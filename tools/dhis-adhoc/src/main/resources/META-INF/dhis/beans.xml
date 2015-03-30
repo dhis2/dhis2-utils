@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd">
+
+    <bean id="exampleCommand" class="org.hisp.dhis.adhoc.command.ExampleCommand" />
+    
+    <bean id="randomDataPopulator" class="org.hisp.dhis.adhoc.command.RandomDataPopulator" />
+    
+    <bean id="randomEventPopulator" class="org.hisp.dhis.adhoc.command.RandomEventPopulator" />
+
+	<bean id="analyticsTableGenerator" class="org.hisp.dhis.adhoc.command.AnalyticsTableGenerator" />
+</beans>

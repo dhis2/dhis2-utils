@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<route xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://camel.apache.org/schema/spring camel-spring-2.9.1.xsd"
+  xmlns="http://camel.apache.org/schema/spring" id="dataUpdater">
+
+  <description>Synch orgunits every 5 minutes</description>
+  <!-- trigger every 5 minutes ... -->
+  <from uri="quartz://everyHour?cron=0+0/5+*+*+*+%3F"/>
+  <!-- filter required elements from metadata export -->
+  <setHeader headerName="CamelHttpQuery">
+    <constant>assumeTrue=false&amp;organisationUnits=true&amp;organisationUnitGroups=true&amp;organisationUnitGroupSets=true&amp;organisationUnitLevels=true&amp;attributeTypes=true</constant>
+  </setHeader>
+  <!-- send http request -->
+  <to
+    uri="http://apps.dhis2.org/demo/api/metaData.xml?httpClient.authenticationPreemptive=true&amp;authMethod=Basic&amp;authUsername=system&amp;authPassword=System123"/>
+  <log logName="org.hisp.dhis.camel" loggingLevel="INFO" message="Importing orgunits"/>
+  <!-- import to dhis2 component -->
+  <inOut uri="dhis2:metadata"/>
+  <!-- log the import summary -->
+  <log logName="org.hisp.dhis.camel" loggingLevel="INFO" message="${body}"/>
+</route>

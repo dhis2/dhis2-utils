@@ -1,0 +1,32 @@
+
+/* 
+
+Handy styles for custom data entry forms. Use with:
+
+<style type="text/css"></style>
+
+<div id="cde"></div>
+
+<h2></h2>
+
+<th></th>
+
+*/
+
+#cde table {
+  border-collapse: collapse;
+}
+
+#cde table, #cde th, #cde td {
+  border: 1px solid #c0c0c0;
+}
+
+#cde td, #cde th {
+  height: 30px;
+  padding: 10px;
+  margin: 10px;
+}
+
+.cde-greyfield {
+  background-color: #e0e0e0;
+}
