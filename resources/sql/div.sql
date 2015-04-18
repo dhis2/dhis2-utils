@@ -320,6 +320,15 @@ inner join categoryoptioncombo coc on (dv.categoryoptioncomboid=coc.categoryopti
 inner join categoryoptioncombo aoc on (dv.attributeoptioncomboid=aoc.categoryoptioncomboid)
 limit 10000;
 
+-- Data values created by day
+
+select dv.created::date as d, count(*) as count
+from datavalue dv
+inner join period pe on dv.periodid=pe.periodid
+group by d
+order by d;
+
+
 -- (Write) Move startdate and enddate in period to next year
 
 update period set 
