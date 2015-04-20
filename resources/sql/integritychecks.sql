@@ -170,6 +170,10 @@ select * from categorycombo where categorycomboid not in (select distinct catego
 
 select categoryid, categoryoptionid, count(*) from categories_categoryoptions group by categoryid, categoryoptionid having count(*) > 1;
 
+-- Get category combos without category option combos
+
+select * from categorycombo where categorycomboid not in (select distinct categorycomboid from categorycombos_optioncombos);
+
 -- Get category combos with categories which share the same category options
 
 select cc.name as cc_name, co.name as co_name from categorycombo cc 
