@@ -13,16 +13,20 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 /**
  * The purpose of this tool is to assist in performing ad-hoc tasks which
  * benefits from having the DHIS 2 service layer accessible. Examples of
- * such tasks are writing complex custom data entry forms to file, generating
- * custom HTML or Jasper reports, and performing database operations which
- * cannot be solved using SQL.
+ * such tasks are writing complex custom data entry forms to file and performing 
+ * database operations which cannot be solved using SQL.
  * 
  * This class should be executed. You can do this e.g. by choosing "Run as" -
  * "Java application" in your IDE.
  * 
- * To add tasks you should implement the Command interface, add your implementation
- * class as a bean in beans.xml under src/main/resources/META-INF/dhis, and add
- * the bean identifier to the list in the commands() method in this class.
+ * To add tasks one should:
+ * 
+ * <ol>
+ * <li>Create a Java class</li>
+ * <li>Annotate the method which performs the work with @Executed</li>
+ * <li>Register the implementation class as a bean in beans.xml under src/main/resources/META-INF/dhis</li>
+ * <li>Add the bean identifier to the list in the commands() method in this class</li>
+ * </ol>
  */
 public class RunMe
 {
@@ -81,8 +85,6 @@ public class RunMe
             return;
         }
         
-        Object[] args = new Object[0];
-        
-        methods.get( 0 ).invoke( object, args );
+        methods.get( 0 ).invoke( object, new Object[0] );
     }
 }
