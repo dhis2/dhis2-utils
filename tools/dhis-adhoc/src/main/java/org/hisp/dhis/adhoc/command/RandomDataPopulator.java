@@ -14,7 +14,7 @@ import org.amplecode.quick.BatchHandler;
 import org.amplecode.quick.BatchHandlerFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.hisp.dhis.adhoc.Command;
+import org.hisp.dhis.adhoc.Executed;
 import org.hisp.dhis.dataelement.DataElement;
 import org.hisp.dhis.dataelement.DataElementCategoryOptionCombo;
 import org.hisp.dhis.dataelement.DataElementCategoryService;
@@ -32,7 +32,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 public class RandomDataPopulator
-    implements Command
 {
     private static final Log log = LogFactory.getLog( RandomDataPopulator.class );
     
@@ -66,7 +65,7 @@ public class RandomDataPopulator
     @Autowired
     private DataValueService dataValueService;
     
-    @Override
+    @Executed
     @Transactional
     public void execute()
         throws Exception

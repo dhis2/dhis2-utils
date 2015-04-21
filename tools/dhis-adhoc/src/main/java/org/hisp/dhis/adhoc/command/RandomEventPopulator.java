@@ -7,7 +7,7 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.hisp.dhis.adhoc.Command;
+import org.hisp.dhis.adhoc.Executed;
 import org.hisp.dhis.dxf2.common.ImportOptions;
 import org.hisp.dhis.dxf2.events.event.DataValue;
 import org.hisp.dhis.dxf2.events.event.Event;
@@ -24,7 +24,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 public class RandomEventPopulator
-    implements Command
 {
     private static final Log log = LogFactory.getLog( RandomEventPopulator.class );
     
@@ -43,10 +42,9 @@ public class RandomEventPopulator
     @Autowired
     private OrganisationUnitService organisationUnitService;
         
-    @Override
+    @Executed
     @Transactional
     public void execute()
-        throws Exception
     {
         log.info( "Populating events" );
         
@@ -80,7 +78,7 @@ public class RandomEventPopulator
             
             events.add( event );
             
-            if ( count % 2000 == 0 )
+            if ( count % 1000 == 0 )
             {
                 log.info( "Populated events: " + count );
             }

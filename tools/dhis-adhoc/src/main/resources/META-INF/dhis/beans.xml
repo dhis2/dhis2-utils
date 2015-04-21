@@ -9,4 +9,7 @@
     <bean id="randomEventPopulator" class="org.hisp.dhis.adhoc.command.RandomEventPopulator" />
 
 	<bean id="analyticsTableGenerator" class="org.hisp.dhis.adhoc.command.AnalyticsTableGenerator" />
+	
+	<bean id="listSortOrderFixer" class="org.hisp.dhis.adhoc.command.ListSortOrderFixer" />
+	
 </beans>
