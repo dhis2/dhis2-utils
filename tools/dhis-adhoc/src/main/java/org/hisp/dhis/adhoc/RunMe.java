@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.hisp.dhis.adhoc.annotation.Executed;
 import org.hisp.dhis.system.util.AnnotationUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
@@ -41,7 +42,7 @@ public class RunMe
      */
     public static List<String> commands()
     {
-        return Arrays.asList( "listSortOrderFixer" );
+        return Arrays.asList( "randomEventPopulator" );
     }
     
     public static void main( String[] args )

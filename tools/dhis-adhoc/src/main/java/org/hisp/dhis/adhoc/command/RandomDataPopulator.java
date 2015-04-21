@@ -14,7 +14,7 @@ import org.amplecode.quick.BatchHandler;
 import org.amplecode.quick.BatchHandlerFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.hisp.dhis.adhoc.Executed;
+import org.hisp.dhis.adhoc.annotation.Executed;
 import org.hisp.dhis.dataelement.DataElement;
 import org.hisp.dhis.dataelement.DataElementCategoryOptionCombo;
 import org.hisp.dhis.dataelement.DataElementCategoryService;
@@ -65,8 +65,8 @@ public class RandomDataPopulator
     @Autowired
     private DataValueService dataValueService;
     
-    @Executed
     @Transactional
+    @Executed
     public void execute()
         throws Exception
     {

@@ -1,6 +1,6 @@
 package org.hisp.dhis.adhoc.command;
 
-import org.hisp.dhis.adhoc.Executed;
+import org.hisp.dhis.adhoc.annotation.Executed;
 import org.springframework.transaction.annotation.Transactional;
 
 public class ExampleCommand
