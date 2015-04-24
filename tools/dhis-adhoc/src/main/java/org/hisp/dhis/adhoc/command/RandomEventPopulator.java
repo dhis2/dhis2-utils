@@ -28,7 +28,7 @@ public class RandomEventPopulator
 {
     private static final Log log = LogFactory.getLog( RandomEventPopulator.class );
     
-    private static final int EVENT_NO = 7000;
+    private static final int EVENT_NO = 40000;
     private static final List<String> OPT_GENDER = Arrays.asList( "male", "female" );
     
     @Autowired
@@ -42,7 +42,7 @@ public class RandomEventPopulator
     
     @Autowired
     private OrganisationUnitService organisationUnitService;
-        
+    
     @Executed
     @Transactional
     public void execute()
