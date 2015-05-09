@@ -84,7 +84,7 @@ where coc.categoryoptioncomboid=2118430;
 
 -- Display overview of category option combos
 
-select coc.uid as optioncombo_uid, cocn.categoryoptioncomboname as optioncombo_name, cc.uid as categorycombo_uid, cc.name as categorycombo_name 
+select coc.uid as optioncombo_uid, cocn.categoryoptioncomboname as optioncombo_nafme, cc.uid as categorycombo_uid, cc.name as categorycombo_name 
 from categoryoptioncombo coc 
 inner join _categoryoptioncomboname cocn on coc.categoryoptioncomboid=cocn.categoryoptioncomboid 
 inner join categorycombos_optioncombos ccoc on coc.categoryoptioncomboid=ccoc.categoryoptioncomboid 
@@ -281,7 +281,7 @@ and di.dashboarditemid not in (
 
 -- Display data out of reasonable time range
 
-select *
+select count(*)
 from datavalue dv
 where dv.periodid in (
   select pe.periodid
@@ -387,4 +387,22 @@ enddate = (enddate + interval '1 year'),
 created = (created + interval '1 year'),
 lastupdated = (lastupdated + interval '1 year');
 
+
+-- APPROVAL
+
+-- Display dataapproval overview
+
+select dal.name as approvallevel_name, dal.uid as approvallevel_uid, ds.name as dataset_name, ds.uid as dataset_uid, 
+pe.startdate, pe.enddate, pt.name as periodtype_name, ou.name as orgunit_name, ou.uid as orgunit_uid, 
+aocn.categoryoptioncomboname as attroptioncombo_name, aoc.uid as attroptioncombo_uid, da.accepted, da.created, u.username as creator_username
+from dataapproval da
+inner join dataapprovallevel dal on da.dataapprovallevelid=dal.dataapprovallevelid
+inner join dataset ds on da.datasetid=ds.datasetid
+inner join period pe on da.periodid=pe.periodid
+inner join periodtype pt on pe.periodtypeid=pt.periodtypeid
+inner join organisationunit ou on ou.organisationunitid=da.organisationunitid
+inner join categoryoptioncombo aoc on da.attributeoptioncomboid=aoc.categoryoptioncomboid
+inner join _categoryoptioncomboname aocn on da.attributeoptioncomboid=aocn.categoryoptioncomboid
+inner join users u on da.creator=u.userid
+limit 1000;
 
