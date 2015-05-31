@@ -359,6 +359,14 @@ delete from programstageinstance psi
 where psi.executiondate < '1960-01-01'
 or psi.executiondate > '2020-01-01';
 
+-- Get count of data elements per program
+
+select pr.name,count(psd.uid)
+from program pr
+inner join programstage ps on pr.programid=ps.programid
+inner join programstagedataelement psd on ps.programstageid=psd.programstageid
+group by pr.name;
+
 -- (Write) Generate random coordinates based on org unit location for events
 
 update programstageinstance psi
@@ -386,7 +394,6 @@ enrollmentdate = (enrollmentdate + interval '1 year'),
 enddate = (enddate + interval '1 year'),
 created = (created + interval '1 year'),
 lastupdated = (lastupdated + interval '1 year');
-
 
 -- APPROVAL
 

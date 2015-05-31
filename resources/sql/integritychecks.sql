@@ -192,11 +192,11 @@ select categoryoptioncomboid, count(categoryoptioncomboid) as count from categor
 
 -- Get additional default option combos 1
 
-select * from categoryoptioncombo coc inner join categorycombos_optioncombos ccoc on coc.categoryoptioncomboid=ccoc.categoryoptioncomboid inner join categorycombo cc on ccoc.categorycomboid=cc.categorycomboid where cc.name = 'default' offset 1;
+select * from categoryoptioncombo coc inner join categorycombos_optioncombos ccoc on coc.categoryoptioncomboid=ccoc.categoryoptioncomboid inner join categorycombo cc on ccoc.categorycomboid=cc.categorycomboid where cc.name = 'default' order by coc.created limit 1;
 
 -- Get additional default option combos 2
 
-select * from categoryoptioncombo coc inner join categoryoptioncombos_categoryoptions cocco on coc.categoryoptioncomboid=cocco.categoryoptioncomboid inner join dataelementcategoryoption co on cocco.categoryoptionid=co.categoryoptionid where co.name = 'default' offset 1;
+select * from categoryoptioncombo coc inner join categoryoptioncombos_categoryoptions cocco on coc.categoryoptioncomboid=cocco.categoryoptioncomboid inner join dataelementcategoryoption co on cocco.categoryoptionid=co.categoryoptionid where co.name = 'default' order by coc.created limit 1;
 
 -- Get category options with count of memberships in categories
 
@@ -218,4 +218,12 @@ order by c.name, n.categoryoptioncomboname;
 -- Get category combinations without data elements or data sets
 
 select * from categorycombo where categorycomboid not in (select distinct categorycomboid from dataelement);
+
+-- Get default category objects info
+
+select * from categorycombo cc where cc.name = 'default';
+select * from dataelementcategory ca where ca.name = 'default';
+select * from dataelementcategoryoption ca where ca.name = 'default';
+
+
 
