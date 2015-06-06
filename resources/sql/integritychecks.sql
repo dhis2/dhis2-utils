@@ -219,3 +219,31 @@ order by c.name, n.categoryoptioncomboname;
 
 select * from categorycombo where categorycomboid not in (select distinct categorycomboid from dataelement);
 
+-- Get data values where category option combo is not part of category combo of data element
+
+select de.name as dataelement_name, pes.iso, ou.name as orgunit_name, cocn.categoryoptioncomboname, dv.value
+from datavalue dv
+inner join dataelement de on dv.dataelementid=de.dataelementid
+inner join _periodstructure pes on dv.periodid=pes.periodid
+inner join organisationunit ou on dv.sourceid=ou.organisationunitid
+inner join _categoryoptioncomboname cocn on dv.categoryoptioncomboid=cocn.categoryoptioncomboid
+where dv.categoryoptioncomboid not in (
+  select ccoc2.categoryoptioncomboid
+  from categorycombos_optioncombos ccoc2
+  where ccoc2.categorycomboid=de.categorycomboid)
+limit 10000;
+
+-- Get data values where attribute option combo is not part of the category combo of data set
+
+select des.dataelementname, ds.name as dataset_name, pes.iso, ou.name as orgunit_name, cocn.categoryoptioncomboname, dv.value
+from datavalue dv
+inner join _dataelementstructure des on dv.dataelementid=des.dataelementid
+inner join dataset ds on des.datasetid=ds.datasetid
+inner join _periodstructure pes on dv.periodid=pes.periodid
+inner join organisationunit ou on dv.sourceid=ou.organisationunitid
+inner join _categoryoptioncomboname cocn on dv.attributeoptioncomboid=cocn.categoryoptioncomboid
+where dv.attributeoptioncomboid not in (
+  select ccoc2.categoryoptioncomboid
+  from categorycombos_optioncombos ccoc2
+  where ccoc2.categorycomboid=ds.categorycomboid)
+limit 10000;
