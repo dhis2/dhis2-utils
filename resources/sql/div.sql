@@ -323,7 +323,7 @@ limit 10000;
 
 select dv.created::date as d, count(*) as count
 from datavalue dv
-inner join period pe on dv.periodid=pe.periodid
+inner join period pe on dv.peri	odid=pe.periodid
 group by d
 order by d;
 
