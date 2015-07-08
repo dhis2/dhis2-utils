@@ -359,6 +359,14 @@ delete from programstageinstance psi
 where psi.executiondate < '1960-01-01'
 or psi.executiondate > '2020-01-01';
 
+-- Get count of data values by year
+
+select extract(year from pe.startdate) as yr, count(*)
+from datavalue dv
+inner join period pe on dv.periodid=pe.periodid
+group by yr
+order by yr;
+
 -- Get count of data elements per program
 
 select pr.name,count(psd.uid)
