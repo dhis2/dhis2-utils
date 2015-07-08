@@ -306,7 +306,6 @@ where dv.attributeoptioncomboid in (
   inner join dataelementcategoryoption co on coo.categoryoptionid=co.categoryoptionid
   where co.uid='LPeJEUjotaB');
 
-
 -- Data value exploded view
 
 select de.name as dename, de.uid as deuid, pe.startdate as pestart, pe.enddate as peend, pt.name as ptname, 
@@ -327,7 +326,6 @@ from datavalue dv
 inner join period pe on dv.periodid=pe.periodid
 group by d
 order by d;
-
 
 -- (Write) Move startdate and enddate in period to next year
 
@@ -359,13 +357,22 @@ delete from programstageinstance psi
 where psi.executiondate < '1960-01-01'
 or psi.executiondate > '2020-01-01';
 
--- Get count of data values by year
+-- Get count of data values by year and month
 
-select extract(year from pe.startdate) as yr, count(*)
+select extract(year from pe.startdate) as yr, extract(month from pe.startdate) as mo, count(*)
 from datavalue dv
 inner join period pe on dv.periodid=pe.periodid
-group by yr
-order by yr;
+where dv.value != '0'
+group by yr, mo
+order by yr, mo;
+
+-- Get count of datavalues by data element
+
+select de.name as de, count(*) as c
+from datavalue dv
+inner join dataelement de on dv.dataelementid=dv.dataelementid
+group by de
+order by c;
 
 -- Get count of data elements per program
 
