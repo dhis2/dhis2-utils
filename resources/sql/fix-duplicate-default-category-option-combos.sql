@@ -3,7 +3,7 @@
 
 -- Delete null data values
 
-delete from datavalue where value is null;
+delete from datavalue where value is null and comment is null;
 
 -- Set lastupdated to far in the past where not set
 
@@ -81,7 +81,17 @@ and exists (
   and cr1.date >= cr2.date
 );
 
--- Min max
+-- Delete min max data element duplicates based on category option combo
+
+delete from minmaxdataelement md1
+where md1.categoryoptioncomboid in (16,498)
+and exists (
+  select * from minmaxdataelement md2
+  where md1.dataelementid = md2.dataelementid
+  and md1.sourceid = md2.sourceid
+  and md1.categoryoptioncomboid != md2.categoryoptioncomboid
+  and md2.categoryoptioncomboid in (16,498)
+);
 
 -- Moved data values from one attribute option combo to the other
 
@@ -92,8 +102,8 @@ update datavalueaudit set attributeoptioncomboid = 16 where attributeoptioncombo
 
 update datavalue set categoryoptioncomboid = 16 where categoryoptioncomboid = 498;
 update datavalueaudit set categoryoptioncomboid = 16 where categoryoptioncomboid = 498;
-
 update completedatasetregistration set attributeoptioncomboid = 16 where attributeoptioncomboid = 498;
+update minmaxdataelement set categoryoptioncomboid = 16 where categoryoptioncomboid = 498;
 
 -- Delete old category option combo and link table rows
 
@@ -101,3 +111,4 @@ delete from categorycombos_optioncombos where categoryoptioncomboid=498;
 delete from categoryoptioncombos_categoryoptions where categoryoptioncomboid=498;
 delete from categoryoptioncombo where categoryoptioncomboid=498;
 
+-- Remember to update category option combos from data admin > maintenance
