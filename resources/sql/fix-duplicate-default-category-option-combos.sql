@@ -111,4 +111,10 @@ delete from categorycombos_optioncombos where categoryoptioncomboid=498;
 delete from categoryoptioncombos_categoryoptions where categoryoptioncomboid=498;
 delete from categoryoptioncombo where categoryoptioncomboid=498;
 
+-- List custom data entry forms which must be updated
+
+select ds.name, df.name from dataentryform df
+inner join dataset ds on ds.dataentryform=df.dataentryformid
+where df.htmlcode ~ 'WeuRNmvZSXe';
+
 -- Remember to update category option combos from data admin > maintenance
