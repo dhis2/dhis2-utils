@@ -1,6 +1,20 @@
 
 -- Delete and update data values for which two attribute option combos are duplicates
 
+-- Get additional default option combos 1
+
+select * from categoryoptioncombo coc 
+inner join categorycombos_optioncombos ccoc on coc.categoryoptioncomboid=ccoc.categoryoptioncomboid 
+inner join categorycombo cc on ccoc.categorycomboid=cc.categorycomboid 
+where cc.name = 'default' offset 1;
+
+-- Get additional default option combos 2
+
+select * from categoryoptioncombo coc 
+inner join categoryoptioncombos_categoryoptions cocco on coc.categoryoptioncomboid=cocco.categoryoptioncomboid 
+inner join dataelementcategoryoption co on cocco.categoryoptionid=co.categoryoptionid 
+where co.name = 'default' offset 1;
+
 -- Delete null data values
 
 delete from datavalue where value is null and comment is null;

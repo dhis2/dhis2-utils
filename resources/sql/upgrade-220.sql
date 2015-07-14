@@ -12,3 +12,8 @@ update messageconversation mc set userid=(
   and mcm.sort_order=1
   limit 1)
 where mc.userid is null;
+
+-- Set organisation units with no opening date to 1970 and set not null
+
+update organisationunit set openingdate='1970-01-01' where openingdate is null;
+alter table organisationunit alter column openingdate set not null;
