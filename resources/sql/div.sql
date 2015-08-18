@@ -410,6 +410,11 @@ enddate = (enddate + interval '1 year'),
 created = (created + interval '1 year'),
 lastupdated = (lastupdated + interval '1 year');
 
+-- (Write) Move interpretations created / lastupdated to next year
+
+update interpretation set created = (created + interval '1 year');
+update interpretation set lastupdated=created;
+
 -- APPROVAL
 
 -- Display dataapproval overview
