@@ -292,10 +292,10 @@ where dv.periodid in (
 -- (Write) Delete all data values for category combo
 
 delete from datavalue where categoryoptioncomboid in (
-select cc.categoryoptioncomboid from categoryoptioncombo cc
-join categorycombos_optioncombos co
-on (cc.categoryoptioncomboid=co.categoryoptioncomboid)
-where categorycomboid=12414 );
+select coc.categoryoptioncomboid from categoryoptioncombo coc
+inner join categorycombos_optioncombos co on coc.categoryoptioncomboid=co.categoryoptioncomboid
+inner join categorycombo cc on co.categorycomboid=cc.categorycomboid
+where cc.uid='iO1SPIBYKuJ');
 
 -- (Write) Delete all data values for an attribute category option
 

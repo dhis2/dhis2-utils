@@ -1,0 +1,10 @@
+#!/bin/sh
+
+PG_LOG='/var/log/postgresql/postgresql-9.3-main.log'
+
+case $1 in
+log)
+  tail -f ${PG_LOG}
+  ;;
+esac
+exit 0
