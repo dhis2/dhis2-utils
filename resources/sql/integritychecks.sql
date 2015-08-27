@@ -124,6 +124,14 @@ inner join dataset ds on s.datasetid=ds.datasetid
 group by ds.name, s.name, sd.sectionid
 order by max(sd.sort_order) desc;
 
+-- Get program indicators where expression contains 
+
+select pi.uid as indicatoruid, pi.name as indicator, de.uid as dataelementuid, de.name as dataelement
+from programindicator pi, dataelement de
+where de.valuetype != 'int'
+and pi.expression like ( '%'||de.uid||'%')
+order by pi.name, de.name;
+
 -- Get category option combos from data values which are not part of the category combo of the data element
 
 select distinct de.name as data_element, dv.dataelementid, de_cc.name as data_element_category_combo, oc_cc.name as option_combo_category_combo, con.categoryoptioncomboname, dv.categoryoptioncomboid
