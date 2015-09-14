@@ -1,19 +1,19 @@
 
 -- Delete and update data values for which two attribute option combos are duplicates
 
--- Get additional default option combos 1
+-- Get default option combos 1 (should only be one)
 
 select * from categoryoptioncombo coc 
 inner join categorycombos_optioncombos ccoc on coc.categoryoptioncomboid=ccoc.categoryoptioncomboid 
 inner join categorycombo cc on ccoc.categorycomboid=cc.categorycomboid 
-where cc.name = 'default' offset 1;
+where cc.name = 'default';
 
--- Get additional default option combos 2
+-- Get additional default option combos 2 (should only be one)
 
 select * from categoryoptioncombo coc 
 inner join categoryoptioncombos_categoryoptions cocco on coc.categoryoptioncomboid=cocco.categoryoptioncomboid 
 inner join dataelementcategoryoption co on cocco.categoryoptionid=co.categoryoptionid 
-where co.name = 'default' offset 1;
+where co.name = 'default';
 
 -- Delete null data values
 
@@ -107,12 +107,16 @@ and exists (
   and md2.categoryoptioncomboid in (16,498)
 );
 
--- Moved data values from one attribute option combo to the other
+-- Update data element operands
+
+update dataelementoperand set categoryoptioncomboid = 16 where categoryoptioncomboid = 498;
+
+-- Move data values from one attribute option combo to the other
 
 update datavalue set attributeoptioncomboid = 16 where attributeoptioncomboid = 498;
 update datavalueaudit set attributeoptioncomboid = 16 where attributeoptioncomboid = 498;
 
--- Moved data values from one category option combo to the other
+-- Move data values from one category option combo to the other
 
 update datavalue set categoryoptioncomboid = 16 where categoryoptioncomboid = 498;
 update datavalueaudit set categoryoptioncomboid = 16 where categoryoptioncomboid = 498;

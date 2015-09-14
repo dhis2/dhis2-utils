@@ -115,3 +115,12 @@ where not exists (
   select 1 from _dataelementcategoryoptioncombo dc
   where dc.dataelementid=dv.dataelementid
   and dc.categoryoptioncomboid=dv.categoryoptioncomboid);
+  
+-- Get category option combos not part of _categoryoptioncomboname resource table
+
+select * from categoryoptioncombo coc
+where coc.categoryoptioncomboid not in (
+  select cocn.categoryoptioncomboid
+  from _categoryoptioncomboname cocn);
+
+
