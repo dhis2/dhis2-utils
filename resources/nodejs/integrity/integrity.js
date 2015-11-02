@@ -10,6 +10,8 @@
  * Define which nodejs version to use with:
  * 
  * nvm use v0.11.14
+ *
+ * Execute the script e.g. from a cron job with $ node integrity.js
  * 
  * The flow of the script:
  * 
