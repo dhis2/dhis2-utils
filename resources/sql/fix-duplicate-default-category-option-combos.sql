@@ -92,7 +92,7 @@ and exists (
   and cr1.sourceid=cr2.sourceid
   and cr1.attributeoptioncomboid != cr2.attributeoptioncomboid
   and cr1.attributeoptioncomboid in (16,498)
-  and cr1.date >= cr2.date
+  and cr2.date >= cr1.date
 );
 
 -- Delete min max data element duplicates based on category option combo
