@@ -65,6 +65,11 @@ and exists (
   and cr2.date >= cr1.date
 );
 
+-- Delete data approval records for org unit to remove
+
+delete from dataapproval where organisationunitid = (
+  select organisationunitid from organisationunit where uid = 'DGjspVpNRWY');
+
 -- Move data values from org unit to remove to org unit to keep
 
 update datavalue set sourceid = (
@@ -80,4 +85,3 @@ where sourceid = (
   select organisationunitid from organisationunit where uid = 'DGjspVpNRWY');
 
 -- Now delete org unit to remove through API to clear up meta-data foreign constraints
-
