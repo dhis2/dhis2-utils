@@ -17,7 +17,6 @@ import org.hisp.dhis.option.Option;
 import org.hisp.dhis.option.OptionService;
 import org.hisp.dhis.organisationunit.OrganisationUnit;
 import org.hisp.dhis.organisationunit.OrganisationUnitService;
-import org.hisp.dhis.program.ProgramService;
 import org.hisp.dhis.system.util.DateUtils;
 import org.hisp.dhis.util.Timer;
 import org.joda.time.DateTime;
@@ -30,9 +29,6 @@ public class RandomEventPopulator
     
     private static final int EVENT_NO = 20000;
     private static final List<String> OPT_GENDER = Arrays.asList( "male", "female" );
-    
-    @Autowired
-    private ProgramService programService;
     
     @Autowired
     private EventService eventService;
