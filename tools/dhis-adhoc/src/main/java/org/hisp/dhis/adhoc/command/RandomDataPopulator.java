@@ -19,7 +19,6 @@ import org.hisp.dhis.dataelement.DataElement;
 import org.hisp.dhis.dataelement.DataElementCategoryOptionCombo;
 import org.hisp.dhis.dataelement.DataElementCategoryService;
 import org.hisp.dhis.dataelement.DataElementService;
-import org.hisp.dhis.dataset.DataSetService;
 import org.hisp.dhis.datavalue.DataValue;
 import org.hisp.dhis.datavalue.DataValueService;
 import org.hisp.dhis.jdbc.batchhandler.DataValueBatchHandler;
@@ -46,10 +45,7 @@ public class RandomDataPopulator
     
     @Autowired
     private DataElementService dataElementService;
-    
-    @Autowired
-    private DataSetService dataSetService;
-    
+        
     @Autowired
     private PeriodService periodService;
     
