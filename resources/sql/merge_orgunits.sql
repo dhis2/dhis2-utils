@@ -14,11 +14,10 @@ END IF;
 
 EXECUTE 'SELECT organisationunitid from organisationunit where uid = ''' ||   $1  || ''''  INTO organisationunitid;
 
-EXECUTE 'SELECT COUNT(organisationunitid) != 0 from organisationunit where parentid = $1' INTO has_children USING organisationunitid;
+EXECUTE format('UPDATE organisationunit set parentid = (SELECT organisationunitid from organisationunit where uid = %L )
+WHERE parentid = (SELECT organisationunitid from organisationunit where uid = %L)',dest_uid,source_uid);
 
-IF  has_children THEN
-RAISE EXCEPTION 'Organisationunit has children. Aborting.';
-END IF;
+
 
 
 -- All overlapping data, only of valuetype INT
@@ -202,7 +201,7 @@ WHERE organisationunitid = (select organisationunitid
 	from organisationunit where uid = %L )',dest_uid,source_uid);
 
 --DELETE all records for the source
-EXECUTE format('SELECT * FROM delete_site_with_data( %L )',source_uid);
+EXECUTE format('SELECT * FROM delete_site_with_data (%L::character(11) )',source_uid);
 
 
 RETURN 1;
