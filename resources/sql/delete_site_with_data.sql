@@ -15,6 +15,7 @@ IF  has_children THEN
 RAISE EXCEPTION 'Organisationunit has children. Aborting.';
 END IF;
 
+
 EXECUTE 'DELETE FROM completedatasetregistration where sourceid = $1' USING organisationunitid;
 EXECUTE 'DELETE FROM datavalueaudit where organisationunitid = $1' USING organisationunitid;
 EXECUTE 'DELETE FROM datavalue where sourceid = $1' USING organisationunitid;
@@ -26,14 +27,20 @@ EXECUTE 'DELETE FROM interpretation WHERE organisationunitid = $1 ' USING organi
 EXECUTE 'DELETE FROM lockexception WHERE organisationunitid = $1 ' USING organisationunitid;
 EXECUTE 'DELETE FROM minmaxdataelement WHERE sourceid = $1 ' USING organisationunitid;
 EXECUTE 'DELETE FROM orgunitgroupmembers WHERE organisationunitid = $1 ' USING organisationunitid;
+EXECUTE 'DELETE FROM trackedentitydatavalue where programstageinstanceid in (SELECT programstageinstanceid
+from programstageinstance where organisationunitid = $1)' USING organisationunitid;
+EXECUTE 'DELETE FROM programstageinstancecomments where programstageinstanceid in (SELECT programstageinstanceid
+from programstageinstance where organisationunitid = $1)' USING organisationunitid;
 EXECUTE 'DELETE FROM programstageinstance WHERE organisationunitid = $1 ' USING organisationunitid;
 EXECUTE 'DELETE FROM trackedentityinstance WHERE organisationunitid = $1 ' USING organisationunitid;
 EXECUTE 'DELETE FROM userdatavieworgunits WHERE organisationunitid = $1 ' USING organisationunitid;
 EXECUTE 'DELETE FROM program_organisationunits WHERE organisationunitid = $1 ' USING organisationunitid;
-
+EXECUTE 'DELETE FROM usermembership where organisationunitid = $1' USING organisationunitid;
 --Special tables which we need to reorder the sort order after deletion of the organisationunit
 
- CREATE TEMP TABLE temp1 (
+SET client_min_messages=WARNING;
+
+CREATE TEMP TABLE IF NOT EXISTS temp1 (
    objectid integer ) ON COMMIT DROP;
 
 --chart_organisationunits
@@ -96,7 +103,7 @@ EXECUTE 'TRUNCATE temp1';
 EXECUTE 'INSERT INTO temp1 SELECT DISTINCT eventreportid from eventreport_organisationunits where organisationunitid = $1 'USING organisationunitid;
 EXECUTE 'DELETE FROM eventreport_organisationunits WHERE organisationunitid = $1 ' USING organisationunitid;
 FOR resort_object IN SELECT objectid from temp1 LOOP
-EXECUTE 'updateeventreport_organisationunits set sort_order = -t.i
+EXECUTE 'UPDATE eventreport_organisationunits set sort_order = -t.i
 from (select row_number() over (ORDER BY sort_order) as i, eventreportid, sort_order, organisationunitid
     from eventreport_organisationunits where eventreportid=$1 order by sort_order) t
 where eventreport_organisationunits.organisationunitid = t.organisationunitid and eventreport_organisationunits.eventreportid=$1' USING resort_object.objectid ;

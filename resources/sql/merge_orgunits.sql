@@ -1,8 +1,16 @@
-CREATE OR REPLACE FUNCTION merge_organisationunits(source_uid character(11),dest_uid character(11)) RETURNS integer AS $$
+CREATE OR REPLACE FUNCTION merge_organisationunits(source_uid character(11),dest_uid character(10),strategy character varying(50)) RETURNS integer AS $$
 DECLARE
 organisationunitid integer;
 has_children boolean;
+is_valid_strategy boolean;
 BEGIN
+
+EXECUTE 'SELECT' || '''' || $3 || ''' NOT IN (''SUM'',''MAX'',''MIN'',''AVG'',''LAST'',''FIRST'')' INTO is_valid_strategy USING strategy;
+
+IF is_valid_strategy  THEN
+RAISE EXCEPTION 'Please provide a merge strategy (SUM,MAX,MIN,AVG,LAST,FIRST)';
+END IF;
+
 
 EXECUTE 'SELECT organisationunitid from organisationunit where uid = ''' ||   $1  || ''''  INTO organisationunitid;
 
@@ -13,10 +21,9 @@ RAISE EXCEPTION 'Organisationunit has children. Aborting.';
 END IF;
 
 
-
-
 -- All overlapping data, only of valuetype INT
-EXECUTE format('CREATE TEMP TABLE _temp_merge_overlaps  ON COMMIT DROP AS SELECT a.*  FROM datavalue a
+EXECUTE format('CREATE TEMP TABLE _temp_merge_overlaps  ON COMMIT DROP AS
+ SELECT a.*  FROM datavalue a
 INNER JOIN
 (SELECT dataelementid,periodid,categoryoptioncomboid,attributeoptioncomboid,COUNT(*) from datavalue
 WHERE sourceid in (
@@ -36,41 +43,126 @@ where uid IN ( %L,%L) )
 and a.dataelementid in (SELECT DISTINCT dataelementid from dataelement where valuetype = ''int'')',
 source_uid,dest_uid,source_uid,dest_uid);
 
-
 --Switch the source 
 EXECUTE format('UPDATE _temp_merge_overlaps set sourceid = 
 (select organisationunitid from organisationunit where uid =  %L )',dest_uid);
 
 
 
---Audit the changes about to be made to the overlapping data
-
-INSERT INTO datavalueaudit SELECT nextval('hibernate_sequence'::regclass),
-a.dataelementid,
-a.periodid,
-a.sourceid as organisationunitid,
-a.categoryoptioncomboid,
-a.value,
-now()::timestamp without time zone,
-'admin'::character varying(100) as modifiedby,
-'DELETE'::character varying(255) as audittype,
-a.attributeoptioncomboid
-FROM datavalue a
-INNER JOIN
-(SELECT DISTINCT sourceid,dataelementid,categoryoptioncomboid,
-	attributeoptioncomboid,periodid from _temp_merge_overlaps) b
-ON a.sourceid = b.sourceid
-and a.dataelementid = b.dataelementid
-and a.categoryoptioncomboid = b.categoryoptioncomboid
-and a.attributeoptioncomboid = b.attributeoptioncomboid
-and a.periodid = b.periodid;
-
---UPDATE the overlapping data
-
+--UPDATE the overlapping INT data
+CASE  strategy WHEN 'SUM' THEN
 UPDATE datavalue a set value = b.value from (
 SELECT sourceid,dataelementid,periodid,categoryoptioncomboid,attributeoptioncomboid,
 SUM(value::numeric)::character varying(50000) as value FROM _temp_merge_overlaps
 GROUP BY sourceid,dataelementid,periodid,categoryoptioncomboid,attributeoptioncomboid) b
+WHERE a.sourceid = b.sourceid
+AND a.dataelementid = b.dataelementid
+and a.categoryoptioncomboid = b.categoryoptioncomboid
+and a.attributeoptioncomboid = b.attributeoptioncomboid;
+ WHEN 'AVG' THEN
+UPDATE datavalue a set value = b.value from (
+SELECT sourceid,dataelementid,periodid,categoryoptioncomboid,attributeoptioncomboid,
+AVG(value::numeric)::integer::character varying(50000) as value FROM _temp_merge_overlaps
+GROUP BY sourceid,dataelementid,periodid,categoryoptioncomboid,attributeoptioncomboid) b
+WHERE a.sourceid = b.sourceid
+AND a.dataelementid = b.dataelementid
+and a.categoryoptioncomboid = b.categoryoptioncomboid
+and a.attributeoptioncomboid = b.attributeoptioncomboid;
+ WHEN 'MAX' THEN
+UPDATE datavalue a set value = b.value from (
+SELECT sourceid,dataelementid,periodid,categoryoptioncomboid,attributeoptioncomboid,
+MAX(value::numeric)::integer::character varying(50000) as value FROM _temp_merge_overlaps
+GROUP BY sourceid,dataelementid,periodid,categoryoptioncomboid,attributeoptioncomboid) b
+WHERE a.sourceid = b.sourceid
+AND a.dataelementid = b.dataelementid
+and a.categoryoptioncomboid = b.categoryoptioncomboid
+and a.attributeoptioncomboid = b.attributeoptioncomboid;
+WHEN 'MIN' THEN
+UPDATE datavalue a set value = b.value from (
+SELECT sourceid,dataelementid,periodid,categoryoptioncomboid,attributeoptioncomboid,
+MIN(value::numeric)::integer::character varying(50000) as value FROM _temp_merge_overlaps
+GROUP BY sourceid,dataelementid,periodid,categoryoptioncomboid,attributeoptioncomboid) b
+WHERE a.sourceid = b.sourceid
+AND a.dataelementid = b.dataelementid
+and a.categoryoptioncomboid = b.categoryoptioncomboid
+and a.attributeoptioncomboid = b.attributeoptioncomboid;
+WHEN 'LAST' THEN
+UPDATE datavalue a set value = b.value from (
+SELECT x.sourceid,x.dataelementid,x.periodid,x.categoryoptioncomboid,x.attributeoptioncomboid,
+x.value as value FROM _temp_merge_overlaps x
+INNER  JOIN (
+SELECT sourceid,dataelementid,periodid,categoryoptioncomboid,attributeoptioncomboid,
+MIN(lastupdated) as lastupdated from _temp_merge_overlaps
+GROUP BY sourceid,dataelementid,periodid,categoryoptioncomboid,attributeoptioncomboid
+) y on
+x.sourceid = y.sourceid
+AND x.dataelementid = y.dataelementid
+and x.categoryoptioncomboid = y.categoryoptioncomboid
+and x.attributeoptioncomboid = y.attributeoptioncomboid
+and x.lastupdated = y.lastupdated) b
+WHERE a.sourceid = b.sourceid
+AND a.dataelementid = b.dataelementid
+and a.categoryoptioncomboid = b.categoryoptioncomboid
+and a.attributeoptioncomboid = b.attributeoptioncomboid;
+WHEN 'FIRST' THEN
+UPDATE datavalue a set value = b.value from (
+SELECT x.sourceid,x.dataelementid,x.periodid,x.categoryoptioncomboid,x.attributeoptioncomboid,
+x.value as value FROM _temp_merge_overlaps x
+INNER  JOIN (
+SELECT sourceid,dataelementid,periodid,categoryoptioncomboid,attributeoptioncomboid,
+MAX(lastupdated) as lastupdated from _temp_merge_overlaps
+GROUP BY sourceid,dataelementid,periodid,categoryoptioncomboid,attributeoptioncomboid
+) y on
+x.sourceid = y.sourceid
+AND x.dataelementid = y.dataelementid
+and x.categoryoptioncomboid = y.categoryoptioncomboid
+and x.attributeoptioncomboid = y.attributeoptioncomboid
+and x.lastupdated = y.lastupdated) b
+WHERE a.sourceid = b.sourceid
+AND a.dataelementid = b.dataelementid
+and a.categoryoptioncomboid = b.categoryoptioncomboid
+and a.attributeoptioncomboid = b.attributeoptioncomboid;
+END CASE;
+
+-- All overlapping data of anything other than INT
+EXECUTE format('CREATE TEMP TABLE _temp_merge_overlaps_others  ON COMMIT DROP AS
+ SELECT a.*  FROM datavalue a
+INNER JOIN
+(SELECT dataelementid,periodid,categoryoptioncomboid,attributeoptioncomboid,COUNT(*) from datavalue
+WHERE sourceid in (
+select organisationunitid from organisationunit  where uid IN ( %L,%L ) )
+GROUP BY dataelementid,periodid,categoryoptioncomboid,attributeoptioncomboid
+HAVING COUNT(*) > 1)  b on
+a.dataelementid = b.dataelementid
+AND
+a.periodid = b.periodid
+AND
+a.categoryoptioncomboid = b.categoryoptioncomboid
+AND
+a.attributeoptioncomboid = b.attributeoptioncomboid
+WHERE a.sourceid IN (
+select organisationunitid from organisationunit
+where uid IN ( %L,%L) )
+and a.dataelementid in (SELECT DISTINCT dataelementid from dataelement where valuetype != ''int'')',
+source_uid,dest_uid,source_uid,dest_uid);
+
+--Switch the source 
+EXECUTE format('UPDATE _temp_merge_overlaps_others set sourceid = 
+(select organisationunitid from organisationunit where uid =  %L )',dest_uid);
+
+UPDATE datavalue a set value = b.value from (
+SELECT x.sourceid,x.dataelementid,x.periodid,x.categoryoptioncomboid,x.attributeoptioncomboid,
+x.value as value FROM _temp_merge_overlaps_others x
+INNER  JOIN (
+SELECT sourceid,dataelementid,periodid,categoryoptioncomboid,attributeoptioncomboid,
+MIN(lastupdated) as lastupdated from _temp_merge_overlaps_others
+GROUP BY sourceid,dataelementid,periodid,categoryoptioncomboid,attributeoptioncomboid
+) y on
+x.sourceid = y.sourceid
+AND x.dataelementid = y.dataelementid
+and x.categoryoptioncomboid = y.categoryoptioncomboid
+and x.attributeoptioncomboid = y.attributeoptioncomboid
+and x.lastupdated = y.lastupdated) b
 WHERE a.sourceid = b.sourceid
 AND a.dataelementid = b.dataelementid
 and a.categoryoptioncomboid = b.categoryoptioncomboid
