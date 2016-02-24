@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION delete_site_with_data(uid character) RETURNS integer AS $$
+CREATE OR REPLACE FUNCTION delete_site_with_data(uid character(11)) RETURNS integer AS $$
 DECLARE
 organisationunitid integer;
 resort_object RECORD;
