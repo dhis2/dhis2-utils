@@ -331,8 +331,7 @@ order by d;
 
 update period set 
 startdate = (startdate + interval '1 year')::date,
-enddate = (enddate + interval '1 year')::date
-where extract(year from startdate) = 2013;
+enddate = (enddate + interval '1 year')::date;
 
 
 -- EVENTS
@@ -404,7 +403,7 @@ created = (created + interval '1 year'),
 lastupdated = (lastupdated + interval '1 year');
 
 update programinstance set
-dateofincident = (dateofincident + interval '1 year'),
+incidentdate = (incidentdate + interval '1 year'),
 enrollmentdate = (enrollmentdate + interval '1 year'),
 enddate = (enddate + interval '1 year'),
 created = (created + interval '1 year'),
@@ -432,4 +431,16 @@ inner join categoryoptioncombo aoc on da.attributeoptioncomboid=aoc.categoryopti
 inner join _categoryoptioncomboname aocn on da.attributeoptioncomboid=aocn.categoryoptioncomboid
 inner join users u on da.creator=u.userid
 limit 1000;
+
+-- SQL VIEWS
+
+-- Generate SQL statements for dropping all SQL views
+-- 1. Save to file with psql -d db -U user -f script.sql > drop.sql
+-- 2. Clean up file and drop views with psql -d db -U user -f drop.sql
+
+select 'drop view ' || table_name || ';'
+from information_schema.views
+where table_schema not in ('pg_catalog', 'information_schema')
+and table_name !~ '^pg_' and table_name ~ '_view';
+
 
