@@ -414,6 +414,7 @@ lastupdated = (lastupdated + interval '1 year');
 update interpretation set created = (created + interval '1 year');
 update interpretation set lastupdated=created;
 
+
 -- APPROVAL
 
 -- Display dataapproval overview
@@ -431,6 +432,7 @@ inner join categoryoptioncombo aoc on da.attributeoptioncomboid=aoc.categoryopti
 inner join _categoryoptioncomboname aocn on da.attributeoptioncomboid=aocn.categoryoptioncomboid
 inner join users u on da.creator=u.userid
 limit 1000;
+
 
 -- SQL VIEWS
 
