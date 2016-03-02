@@ -123,6 +123,7 @@ where coc.categoryoptioncomboid not in (
   select cocn.categoryoptioncomboid
   from _categoryoptioncomboname cocn);
 
+
 -- WRITE
 
 -- Repair missing link row between default category and default category option
@@ -138,3 +139,5 @@ insert into categorycombos_categories(categorycomboid, categoryid, sort_order)
 select categorycomboid, categoryid, 1 from
 (select categorycomboid from categorycombo where name = 'default') as categorycomboid,
 (select categoryid from dataelementcategory where name = 'default') as categoryid;
+
+
