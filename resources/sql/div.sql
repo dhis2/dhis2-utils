@@ -443,6 +443,6 @@ limit 1000;
 select 'drop view ' || table_name || ';'
 from information_schema.views
 where table_schema not in ('pg_catalog', 'information_schema')
-and table_name !~ '^pg_' and table_name ~ '_view';
+and table_name !~ '^pg_' and table_name ~ '^_view';
 
 
