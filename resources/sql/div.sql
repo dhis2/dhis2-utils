@@ -446,3 +446,19 @@ where table_schema not in ('pg_catalog', 'information_schema')
 and table_name !~ '^pg_' and table_name ~ '^_view';
 
 
+-- VARIOUS
+
+-- Identify missing sort_order entries in link tables
+-- Replace 101 with the number of entries in the link table for one owner
+-- Replace 102 with the identifier of the owner entity row
+-- Replace categories_categoryoptions with the name of the link table
+
+select generate_series 
+from generate_series(1,101)
+where not generate_series in (
+  select sort_order
+  from categories_categoryoptions cco
+  where categoryid=102
+);
+
+
