@@ -457,7 +457,7 @@ select generate_series
 from generate_series(1,101)
 where not generate_series in (
   select sort_order
-  from categories_categoryoptions cco
+  from categories_categoryoptions
   where categoryid=102
 );
 
