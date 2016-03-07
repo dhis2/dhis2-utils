@@ -180,24 +180,24 @@ public class RandomChildrenPopulator
             
             List<TrackedEntityDataValue> dvs = new ArrayList<>();       
 
-            dvs.add( new TrackedEntityDataValue( psi1, deApgar, date.toDate(), String.valueOf( new Random().nextInt( 3 ) ) ) );
-            dvs.add( new TrackedEntityDataValue( psi1, deWeight, date.toDate(), String.valueOf( ( 2500 + new Random().nextInt( 1500 ) ) ) ) );
-            dvs.add( new TrackedEntityDataValue( psi1, deArv, date.toDate(), getRandomOptionSetCode( osArv  ) ) );
-            dvs.add( new TrackedEntityDataValue( psi1, deBcg, date.toDate(), getRandomBool() ) );
-            dvs.add( new TrackedEntityDataValue( psi1, deOpv, date.toDate(), getRandomOptionSetCode( osOpv ) ) );
-            dvs.add( new TrackedEntityDataValue( psi1, deInfFeed, date.toDate(), getRandomOptionSetCode( osInfFeed ) ) );
+            dvs.add( new TrackedEntityDataValue( psi1, deApgar, String.valueOf( new Random().nextInt( 3 ) ) ) );
+            dvs.add( new TrackedEntityDataValue( psi1, deWeight, String.valueOf( ( 2500 + new Random().nextInt( 1500 ) ) ) ) );
+            dvs.add( new TrackedEntityDataValue( psi1, deArv, getRandomOptionSetCode( osArv  ) ) );
+            dvs.add( new TrackedEntityDataValue( psi1, deBcg, getRandomBool() ) );
+            dvs.add( new TrackedEntityDataValue( psi1, deOpv, getRandomOptionSetCode( osOpv ) ) );
+            dvs.add( new TrackedEntityDataValue( psi1, deInfFeed, getRandomOptionSetCode( osInfFeed ) ) );
             
-            dvs.add( new TrackedEntityDataValue( psi2, deInfWeight, date.toDate(), String.valueOf( ( 2500 + new Random().nextInt( 1500 ) ) ) ) );
-            dvs.add( new TrackedEntityDataValue( psi2, deInfFeed, date.toDate(), getRandomOptionSetCode( osInfFeed ) ) );
-            dvs.add( new TrackedEntityDataValue( psi2, deMeasles, date.toDate(), getRandomBool() ) );
-            dvs.add( new TrackedEntityDataValue( psi2, dePenta, date.toDate(), getRandomOptionSetCode( osPenta ) ) );
-            dvs.add( new TrackedEntityDataValue( psi2, deYelFev, date.toDate(), getRandomBool() ) );
-            dvs.add( new TrackedEntityDataValue( psi2, deIpt, date.toDate(), getRandomOptionSetCode( osIpt ) ) );
-            dvs.add( new TrackedEntityDataValue( psi2, deDpt, date.toDate(), getRandomOptionSetCode( osDpt ) ) );
-            dvs.add( new TrackedEntityDataValue( psi2, deVitA, date.toDate(), getRandomBool() ) );
-            dvs.add( new TrackedEntityDataValue( psi2, deHivRes, date.toDate(), getRandomOptionSetCode( osHivRes ) ) );
-            dvs.add( new TrackedEntityDataValue( psi2, deHivTest, date.toDate(), getRandomOptionSetCode( osHivTest ) ) );
-            dvs.add( new TrackedEntityDataValue( psi2, deChildArv, date.toDate(), getRandomOptionSetCode( osChildArv ) ) );
+            dvs.add( new TrackedEntityDataValue( psi2, deInfWeight, String.valueOf( ( 2500 + new Random().nextInt( 1500 ) ) ) ) );
+            dvs.add( new TrackedEntityDataValue( psi2, deInfFeed, getRandomOptionSetCode( osInfFeed ) ) );
+            dvs.add( new TrackedEntityDataValue( psi2, deMeasles, getRandomBool() ) );
+            dvs.add( new TrackedEntityDataValue( psi2, dePenta, getRandomOptionSetCode( osPenta ) ) );
+            dvs.add( new TrackedEntityDataValue( psi2, deYelFev, getRandomBool() ) );
+            dvs.add( new TrackedEntityDataValue( psi2, deIpt, getRandomOptionSetCode( osIpt ) ) );
+            dvs.add( new TrackedEntityDataValue( psi2, deDpt, getRandomOptionSetCode( osDpt ) ) );
+            dvs.add( new TrackedEntityDataValue( psi2, deVitA, getRandomBool() ) );
+            dvs.add( new TrackedEntityDataValue( psi2, deHivRes, getRandomOptionSetCode( osHivRes ) ) );
+            dvs.add( new TrackedEntityDataValue( psi2, deHivTest, getRandomOptionSetCode( osHivTest ) ) );
+            dvs.add( new TrackedEntityDataValue( psi2, deChildArv, getRandomOptionSetCode( osChildArv ) ) );
             
             for ( TrackedEntityDataValue dv : dvs )
             {
