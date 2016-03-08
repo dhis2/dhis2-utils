@@ -43,7 +43,7 @@
     </dependency>
     <dependency>
       <groupId>org.hisp.dhis</groupId>
-      <artifactId>dhis-service-importexport</artifactId>
+      <artifactId>dhis-service-mobile</artifactId>
     </dependency>
     <dependency>
       <groupId>org.hisp.dhis</groupId>
