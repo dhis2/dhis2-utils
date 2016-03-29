@@ -446,6 +446,47 @@ where table_schema not in ('pg_catalog', 'information_schema')
 and table_name !~ '^pg_' and table_name ~ '^_view';
 
 
+-- SHARING
+
+-- Remove rows in usergroupaccess which are no longer referenced
+
+delete from usergroupaccess where usergroupaccessid not in (
+select usergroupaccessid from categorycombousergroupaccesses
+union all select usergroupaccessid from categoryoptiongroupsetusergroupaccesses
+union all select usergroupaccessid from categoryoptiongroupusergroupaccesses
+union all select usergroupaccessid from chartusergroupaccesses
+union all select usergroupaccessid from constantusergroupaccesses
+union all select usergroupaccessid from dashboardusergroupaccesses
+union all select usergroupaccessid from dataapprovallevelusergroupaccesses
+union all select usergroupaccessid from dataapprovalworkflowusergroupaccesses
+union all select usergroupaccessid from dataelementcategoryoptionusergroupaccesses
+union all select usergroupaccessid from dataelementcategoryusergroupaccesses
+union all select usergroupaccessid from dataelementgroupsetusergroupaccesses
+union all select usergroupaccessid from dataelementgroupusergroupaccesses
+union all select usergroupaccessid from dataelementusergroupaccesses
+union all select usergroupaccessid from datasetusergroupaccesses
+union all select usergroupaccessid from documentusergroupaccesses
+union all select usergroupaccessid from eventchartusergroupaccesses
+union all select usergroupaccessid from eventreportusergroupaccesses
+union all select usergroupaccessid from indicatorgroupsetusergroupaccesses
+union all select usergroupaccessid from indicatorgroupusergroupaccesses
+union all select usergroupaccessid from indicatorusergroupaccesses
+union all select usergroupaccessid from interpretationusergroupaccesses
+union all select usergroupaccessid from mapusergroupaccesses
+union all select usergroupaccessid from optionsetusergroupaccesses
+union all select usergroupaccessid from orgunitgroupsetusergroupaccesses
+union all select usergroupaccessid from orgunitgroupusergroupaccesses
+union all select usergroupaccessid from programindicatorusergroupaccesses
+union all select usergroupaccessid from programusergroupaccesses
+union all select usergroupaccessid from reporttableusergroupaccesses
+union all select usergroupaccessid from reportusergroupaccesses
+union all select usergroupaccessid from sqlviewusergroupaccesses
+union all select usergroupaccessid from trackedentityattributeusergroupaccesses
+union all select usergroupaccessid from usergroupusergroupaccesses
+union all select usergroupaccessid from userroleusergroupaccesses
+union all select usergroupaccessid from validationrulegroupusergroupaccesses);
+
+
 -- VARIOUS
 
 -- Identify missing sort_order entries in link tables
