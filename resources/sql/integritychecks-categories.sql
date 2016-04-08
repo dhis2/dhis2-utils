@@ -123,6 +123,11 @@ where coc.categoryoptioncomboid not in (
   select cocn.categoryoptioncomboid
   from _categoryoptioncomboname cocn);
 
+-- Get category combo with no data elements
+
+select cc.categorycomboid, cc.name from categorycombo cc where cc.categorycomboid not in (
+select distinct categorycomboid from dataelement);
+
 
 -- WRITE
 

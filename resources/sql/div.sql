@@ -308,8 +308,11 @@ where dv.attributeoptioncomboid in (
 
 -- Data value exploded view
 
-select de.name as dename, de.uid as deuid, pe.startdate as pestart, pe.enddate as peend, pt.name as ptname, 
-ou.name as ouname, ou.uid as ouuid, coc.uid as cocuid, coc.categoryoptioncomboid as cocid, aoc.uid as aocuid, aoc.categoryoptioncomboid as aocid, dv.value as dvval
+select de.name as dename, de.uid as deuid, 
+pe.startdate as pestart, pe.enddate as peend, pt.name as ptname, 
+ou.name as ouname, ou.uid as ouuid, 
+coc.name as cocname, coc.uid as cocuid, coc.categoryoptioncomboid as cocid, 
+aoc.name as aocname, aoc.uid as aocuid, aoc.categoryoptioncomboid as aocid, dv.value as dvval
 from datavalue dv
 inner join dataelement de on (dv.dataelementid=de.dataelementid)
 inner join period pe on (dv.periodid=pe.periodid)
