@@ -146,6 +146,7 @@ order by membercount desc, ou.name, oug.name, ougs.name
 ) as ous
 where membercount > 1;
 
+
 -- GENERAL
 
 -- Get missing items in a list / missing options in a category by looking at the sort_order and the max sort_order value
@@ -186,7 +187,5 @@ select orgunitgroupid, count(orgunitgroupid) as count
 from orgunitgroupsetmembers
 group by orgunitgroupid
 having count(orgunitgroupid) > 1;
-
-
 
 
