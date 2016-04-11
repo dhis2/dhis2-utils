@@ -37,10 +37,10 @@ public class RandomDataPopulator
     private static final String DE_GROUP = "Svac1cNQhRS";
     private static final String DE_WEIGHT = "h0xKKjijTdI";
     private static final int OU_LEVEL = 4;
-    private static final String PE_WEIGHT = "2014";
+    private static final String PE_WEIGHT = "2016";
     private static final List<String> PERIODS = Arrays.asList( 
-        "201301", "201302", "201303", "201304", "201305", "201306", "201307", "201308", "201309", "201310","201311", "201312", 
-        "201401", "201402", "201403", "201404", "201405", "201406", "201407", "201408", "201409", "201410","201411", "201412"
+        "201501", "201502", "201503", "201504", "201505", "201506", "201507", "201508", "201509", "201510","201511", "201512", 
+        "201601", "201602", "201603", "201604", "201605", "201606", "201607", "201608", "201609", "201610","201611", "201612"
     );
     
     @Autowired
@@ -80,7 +80,7 @@ public class RandomDataPopulator
 
         List<OrganisationUnit> ous = new ArrayList<OrganisationUnit>( organisationUnitService.getOrganisationUnitsAtLevel( OU_LEVEL ) );
         Collections.shuffle( ous );
-        ous = ListUtils.subList( ous, 0, 4000 );
+        ous = ListUtils.subList( ous, 0, 700 );
         
         log.info( "Organisation units: " + ous.size() );
 
