@@ -1,10 +1,10 @@
 package org.hisp.dhis.adhoc.command;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import org.amplecode.quick.BatchHandler;
 import org.amplecode.quick.BatchHandlerFactory;
@@ -25,19 +25,25 @@ import org.hisp.dhis.period.PeriodService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+
 public class RandomCompleteRegistrationPopulator
 {
     private static final Log log = LogFactory.getLog( RandomCompleteRegistrationPopulator.class );
 
     private static final int OU_LEVEL = 4;
     
-    private static final List<String> DATA_SETS = Arrays.asList( 
-        "Rl58JxmKJo2", "PLq9sJluXvc", "EDzMBk0RRji", "V8MHeZHIrcP", "VTdjfLXXmoi" );
+    private static final Map<String, Double> DATA_SETS = ImmutableMap.<String, Double>builder().
+        put( "Rl58JxmKJo2", 0.85 ).put( "PLq9sJluXvc", 0.76 ).put( "EDzMBk0RRji", 0.94 ).build();
     
-    private static final List<String> PERIODS = Arrays.asList( 
-        "201501", "201502", "201503", "201504", "201505", "201506", "201507", "201508", "201509", "201510","201511", "201512", 
-        "201601", "201602", "201603", "201604", "201605", "201606", "201607", "201608", "201609", "201610","201611", "201612"
-    );
+    private static final Map<String, Double> PERIODS = ImmutableMap.<String, Double>builder().
+        put( "201501", 0.68 ).put( "201502", 0.71 ).put( "201503", 0.78 ).put( "201504", 0.72 ).
+        put( "201505", 0.67 ).put( "201506", 0.82 ).put( "201507", 0.89 ).put( "201508", 0.92 ).
+        put( "201509", 0.96 ).put( "201510", 0.92 ).put( "201511", 0.89 ).put( "201512", 0.99 ).
+        put( "201601", 0.67 ).put( "201602", 0.69 ).put( "201603", 0.73 ).put( "201604", 0.79 ).
+        put( "201605", 0.84 ).put( "201606", 0.89 ).put( "201607", 0.98 ).put( "201608", 0.96 ).
+        put( "201609", 0.92 ).put( "201610", 0.80 ).put( "201611", 0.78 ).put( "201612", 0.83 ).build();
     
     @Autowired
     private IdentifiableObjectManager idObjectManager;
@@ -56,7 +62,7 @@ public class RandomCompleteRegistrationPopulator
     public void execute()
         throws Exception
     {
-        List<DataSet> dss = idObjectManager.getObjects( DataSet.class, IdentifiableProperty.UID, DATA_SETS );
+        List<DataSet> dss = idObjectManager.getObjects( DataSet.class, IdentifiableProperty.UID, DATA_SETS.keySet() );
 
         Date date = new Date();
         
@@ -72,7 +78,7 @@ public class RandomCompleteRegistrationPopulator
         // Periods (might fail if not present in database due to single tx)
         // ---------------------------------------------------------------------
 
-        List<Period> pes = periodService.reloadIsoPeriods( PERIODS );
+        List<Period> pes = periodService.reloadIsoPeriods( Lists.newArrayList( PERIODS.keySet() ) );
         
         log.info( "Periods: " + pes );
 
@@ -80,19 +86,25 @@ public class RandomCompleteRegistrationPopulator
 
         for ( DataSet ds : dss )
         {
-            for ( Period pe : pes )
+            for ( DataElementCategoryOptionCombo aoc : ds.getCategoryCombo().getOptionCombos() )
             {
-                Collections.shuffle( ous );
-                List<OrganisationUnit> subOus = ListUtils.subList( ous, 0, 650 );
-                
-                for ( OrganisationUnit ou : subOus )
+                for ( Period pe : pes )
                 {
-                    for ( DataElementCategoryOptionCombo aoc : ds.getCategoryCombo().getOptionCombos() )
+                    Double weight = DATA_SETS.get( ds.getUid() ) * PERIODS.get( pe.getIsoDate() );
+                    
+                    Double ouMax = ous.size() * weight;
+                    
+                    log.info( "Org unit max: " + ouMax );
+                                        
+                    Collections.shuffle( ous );
+                    List<OrganisationUnit> subOus = ListUtils.subList( ous, 0, ouMax.intValue() );
+                    
+                    for ( OrganisationUnit ou : subOus )
                     {
                         CompleteDataSetRegistration cdr = new CompleteDataSetRegistration( ds, pe, ou, aoc, date, storedBy );
                         
-                        batchHandler.addObject( cdr );
-                    }                
+                        batchHandler.addObject( cdr );                
+                    }
                 }
             }
             
