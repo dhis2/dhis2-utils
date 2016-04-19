@@ -36,7 +36,8 @@ public class RandomDataUsagePopulator
                 ( rand( 520, 610 ) + w ), ( rand( 620, 910 ) + w ), ( rand( 3200, 3400 ) + w ), 
                 
                 ( rand( 110, 150 ) + w ), ( rand( 120, 160 ) + w ), ( rand( 110, 150 ) + w ), ( rand( 130, 160 ) + w ), 
-                ( rand( 110, 160 ) + w ), ( rand( 140, 180 ) + w ), ( rand( 140, 190 ) + w ), 
+                ( rand( 110, 160 ) + w ), ( rand( 140, 180 ) + w ), ( rand( 140, 190 ) + w ),
+                
                 ( rani( 110, 150 ) + w ) );
             
             stats.setCreated( start.toDate() );
