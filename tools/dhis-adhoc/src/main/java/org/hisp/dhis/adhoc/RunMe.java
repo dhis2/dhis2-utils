@@ -42,7 +42,7 @@ public class RunMe
      */
     public static List<String> commands()
     {
-        return Arrays.asList( "randomCompleteRegistrationPopulator" ); // Change this
+        return Arrays.asList( "randomDataUsagePopulator" ); // Change this
     }
     
     public static void main( String[] args )

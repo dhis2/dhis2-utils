@@ -35,7 +35,8 @@ public class RandomCompleteRegistrationPopulator
     private static final int OU_LEVEL = 4;
     
     private static final Map<String, Double> DATA_SETS = ImmutableMap.<String, Double>builder().
-        put( "Rl58JxmKJo2", 0.85 ).put( "PLq9sJluXvc", 0.76 ).put( "EDzMBk0RRji", 0.94 ).build();
+        put( "TuL8IOPzpHh", 0.85 ).put( "Rl58JxmKJo2", 0.85 ).put( "PLq9sJluXvc", 0.76 ).put( "EDzMBk0RRji", 0.94 ).
+        build();
     
     private static final Map<String, Double> PERIODS = ImmutableMap.<String, Double>builder().
         put( "201501", 0.68 ).put( "201502", 0.71 ).put( "201503", 0.78 ).put( "201504", 0.72 ).
