@@ -314,12 +314,12 @@ ou.name as ouname, ou.uid as ouuid,
 coc.name as cocname, coc.uid as cocuid, coc.categoryoptioncomboid as cocid, 
 aoc.name as aocname, aoc.uid as aocuid, aoc.categoryoptioncomboid as aocid, dv.value as dvval
 from datavalue dv
-inner join dataelement de on (dv.dataelementid=de.dataelementid)
-inner join period pe on (dv.periodid=pe.periodid)
-inner join periodtype pt on (pe.periodtypeid=pt.periodtypeid)
-inner join organisationunit ou on (dv.sourceid=ou.organisationunitid)
-inner join categoryoptioncombo coc on (dv.categoryoptioncomboid=coc.categoryoptioncomboid)
-inner join categoryoptioncombo aoc on (dv.attributeoptioncomboid=aoc.categoryoptioncomboid)
+inner join dataelement de on dv.dataelementid=de.dataelementid
+inner join period pe on dv.periodid=pe.periodid
+inner join periodtype pt on pe.periodtypeid=pt.periodtypeid
+inner join organisationunit ou on dv.sourceid=ou.organisationunitid
+inner join categoryoptioncombo coc on dv.categoryoptioncomboid=coc.categoryoptioncomboid
+inner join categoryoptioncombo aoc on dv.attributeoptioncomboid=aoc.categoryoptioncomboid
 limit 10000;
 
 -- Data values created by day
@@ -335,6 +335,21 @@ order by d;
 update period set 
 startdate = (startdate + interval '1 year')::date,
 enddate = (enddate + interval '1 year')::date;
+
+
+-- COMPLETE DATA SET REGISTRATIONS
+
+-- Complete data set registration exploded view
+
+select ds.name, ds.uid, pe.startdate as pestart, pe.enddate as peend, pt.name as ptname, 
+ou.name as ouname, ou.uid as ouuid, aoc.name as aocname, aoc.uid as aocuid, aoc.categoryoptioncomboid as aocid
+from completedatasetregistration cdr
+inner join dataset ds on cdr.datasetid=ds.datasetid
+inner join period pe on cdr.periodid=pe.periodid
+inner join periodtype pt on pe.periodtypeid=pt.periodtypeid
+inner join organisationunit ou on cdr.sourceid=ou.organisationunitid
+inner join categoryoptioncombo aoc on cdr.attributeoptioncomboid=aoc.categoryoptioncomboid
+limit 10000;
 
 
 -- EVENTS
