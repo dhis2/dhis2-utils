@@ -120,6 +120,15 @@ union all select 'dataelementcategoryoptionusergroupaccesses' as tbl, ( select c
 union all select 'categoryoptiongroupsetusergroupaccesses' as tbl, ( select count(*) from categoryoptiongroupsetusergroupaccesses ) as cnt
 union all select 'categoryoptiongroupusergroupaccesses' as tbl, ( select count(*) from categoryoptiongroupusergroupaccesses ) as cnt;
 
+-- Category option combo count per category option
+
+select count(cocco.categoryoptioncomboid) as cat_option_combo_count, cocco.categoryoptionid as cat_option_id, co.name as cat_option_name
+from categoryoptioncombos_categoryoptions cocco 
+inner join dataelementcategoryoption co on cocco.categoryoptionid=co.categoryoptionid 
+group by cocco.categoryoptionid, co.name 
+order by count(categoryoptioncomboid) desc 
+limit 100;
+
 
 -- ORGANISATION UNITS
 
