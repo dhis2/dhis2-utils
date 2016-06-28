@@ -98,6 +98,28 @@ inner join categoryoptioncombos_categoryoptions coo on coc.categoryoptioncomboid
 inner join dataelementcategoryoption co on coo.categoryoptionid=co.categoryoptionid
 where co.uid='LPeJEUjotaB';
 
+-- Row count of category related tables
+
+select 'categorycombo' as tbl, ( select count(*) from categorycombo ) as cnt
+union all select 'categorycombos_categories' as tbl, ( select count(*) from categorycombos_categories ) as cnt
+union all select 'dataelementcategory' as tbl, ( select count(*) from dataelementcategory ) as cnt
+union all select 'categories_categoryoptions' as tbl, ( select count(*) from categories_categoryoptions ) as cnt
+union all select 'dataelementcategoryoption' as tbl, ( select count(*) from dataelementcategoryoption ) as cnt
+union all select 'categorycombos_optioncombos' as tbl, ( select count(*) from categorycombos_optioncombos ) as cnt
+union all select 'categoryoption_organisationunits' as tbl, ( select count(*) from categoryoption_organisationunits ) as cnt
+union all select 'categoryoptioncombo' as tbl, ( select count(*) from categoryoptioncombo ) as cnt
+union all select 'categoryoptioncombos_categoryoptions' as tbl, ( select count(*) from categoryoptioncombos_categoryoptions ) as cnt
+union all select 'categoryoptiongroup' as tbl, ( select count(*) from categoryoptiongroup ) as cnt
+union all select 'categoryoptiongroupmembers' as tbl, ( select count(*) from categoryoptiongroupmembers ) as cnt
+union all select 'categoryoptiongroupset' as tbl, ( select count(*) from categoryoptiongroupset ) as cnt
+union all select 'categoryoptiongroupsetmembers' as tbl, ( select count(*) from categoryoptiongroupsetmembers ) as cnt
+union all select 'categorycombousergroupaccesses' as tbl, ( select count(*) from categorycombousergroupaccesses ) as cnt
+union all select 'dataelementcategoryoptionusergroupaccesses' as tbl, ( select count(*) from dataelementcategoryoptionusergroupaccesses ) as cnt
+union all select 'dataelementcategoryusergroupaccesses' as tbl, ( select count(*) from dataelementcategoryusergroupaccesses ) as cnt
+union all select 'dataelementcategoryoptionusergroupaccesses' as tbl, ( select count(*) from dataelementcategoryoptionusergroupaccesses ) as cnt
+union all select 'categoryoptiongroupsetusergroupaccesses' as tbl, ( select count(*) from categoryoptiongroupsetusergroupaccesses ) as cnt
+union all select 'categoryoptiongroupusergroupaccesses' as tbl, ( select count(*) from categoryoptiongroupusergroupaccesses ) as cnt;
+
 
 -- ORGANISATION UNITS
 
