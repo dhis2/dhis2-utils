@@ -1,7 +1,7 @@
 #!/bin/sh
 
 TOMCAT_LOCAL=~/dev/lib/tomcat
-DHIS2_SOURCE_HOME=~/dev/src/dhis2
+DHIS2_SOURCE_HOME=~/dev/src/dhis2-core
 
 if [ $# -eq 0 ]
   then
