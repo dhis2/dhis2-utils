@@ -129,6 +129,14 @@ group by cocco.categoryoptionid, co.name
 order by count(categoryoptioncomboid) desc 
 limit 100;
 
+-- Exploded _datasetorganisationunitcategory view
+
+select ds.uid as ds_uid, ds.name as ds_name, ou.uid as ou_uid, ou.name as ou_name, coc.uid as aoc_uid, coc.name as aoc_name, dsc.costartdate, dsc.coenddate
+from _datasetorganisationunitcategory dsc
+inner join dataset ds on dsc.datasetid=ds.datasetid
+inner join organisationunit ou on dsc.organisationunitid=ou.organisationunitid
+inner join categoryoptioncombo coc on dsc.attributeoptioncomboid=coc.categoryoptioncomboid;
+
 
 -- ORGANISATION UNITS
 

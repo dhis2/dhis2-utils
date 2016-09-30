@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import org.amplecode.quick.BatchHandler;
-import org.amplecode.quick.BatchHandlerFactory;
+import org.hisp.quick.BatchHandler;
+import org.hisp.quick.BatchHandlerFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hisp.dhis.adhoc.annotation.Executed;
@@ -29,6 +29,8 @@ import org.hisp.dhis.period.PeriodService;
 import org.hisp.dhis.commons.collection.ListUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.google.common.collect.Sets;
 
 public class RandomDataPopulator
 {
@@ -106,7 +108,7 @@ public class RandomDataPopulator
         DataElement deWeight = dataElementService.getDataElement( DE_WEIGHT );
         Period peWeight = periodService.reloadIsoPeriod( PE_WEIGHT );
         
-        Collection<DataValue> values = dataValueService.getDataValues( deWeight, peWeight, ous );
+        Collection<DataValue> values = dataValueService.getDataValues( Sets.newHashSet( deWeight ), Sets.newHashSet( peWeight ), ous );
         
         Map<String, String> valueMap = new HashMap<String, String>();
         
