@@ -131,11 +131,24 @@ limit 100;
 
 -- Exploded _datasetorganisationunitcategory view
 
-select ds.uid as ds_uid, ds.name as ds_name, ou.uid as ou_uid, ou.name as ou_name, coc.uid as aoc_uid, coc.name as aoc_name, dsc.costartdate, dsc.coenddate
+select ds.uid as ds_uid, ds.name as ds_name, ou.uid as ou_uid, ou.name as ou_name, oulev2.name as oulev2_name, oulev3.name as oulev3_name, 
+coc.uid as aoc_uid, coc.name as aoc_name, dsc.costartdate, dsc.coenddate
 from _datasetorganisationunitcategory dsc
 inner join dataset ds on dsc.datasetid=ds.datasetid
-inner join organisationunit ou on dsc.organisationunitid=ou.organisationunitid
+inner join _orgunitstructure ous on dsc.organisationunitid=ous.organisationunitid
+inner join organisationunit ou on ous.organisationunitid=ou.organisationunitid
+inner join organisationunit oulev2 on ous.idlevel2=oulev2.organisationunitid
+inner join organisationunit oulev3 on ous.idlevel3=oulev3.organisationunitid
 inner join categoryoptioncombo coc on dsc.attributeoptioncomboid=coc.categoryoptioncomboid;
+
+-- Exploded analytics_completenesstarget view
+
+select ct.*, ds.name as ds_name, oulev2.name as oulev2_name, oulev3.name as oulev3_name, coc.name as aoc_name
+from analytics_completenesstarget ct
+inner join dataset ds on ct.dx=ds.uid
+inner join organisationunit oulev2 on ct.uidlevel2=oulev2.uid
+inner join organisationunit oulev3 on ct.uidlevel3=oulev3.uid
+inner join categoryoptioncombo coc on ct.ao=coc.uid
 
 
 -- ORGANISATION UNITS
