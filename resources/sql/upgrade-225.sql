@@ -3,7 +3,7 @@
 
 -- Add deleted column to datavalue table
 
--- This will be handled by DHIS 2. Running this script will be much faster in comparison for large datavalue tables.
+-- This will be handled by DHIS 2, however running this script will be much faster in comparison for large datavalue tables
 
 begin;
 
