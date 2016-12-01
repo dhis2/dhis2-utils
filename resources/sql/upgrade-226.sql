@@ -11,3 +11,14 @@ where dataelementid in (
 and value is not null
 and value ~ ','
 and value not like '\[%\]';
+
+-- Upgrade coordinate tracked entity attribute values to use brackets
+
+update trackedentityattributevalue
+set value = '[' || value || ']'
+where trackedentityattributeid in (
+  select trackedentityattributeid from trackedentityattribute
+  where valuetype='COORDINATE')
+and value is not null
+and value ~ ','
+and value not like '\[%\]';
