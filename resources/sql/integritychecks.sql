@@ -189,3 +189,16 @@ group by orgunitgroupid
 having count(orgunitgroupid) > 1;
 
 
+-- DATA VALUES
+
+-- Get data values which are not compatible with the data element value type
+
+select * from datavalue
+where value !~* '^(-?[0-9]+)(\.[0-9]+)?$'
+and dataelementid in (
+  select dataelementid 
+  from dataelement de
+  where de.valuetype in ('INTEGER', 'INTEGER_POSITIVE', 'INTEGER_NEGATIVE', 'INTEGER_ZERO_OR_POSITIVE', 'NUMBER', 'UNIT_INTERVAL', 'PERCENTAGE') )
+limit 2000;
+
+
