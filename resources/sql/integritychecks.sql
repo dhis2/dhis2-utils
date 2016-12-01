@@ -191,10 +191,11 @@ having count(orgunitgroupid) > 1;
 
 -- DATA VALUES
 
--- Get data values which are not compatible with the data element value type
+-- Get numerical data values which are not compatible with the data element value type
 
 select * from datavalue
 where value !~* '^(-?[0-9]+)(\.[0-9]+)?$'
+and value is not null
 and dataelementid in (
   select dataelementid 
   from dataelement de
