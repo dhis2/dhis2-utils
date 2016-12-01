@@ -193,13 +193,33 @@ having count(orgunitgroupid) > 1;
 
 -- Get numerical data values which are not compatible with the data element value type
 
-select * from datavalue
+select de.name as de_name, de.uid as de_uid, de.dataelementid as de_id,
+pe.startdate, pe.enddate, pe.periodid as pe_id, 
+ou.name as ou_name, ou.uid as ou_uid, ou.organisationunitid as ou_id, 
+dv.categoryoptioncomboid, dv.attributeoptioncomboid, dv.lastupdated, dv.created, de.valuetype as de_valuetype, dv.value 
+from datavalue dv
+inner join dataelement de on dv.dataelementid=de.dataelementid
+inner join period pe on dv.periodid=pe.periodid
+inner join organisationunit ou on dv.sourceid=ou.organisationunitid
 where value !~* '^(-?[0-9]+)(\.[0-9]+)?$'
 and value is not null
-and dataelementid in (
+and dv.dataelementid in (
   select dataelementid 
   from dataelement de
   where de.valuetype in ('INTEGER', 'INTEGER_POSITIVE', 'INTEGER_NEGATIVE', 'INTEGER_ZERO_OR_POSITIVE', 'NUMBER', 'UNIT_INTERVAL', 'PERCENTAGE') )
-limit 2000;
+limit 500;
+
+-- Count numerical data values which are not compatible with the data element value type
+
+select count(*)
+from datavalue dv
+where value !~* '^(-?[0-9]+)(\.[0-9]+)?$'
+and value is not null
+and dv.dataelementid in (
+  select dataelementid 
+  from dataelement de
+  where de.valuetype in ('INTEGER', 'INTEGER_POSITIVE', 'INTEGER_NEGATIVE', 'INTEGER_ZERO_OR_POSITIVE', 'NUMBER', 'UNIT_INTERVAL', 'PERCENTAGE') );
+
+
 
 
