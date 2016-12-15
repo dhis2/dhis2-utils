@@ -53,9 +53,7 @@ select * from categoryoptioncombo coc inner join categoryoptioncombos_categoryop
 
 -- Get category options with count of memberships in categories
 
-select cc.categoryoptionid, co.name, (
-select count(categoryoptionid) from categories_categoryoptions where categoryoptionid=cc.categoryoptionid )
-as categorycount from categories_categoryoptions as cc join dataelementcategoryoption co on(cc.categoryoptionid=co.categoryoptionid) order by categorycount desc;
+select co.categoryoptionid, co.name, (select count(categoryoptionid) from categories_categoryoptions where categoryoptionid=co.categoryoptionid ) as categorycount from dataelementcategoryoption co order by categorycount desc;
 
 -- Get category option combos without data values (not an error)
 
