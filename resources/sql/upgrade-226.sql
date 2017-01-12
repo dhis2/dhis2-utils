@@ -22,3 +22,8 @@ where trackedentityattributeid in (
 and value is not null
 and value ~ ','
 and value not like '\[%\]';
+
+-- Upgrade authority for messaging module
+
+insert into userroleauthorities 
+select userroleid, 'M_dhis-web-messaging' FROM userroleauthorities WHERE authority = 'M_dhis-web-dashboard-integration';
