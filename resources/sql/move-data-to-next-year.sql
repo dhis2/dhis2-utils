@@ -1,4 +1,7 @@
 
+-- SQL script for moving data from one year to the next. Useful for 
+-- updating demo databases with sample data.
+
 -- (Write) Move startdate and enddate in period to next year
 
 update period set 
