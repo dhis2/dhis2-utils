@@ -34,4 +34,14 @@ and value not like '\[%\]';
 -- Upgrade authority for messaging module
 
 insert into userroleauthorities 
-select userroleid, 'M_dhis-web-messaging' FROM userroleauthorities WHERE authority = 'M_dhis-web-dashboard-integration';
+select userroleid, 'M_dhis-web-messaging'
+from userroleauthorities 
+where authority = 'M_dhis-web-dashboard-integration';
+
+-- Add new event analytics authority to user roles with access to event reports/visualizer/dashboard
+
+insert into userroleauthorities(userroleid,authority)
+select distinct ura.userroleid, 'F_VIEW_EVENT_ANALYTICS' as view_event_analytics
+from userroleauthorities ura
+where ura.authority in ('M_dhis-web-event-reports', 'M_dhis-web-event-visualizer', 'M_dhis-web-dashboard-integration');
+
