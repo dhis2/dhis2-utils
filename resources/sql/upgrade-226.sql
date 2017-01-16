@@ -1,6 +1,14 @@
 
 -- 2.26 upgrade script
 
+-- Set data value 'created' and 'lastupdated' columns to now if null and set to not null
+
+update datavalue set created = now()::timestamp where created is null;
+alter table datavalue alter column created set not null;
+
+update datavalue set lastupdated = now()::timestamp where lastupdated is null;
+alter table datavalue alter column lastupdated set not null;
+
 -- Upgrade coordinate tracked entity data values to use brackets
 
 update trackedentitydatavalue
