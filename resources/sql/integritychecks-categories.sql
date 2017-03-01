@@ -59,6 +59,10 @@ select co.categoryoptionid, co.name, (select count(categoryoptionid) from catego
 
 select * from categoryoptioncombo where categoryoptioncomboid not in (select distinct categoryoptioncomboid from datavalue);
 
+-- Get category option combos whose name is blank or null
+
+SELECT * FROM categoryoptioncombo where name ='' OR name IS NULL;
+
 -- Get category combos with categories which share the same category options
 
 select cc.name as cc_name, co.name as co_name from categorycombo cc 
