@@ -70,6 +70,18 @@ group by cc_name, co_name having count(*) > 1;
 -- Get category combinations without data elements or data sets
 
 select * from categorycombo where categorycomboid not in (select distinct categorycomboid from dataelement);
+-- Get category option combos which have disjoint associations with category options within categories
+-- This normally results from altering the category options within a category after the category combo has been created
+
+WITH foo as (
+SELECT DISTINCT a.categorycomboid, b.categoryoptionid from categorycombos_optioncombos a
+INNER JOIN  categoryoptioncombos_categoryoptions  b on a.categoryoptioncomboid= b.categoryoptioncomboid
+EXCEPT
+SELECT a.categorycomboid,b.categoryoptionid from categorycombos_categories a
+INNER JOIN categories_categoryoptions b on a.categoryid = b.categoryid )
+SELECT y.uid as catcombo_uid,z.uid as catoption_uid,y.name,z.name from foo x
+INNER JOIN categorycombo y on x.categorycomboid = y.categorycomboid
+INNER JOIN dataelementcategoryoption z on x. categoryoptionid = z. categoryoptionid;
 
 -- Get data values where category option combo is not part of category combo of data element
 
