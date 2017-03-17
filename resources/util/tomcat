@@ -24,7 +24,7 @@ log)
   tail -f ${TOMCAT_LOCAL}/logs/catalina.out
   ;;
 load)
-  ${TOMCAT_LOCAL}/bin/startup.sh
+  ${TOMCAT_LOCAL}/bin/shutdown.sh
   sudo rm -rf ${TOMCAT_LOCAL}/webapps/dhis
   sudo rm ${TOMCAT_LOCAL}/webapps/dhis.war
   sudo cp ${DHIS2_SOURCE_HOME}/dhis-2/dhis-web/dhis-web-portal/target/dhis.war ${TOMCAT_LOCAL}/webapps/
@@ -50,7 +50,7 @@ get)
   
   sudo rm -rf ${TOMCAT_LOCAL}/webapps/dhis
   sudo rm ${TOMCAT_LOCAL}/webapps/dhis.war
-  wget -O ${TOMCAT_LOCAL}/webapps/dhis.war http://stable.dhis2.org/${2}
+  wget -O ${TOMCAT_LOCAL}/webapps/dhis.war https://stable.dhis2.org/${2}
   echo Tomcat updated with WAR version ${2} from stable.dhis2.org
   ;;
 esac
