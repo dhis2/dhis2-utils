@@ -59,6 +59,10 @@ select co.categoryoptionid, co.name, (select count(categoryoptionid) from catego
 
 select * from categoryoptioncombo where categoryoptioncomboid not in (select distinct categoryoptioncomboid from datavalue);
 
+-- Get category option combos whose name is blank or null
+
+SELECT * FROM categoryoptioncombo where name ='' OR name IS NULL;
+
 -- Get category combos with categories which share the same category options
 
 select cc.name as cc_name, co.name as co_name from categorycombo cc 
@@ -70,6 +74,34 @@ group by cc_name, co_name having count(*) > 1;
 -- Get category combinations without data elements or data sets
 
 select * from categorycombo where categorycomboid not in (select distinct categorycomboid from dataelement);
+-- Get category option combos which have disjoint associations with category options within categories
+-- This normally results from altering the category options within a category after the category combo has been created
+
+WITH foo as (
+SELECT DISTINCT a.categorycomboid, b.categoryoptionid from categorycombos_optioncombos a
+INNER JOIN  categoryoptioncombos_categoryoptions  b on a.categoryoptioncomboid= b.categoryoptioncomboid
+EXCEPT
+SELECT a.categorycomboid,b.categoryoptionid from categorycombos_categories a
+INNER JOIN categories_categoryoptions b on a.categoryid = b.categoryid )
+SELECT y.uid as catcombo_uid,z.uid as catoption_uid,y.name,z.name from foo x
+INNER JOIN categorycombo y on x.categorycomboid = y.categorycomboid
+INNER JOIN dataelementcategoryoption z on x. categoryoptionid = z. categoryoptionid;
+
+--Get category option combos whose cardnality differs from the theortical cardnality, as defined by the number of categories
+WITH baz as (
+SELECT foo.categorycomboid,foo.categoryoptioncomboid,foo.actual_cardnality,bar.theoretical_cardnality FROM (
+SELECT b.categorycomboid,a.categoryoptioncomboid, COUNT(*) as actual_cardnality FROM categoryoptioncombos_categoryoptions a
+INNER JOIN categorycombos_optioncombos b on a.categoryoptioncomboid = b.categoryoptioncomboid
+GROUP BY b.categorycomboid,a.categoryoptioncomboid ) as foo
+INNER JOIN 
+(SELECT categorycomboid,COUNT(*) as theoretical_cardnality FROM categorycombos_categories
+  GROUP BY categorycomboid) bar on foo.categorycomboid = bar.categorycomboid
+WHERE foo.actual_cardnality != bar.theoretical_cardnality )
+SELECT x.uid as catcombo_uid,y.uid as coc_uid,x.name as catcombo_name,y.name as coc_name,
+baz.actual_cardnality,baz.theoretical_cardnality 
+FROM baz
+INNER JOIN categorycombo x on baz.categorycomboid = x.categorycomboid
+INNER JOIN categoryoptioncombo y on baz.categoryoptioncomboid = y.categoryoptioncomboid;
 
 -- Get data values where category option combo is not part of category combo of data element
 
