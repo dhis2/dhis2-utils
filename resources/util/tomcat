@@ -9,7 +9,7 @@ if [ $# -eq 0 ]
 fi
 
 case $1 in
-start) 
+start)
   ${TOMCAT_LOCAL}/bin/startup.sh
   tail -f ${TOMCAT_LOCAL}/logs/catalina.out
   ;;
@@ -32,8 +32,7 @@ load)
   tail -f ${TOMCAT_LOCAL}/logs/catalina.out
   ;;
 clear)
-  sudo rm -rf ${TOMCAT_LOCAL}/webapps/dhis
-  sudo rm ${TOMCAT_LOCAL}/webapps/dhis.war
+  sudo rm -rf ${TOMCAT_LOCAL}/webapps/*
   echo Tomcat WAR cleared
   ;;
 update)
@@ -47,7 +46,7 @@ get)
   then
     echo "Usage: tomcat get [version]"
   fi
-  
+
   sudo rm -rf ${TOMCAT_LOCAL}/webapps/dhis
   sudo rm ${TOMCAT_LOCAL}/webapps/dhis.war
   wget -O ${TOMCAT_LOCAL}/webapps/dhis.war https://stable.dhis2.org/${2}
@@ -55,4 +54,3 @@ get)
   ;;
 esac
 exit 0
-
