@@ -74,7 +74,9 @@ group by cc_name, co_name having count(*) > 1;
 -- Get category combinations without data elements or data sets
 
 select * from categorycombo where categorycomboid not in (select distinct categorycomboid from dataelement);
+
 -- Get category option combos which have disjoint associations with category options within categories
+
 -- This normally results from altering the category options within a category after the category combo has been created
 
 WITH foo as (
@@ -87,7 +89,8 @@ SELECT y.uid as catcombo_uid,z.uid as catoption_uid,y.name,z.name from foo x
 INNER JOIN categorycombo y on x.categorycomboid = y.categorycomboid
 INNER JOIN dataelementcategoryoption z on x. categoryoptionid = z. categoryoptionid;
 
---Get category option combos whose cardnality differs from the theortical cardnality, as defined by the number of categories
+-- Get category option combos whose cardnality differs from the theoretical cardnality as defined by the number of categories
+
 WITH baz as (
 SELECT foo.categorycomboid,foo.categoryoptioncomboid,foo.actual_cardnality,bar.theoretical_cardnality FROM (
 SELECT b.categorycomboid,a.categoryoptioncomboid, COUNT(*) as actual_cardnality FROM categoryoptioncombos_categoryoptions a
@@ -174,5 +177,12 @@ insert into categorycombos_categories(categorycomboid, categoryid, sort_order)
 select categorycomboid, categoryid, 1 from
 (select categorycomboid from categorycombo where name = 'default') as categorycomboid,
 (select categoryid from dataelementcategory where name = 'default') as categoryid;
+
+-- Repair missing link row between default category option and default category option combo
+
+insert into categoryoptioncombos_categoryoptions(categoryoptionid, categoryoptioncomboid)
+select categoryoptionid, categoryoptioncomboid from
+(select categoryoptionid from dataelementcategoryoption where name = 'default') as categoryoptionid,
+(select categoryoptioncomboid from categoryoptioncombo where name = 'default') as categoryoptioncomboid;
 
 
