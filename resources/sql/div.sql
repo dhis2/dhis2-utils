@@ -457,6 +457,31 @@ latitude = (
   from organisationunit ou
   where psi.organisationunitid=ou.organisationunitid );
 
+-- (Write) Delete data values and events for a program
+
+delete from trackedentitydatavalueaudit dv
+where dv.programstageinstanceid in (
+  select psi.programstageinstanceid
+  from programstageinstance psi
+  inner join programinstance pi on psi.programinstanceid=psi.programinstanceid
+  inner join program pr on pi.programid=pr.programid
+  where pr.uid = 'bMcwwoVnbSR');
+
+delete from trackedentitydatavalue dv
+where dv.programstageinstanceid in (
+  select psi.programstageinstanceid
+  from programstageinstance psi
+  inner join programinstance pi on psi.programinstanceid=psi.programinstanceid
+  inner join program pr on pi.programid=pr.programid
+  where pr.uid = 'bMcwwoVnbSR');
+  
+delete from programstageinstance psi
+where psi.programinstanceid in (
+  select pi.programinstanceid
+  from programinstance pi
+  inner join program pr on pi.programid=pr.programid
+  where pr.uid = 'bMcwwoVnbSR');
+
 
 -- APPROVAL
 
