@@ -3,7 +3,6 @@ DECLARE
 organisationunitid integer;
 resort_object RECORD;
 resort_integer integer;
-has_children boolean;
 
 BEGIN
 
