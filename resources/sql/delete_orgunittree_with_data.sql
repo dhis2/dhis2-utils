@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION delete_orgunittree_with_data(uid character(11), recurse boolean default false) RETURNS integer AS $$
+CREATE OR REPLACE FUNCTION delete_orgunittree_with_data(uid character(11)) RETURNS integer AS $$
 DECLARE
 organisationunitid integer;
 resort_object RECORD;
@@ -9,14 +9,7 @@ BEGIN
 
 EXECUTE 'SELECT organisationunitid from organisationunit where uid = ''' ||   $1  || ''''  INTO organisationunitid;
 
-EXECUTE 'SELECT COUNT(organisationunitid) != 0 from organisationunit where parentid = $1' INTO has_children USING organisationunitid;
-
-IF recurse THEN
-EXECUTE 'SELECT delete_site_with_data(uid,true) from organisationunit where parentid = $1' USING organisationunitid;
-ELSIF has_children THEN
-RAISE EXCEPTION 'Organisationunit has children, and parameter for recursion is not set to true. Aborting.';
-END IF;
-
+EXECUTE 'SELECT delete_orgunittree_with_data(uid) from organisationunit where parentid = $1' USING organisationunitid;
 
 EXECUTE 'DELETE FROM completedatasetregistration where sourceid = $1' USING organisationunitid;
 EXECUTE 'DELETE FROM datavalueaudit where organisationunitid = $1' USING organisationunitid;
