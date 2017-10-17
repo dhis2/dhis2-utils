@@ -41,6 +41,7 @@ EXECUTE 'DELETE FROM programinstance WHERE organisationunitid = $1 OR trackedent
 --delete all data still connected to trackedentityinstances based on trackedentityinstance orgunit
 EXECUTE 'DELETE FROM trackedentityattributevalue WHERE trackedentityinstanceid IN(SELECT trackedentityinstanceid from trackedentityinstance where organisationunitid = $1) ' USING organisationunitid;
 EXECUTE 'DELETE FROM trackedentityattributevalueaudit WHERE trackedentityinstanceid IN(SELECT trackedentityinstanceid from trackedentityinstance where organisationunitid = $1) ' USING organisationunitid;
+EXECUTE 'DELETE FROM trackedentityaudit WHERE trackedentityinstanceid IN(SELECT trackedentityinstanceid from trackedentityinstance where organisationunitid = $1) ' USING organisationunitid;
 EXECUTE 'DELETE FROM trackedentityinstance WHERE organisationunitid = $1 ' USING organisationunitid;
 
 EXECUTE 'DELETE FROM userdatavieworgunits WHERE organisationunitid = $1 ' USING organisationunitid;
