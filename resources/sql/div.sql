@@ -358,6 +358,15 @@ where dv.attributeoptioncomboid in (
   inner join dataelementcategoryoption co on coo.categoryoptionid=co.categoryoptionid
   where co.uid='LPeJEUjotaB');
 
+-- (Write) Delete all data values for a data set
+  
+delete from datavalue dv
+where dv.dataelementid in (
+  select dse.dataelementid
+  from datasetelement dse
+  inner join dataset ds on dse.datasetid=ds.datasetid
+  where ds.uid='j38YW1Am7he');
+
 -- Data value exploded view
 
 select de.name as dename, de.uid as deuid, 
