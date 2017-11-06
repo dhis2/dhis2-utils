@@ -3,7 +3,7 @@
 <style type="text/css">
 
 #container {
-	width: 90%; 
+	width: 95%; 
 	margin: 5% auto;
 }
 
@@ -12,6 +12,10 @@
 	height: 78%;
 	font-size: 2.1em;
 	margin-bottom: 10px;
+}
+
+.main-btn {
+	font-size: 1.1em;
 }
 
 </style>
@@ -83,10 +87,10 @@ app.clearQuery = function() {
 <textarea id="query" placeholder="Enter query"></textarea>
 
 <div>
-<input type="button" onclick="app.formatQuery()" value="Format">
-<input type="button" onclick="app.unFormatQuery()" value="Un-format">
-<input type="button" onclick="app.clearQuery()" value="Clear">
-<input type="button" onclick="app.getQueryResult()" value="Get result">
+<input type="button" class="main-btn" onclick="app.formatQuery()" value="Format">
+<input type="button" class="main-btn"  onclick="app.unFormatQuery()" value="Un-format">
+<input type="button" class="main-btn" onclick="app.clearQuery()" value="Clear">
+<input type="button" class="main-btn"  onclick="app.getQueryResult()" value="Get result">
 </div>
 
 </div>
