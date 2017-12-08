@@ -1,5 +1,7 @@
 -- 2.29 upgrade script
 
+-- rename tables and columns from "tracked entity" to "tracked entity type"
+
 alter table trackedentity rename to trackedentitytype;
 alter table trackedentitytype rename trackedentityid to trackedentitytypeid;
 
