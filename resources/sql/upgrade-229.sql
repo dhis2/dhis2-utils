@@ -17,4 +17,4 @@ alter table trackedentityattributevalues rename to trackedentitytypeattributeval
 alter table trackedentitytypeattributevalues rename trackedentityid to trackedentitytypeid;
 
 alter table trackedentitytranslations rename trackedentityid to trackedentitytypeid;            
-alter table trackedentitytranslations rename constraint fk_objecttranslation_trackedentityid to fk_objecttranslation_trackedentitytypeid
+alter table trackedentitytranslations rename constraint fk_objecttranslation_trackedentityid to fk_objecttranslation_trackedentitytypeid;
