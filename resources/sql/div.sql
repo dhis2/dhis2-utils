@@ -438,6 +438,15 @@ where dv.value != '0'
 group by yr, mo
 order by yr, mo;
 
+-- Get count of data values by year
+
+select extract(year from pe.startdate) as yr, count(*)
+from datavalue dv
+inner join period pe on dv.periodid=pe.periodid
+where dv.value != '0'
+group by yr
+order by yr;
+
 -- Get count of datavalues by data element
 
 select de.name as de, count(*) as c
