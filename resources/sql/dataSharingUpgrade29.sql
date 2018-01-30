@@ -1,7 +1,6 @@
 
---- migrate userrole.dataSets and userrole.programs to usergroup
-
-
+-- migrate userrole.dataSets and userrole.programs to usergroup and apply data sharing
+-- after executing below scripts run command "select migrateRoleToUserGroup();" to migrate data. 
 
 CREATE OR REPLACE FUNCTION uid()
 RETURNS text AS $$
@@ -12,7 +11,7 @@ RETURNS text AS $$
    FROM generate_series(1,10)), '') ;
 $$ LANGUAGE sql;
 
-create or replace function migrateRoleToUG() returns void as $$
+create or replace function migrateRoleToUserGroup() returns void as $$
 declare role RECORD;
 declare curUserGroupId int;
 declare roleDataset RECORD;
@@ -78,3 +77,16 @@ loop
 end loop;
 end;
 $$ language plpgsql;
+
+
+--- rollback scripts
+
+-- delete from datasetusergroupaccesses where usergroupaccessid in ( select usergroupaccessid from usergroupaccess uga inner join usergroup ug on uga.usergroupid = ug.usergroupid and ug.name like '_DATASET_%');
+
+-- delete from programusergroupaccesses where usergroupaccessid in ( select usergroupaccessid from usergroupaccess uga inner join usergroup ug on uga.usergroupid = ug.usergroupid and ug.name like '_PROGRAM_%');
+
+-- delete from usergroupaccess where usergroupid in ( select usergroupid from usergroup where name  like '_DATASET_%' or name like '_PROGRAM_%');
+
+-- delete from usergroupmembers where usergroupid in ( select usergroupid from usergroup where name  like '_DATASET_%' or name like '_PROGRAM_%' );
+
+-- delete from usergroup where name  like '_DATASET_%' or name like '_PROGRAM_%';
