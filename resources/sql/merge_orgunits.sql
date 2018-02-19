@@ -14,13 +14,14 @@ END IF;
 
 EXECUTE 'SELECT organisationunitid from organisationunit where uid = ''' ||   $1  || ''''  INTO organisationunitid;
 
-EXECUTE format('UPDATE organisationunit set parentid = (SELECT organisationunitid from organisationunit where uid = %L )
-WHERE parentid = (SELECT organisationunitid from organisationunit where uid = %L)',dest_uid,source_uid);
+EXECUTE 'SELECT COUNT(organisationunitid) != 0 from organisationunit where parentid = $1' INTO has_children USING organisationunitid;
+
+IF  has_children THEN
+RAISE EXCEPTION 'Organisationunit has children. Aborting.';
+END IF;
 
 
-
-
--- All overlapping data, only of valuetype INT
+-- All overlapping data, only of numeric value type
 EXECUTE format('CREATE TEMP TABLE _temp_merge_overlaps  ON COMMIT DROP AS
  SELECT a.*  FROM datavalue a
 INNER JOIN
@@ -39,7 +40,8 @@ a.attributeoptioncomboid = b.attributeoptioncomboid
 WHERE a.sourceid IN (
 select organisationunitid from organisationunit
 where uid IN ( %L,%L) )
-and a.dataelementid in (SELECT DISTINCT dataelementid from dataelement where valuetype = ''int'')',
+and a.dataelementid in (SELECT DISTINCT dataelementid from 
+dataelement where valuetype IN (''INTEGER'',''NUMBER'',''INTEGER_ZERO_OR_POSITIVE'',''INTEGER_POSITIVE''))',
 source_uid,dest_uid,source_uid,dest_uid);
 
 --Switch the source 
@@ -142,7 +144,8 @@ a.attributeoptioncomboid = b.attributeoptioncomboid
 WHERE a.sourceid IN (
 select organisationunitid from organisationunit
 where uid IN ( %L,%L) )
-and a.dataelementid in (SELECT DISTINCT dataelementid from dataelement where valuetype != ''int'')',
+and a.dataelementid in (SELECT DISTINCT dataelementid from dataelement where valuetype 
+NOT IN (''INTEGER'',''NUMBER'',''INTEGER_ZERO_OR_POSITIVE'',''INTEGER_POSITIVE''))',
 source_uid,dest_uid,source_uid,dest_uid);
 
 --Switch the source 
@@ -181,16 +184,26 @@ AND d1.attributeoptioncomboid=d2.attributeoptioncomboid)',dest_uid,source_uid,de
 
 
 --Audit the changes to be made to the source data as it will be totally removed in the next step.
-EXECUTE format('INSERT INTO datavalueaudit SELECT nextval(''hibernate_sequence''::regclass),
+EXECUTE format('INSERT INTO datavalueaudit (datavalueauditid,
+dataelementid,
+periodid,
+organisationunitid,
+categoryoptioncomboid,
+value,
+modifiedby,
+audittype,
+attributeoptioncomboid,
+created )
+SELECT nextval(''hibernate_sequence''::regclass),
 dataelementid,
 periodid,
 ( SELECT organisationunitid from organisationunit where uid = %L ) as organisationunitid,
 categoryoptioncomboid,
 value,
-now()::timestamp without time zone,
 ''admin''::character varying(100) as modifiedby,
-''MERGE_SOURCE''::character varying(255) as audittype,
-attributeoptioncomboid
+''DELETE''::character varying(255) as audittype,
+attributeoptioncomboid,
+now()::timestamp without time zone 
 FROM datavalue where sourceid = ( SELECT organisationunitid 
 	from organisationunit where uid = %L )',dest_uid,source_uid);
 
@@ -201,7 +214,7 @@ WHERE organisationunitid = (select organisationunitid
 	from organisationunit where uid = %L )',dest_uid,source_uid);
 
 --DELETE all records for the source
-EXECUTE format('SELECT * FROM delete_site_with_data (%L::character(11) )',source_uid);
+EXECUTE format('SELECT * FROM delete_site_with_data( %L )',source_uid);
 
 
 RETURN 1;

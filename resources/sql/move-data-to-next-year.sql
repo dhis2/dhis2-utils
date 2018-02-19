@@ -1,6 +1,6 @@
 
--- SQL script for moving data from one year to the next. Useful for 
--- updating demo databases with sample data.
+-- SQL script for moving data from one year to the next. 
+-- Useful for updating demo databases with sample data.
 
 -- (Write) Move startdate and enddate in period to next year
 
@@ -28,3 +28,14 @@ lastupdated = (lastupdated + interval '1 year');
 
 update interpretation set created = (created + interval '1 year');
 update interpretation set lastupdated=created;
+
+-- (Write) Move favorite start/end dates to next year
+
+update mapview set startdate = (startdate + interval '1 year') where startdate is not null;
+update mapview set enddate = (enddate + interval '1 year') where enddate is not null;
+
+update eventreport set startdate = (startdate + interval '1 year') where startdate is not null;
+update eventreport set enddate = (enddate + interval '1 year') where enddate is not null;
+
+update eventchart set startdate = (startdate + interval '1 year') where startdate is not null;
+update eventchart set enddate = (enddate + interval '1 year') where enddate is not null;
