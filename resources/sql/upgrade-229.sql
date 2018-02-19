@@ -50,7 +50,6 @@ update program_attributes set searchable = true;
 
 	
 -- migrate userrole.dataSets and userrole.programs to usergroup and apply data sharing
--- after executing below scripts run command "select migrateRoleToUserGroup();" to migrate data. 
 
 CREATE OR REPLACE FUNCTION uid()
 RETURNS text AS $$
@@ -67,6 +66,7 @@ declare curUserGroupId int;
 declare roleDataset RECORD;
 declare curGroupAccessId int;
 declare roleProgram RECORD;
+declare programStage RECORD;
 begin
 for role in select * from userrole
 loop 
@@ -78,7 +78,7 @@ loop
 		for roleDataset in select * from userroledataset
 		loop 
 			insert into usergroupaccess ( usergroupaccessid, access, usergroupid )
-			values ( nextval('hibernate_sequence'::regclass), 'rwrw----', curUserGroupId )
+			values ( nextval('hibernate_sequence'::regclass), 'r-rw----', curUserGroupId )
 			returning usergroupaccessid into curGroupAccessId;
 			insert into datasetusergroupaccesses (datasetid, usergroupaccessid)
 			values ( roleDataset.datasetid, curGroupAccessId);
@@ -89,7 +89,7 @@ loop
 			end if;
 		end loop;
 	end if;
-	if exists ( select 1 from userroleprogram rds where rds.userroleid = role.userroleid )
+	if exists ( select 1 from userroleprogram urp where urp.userroleid = role.userroleid )
 	then 
 		insert into usergroup (usergroupid, name, uid, code, lastupdated, created, userid, publicaccess, lastupdatedby)
 		values ( nextval('hibernate_sequence'::regclass), '_PROGRAM_' || role.name, uid(), null,null,now(), role.userid, 'rw------',null )
@@ -97,10 +97,18 @@ loop
 		for roleProgram in select * from userroleprogram
 		loop 
 			insert into usergroupaccess ( usergroupaccessid, access, usergroupid )
-			values ( nextval('hibernate_sequence'::regclass), 'rwrw----', curUserGroupId )
+			values ( nextval('hibernate_sequence'::regclass), 'r-rw----', curUserGroupId )
 			returning usergroupaccessid into curGroupAccessId;
 			insert into programusergroupaccesses (programid, usergroupaccessid)
 			values ( roleProgram.programid, curGroupAccessId);
+			for programStage in select * from programstage pgs where pgs.programid = roleProgram.programid
+			loop
+				insert into usergroupaccess ( usergroupaccessid, access, usergroupid )
+				values ( nextval('hibernate_sequence'::regclass), 'r-rw----', curUserGroupId )
+				returning usergroupaccessid into curGroupAccessId;
+				insert into programstageusergroupaccesses ( programid, usergroupaccessid )
+				values ( programStage.programstageid, curGroupAccessId );
+			end loop;
 			if not exists ( select 1 from usergroupmembers where usergroupid = curUserGroupId )
 			then 
 				insert into usergroupmembers ( usergroupid, userid )
@@ -112,10 +120,13 @@ end loop;
 end;
 $$ language plpgsql;
 
+select migrateRoleToUserGroup();
+
 --- rollback scripts for migrate data sharing 
 
 -- delete from datasetusergroupaccesses where usergroupaccessid in ( select usergroupaccessid from usergroupaccess uga inner join usergroup ug on uga.usergroupid = ug.usergroupid and ug.name like '_DATASET_%');
 -- delete from programusergroupaccesses where usergroupaccessid in ( select usergroupaccessid from usergroupaccess uga inner join usergroup ug on uga.usergroupid = ug.usergroupid and ug.name like '_PROGRAM_%');
+-- delete from programstageusergroupaccesses where usergroupaccessid in ( select usergroupaccessid from usergroupaccess uga inner join usergroup ug on uga.usergroupid = ug.usergroupid and ug.name like '_PROGRAM_%');
 -- delete from usergroupaccess where usergroupid in ( select usergroupid from usergroup where name  like '_DATASET_%' or name like '_PROGRAM_%');
 -- delete from usergroupmembers where usergroupid in ( select usergroupid from usergroup where name  like '_DATASET_%' or name like '_PROGRAM_%' );
 -- delete from usergroup where name  like '_DATASET_%' or name like '_PROGRAM_%';
