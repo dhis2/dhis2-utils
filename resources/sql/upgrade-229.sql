@@ -42,3 +42,8 @@ update usergroupaccess set access = 'r-r-----' where access = 'r-------' and use
   union all select usergroupaccessid from programstageuseraccesses
   union all select usergroupaccessid from datasetuseraccesses
   union all select usergroupaccessid from dataelementcategoryoption);
+
+
+-- set all tracked entity attributes searchable
+
+update program_attributes set searchable = true;
