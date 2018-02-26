@@ -38,9 +38,9 @@ update usergroupaccess set access = 'r-r-----' where access = 'r-------' and use
   union all select usergroupaccessid from dataelementcategoryoption);
 
 
--- set all tracked entity attributes searchable
+-- add searchable column and set all tracked entity attributes searchable
 
-update program_attributes set searchable = true;
+alter table program_attributes add column searchable boolean default true;
 
 	
 -- migrate userrole.dataSets and userrole.programs to usergroup and apply data sharing
