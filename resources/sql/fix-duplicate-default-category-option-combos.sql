@@ -1,6 +1,8 @@
 
 -- Delete and update data values for which two attribute option combos are duplicates
 
+-- The identifiers in this script must be updated to match the relevant database
+
 -- Get default option combos 1 (should only be one)
 
 select * from categoryoptioncombo coc 
