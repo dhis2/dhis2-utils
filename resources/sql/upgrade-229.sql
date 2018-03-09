@@ -114,13 +114,6 @@ end loop;
 end;
 $$ language plpgsql;
 
-select migrateRoleToUserGroup();
-
---- rollback scripts for migrate data sharing 
-
--- delete from datasetusergroupaccesses where usergroupaccessid in ( select usergroupaccessid from usergroupaccess uga inner join usergroup ug on uga.usergroupid = ug.usergroupid and ug.name like '_DATASET_%');
--- delete from programusergroupaccesses where usergroupaccessid in ( select usergroupaccessid from usergroupaccess uga inner join usergroup ug on uga.usergroupid = ug.usergroupid and ug.name like '_PROGRAM_%');
--- delete from programstageusergroupaccesses where usergroupaccessid in ( select usergroupaccessid from usergroupaccess uga inner join usergroup ug on uga.usergroupid = ug.usergroupid and ug.name like '_PROGRAM_%');
--- delete from usergroupaccess where usergroupid in ( select usergroupid from usergroup where name  like '_DATASET_%' or name like '_PROGRAM_%');
--- delete from usergroupmembers where usergroupid in ( select usergroupid from usergroup where name  like '_DATASET_%' or name like '_PROGRAM_%' );
--- delete from usergroup where name  like '_DATASET_%' or name like '_PROGRAM_%';
+--To automatically share programs and data sets with users that had access to these before 2.29, 
+--start the DHIS2 server, then run the migration bu executing this SQL:
+--select migrateRoleToUserGroup();
