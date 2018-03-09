@@ -83,12 +83,12 @@ loop
 			end if;
 		end loop;
 	end if;
-	if exists ( select 1 from userroleprogram urp where urp.userroleid = role.userroleid )
+	if exists ( select 1 from program_userroles urp where urp.userroleid = role.userroleid )
 	then 
 		insert into usergroup (usergroupid, name, uid, code, lastupdated, created, userid, publicaccess, lastupdatedby)
 		values ( nextval('hibernate_sequence'::regclass), '_PROGRAM_' || role.name, uid(), null,null,now(), role.userid, 'rw------',null )
 		returning usergroup.usergroupid into curUserGroupId;
-		for roleProgram in select * from userroleprogram
+		for roleProgram in select * from program_userroles
 		loop 
 			insert into usergroupaccess ( usergroupaccessid, access, usergroupid )
 			values ( nextval('hibernate_sequence'::regclass), 'r-rw----', curUserGroupId )
