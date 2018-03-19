@@ -41,9 +41,14 @@ update usergroupaccess set access = 'r-r-----' where access = 'r-------' and use
 -- add searchable column and set all tracked entity attributes searchable
 
 alter table program_attributes add column searchable boolean default true;
-
 	
--- migrate userrole.dataSets and userrole.programs to usergroup and apply data sharing
+-- ***** NOTE *****
+-- From 2.29 UserRole-DataSet and UserRole-Program relations are replace by new Data Sharing level
+-- To migrate apply new data sharing for existing data, do the following steps:
+-- 1) Execute below scripts.
+-- 2) Start the DHIS2 server.
+-- 3) Then run the migration by executing this SQL: select migrateRoleToUserGroup();
+-- 4) Restart server.
 
 CREATE OR REPLACE FUNCTION uid()
 RETURNS text AS $$
@@ -69,7 +74,7 @@ loop
 		insert into usergroup (usergroupid, name, uid, code, lastupdated, created, userid, publicaccess, lastupdatedby)
 		values ( nextval('hibernate_sequence'::regclass), '_DATASET_' || role.name, uid(), null,null,now(), role.userid, 'rw------',null )
 		returning usergroup.usergroupid into curUserGroupId;
-		for roleDataset in select * from userroledataset
+		for roleDataset in select * from userroledataset rds where rds.userroleid = role.userroleid
 		loop 
 			insert into usergroupaccess ( usergroupaccessid, access, usergroupid )
 			values ( nextval('hibernate_sequence'::regclass), 'r-rw----', curUserGroupId )
@@ -88,7 +93,7 @@ loop
 		insert into usergroup (usergroupid, name, uid, code, lastupdated, created, userid, publicaccess, lastupdatedby)
 		values ( nextval('hibernate_sequence'::regclass), '_PROGRAM_' || role.name, uid(), null,null,now(), role.userid, 'rw------',null )
 		returning usergroup.usergroupid into curUserGroupId;
-		for roleProgram in select * from program_userroles
+		for roleProgram in select * from program_userroles urp where urp.userroleid = role.userroleid
 		loop 
 			insert into usergroupaccess ( usergroupaccessid, access, usergroupid )
 			values ( nextval('hibernate_sequence'::regclass), 'r-rw----', curUserGroupId )
@@ -113,7 +118,3 @@ loop
 end loop;
 end;
 $$ language plpgsql;
-
---To automatically share programs and data sets with users that had access to these before 2.29, 
---start the DHIS2 server, then run the migration bu executing this SQL:
---select migrateRoleToUserGroup();
