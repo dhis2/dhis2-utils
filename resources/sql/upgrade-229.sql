@@ -72,7 +72,7 @@ loop
 	if exists ( select 1 from userroledataset rds where rds.userroleid = role.userroleid )
 	then 
 		insert into usergroup (usergroupid, name, uid, code, lastupdated, created, userid, publicaccess, lastupdatedby)
-		values ( nextval('hibernate_sequence'::regclass), '_DATASET_' || role.name, uid(), null,null,now(), role.userid, 'rw------',null )
+		values ( nextval('hibernate_sequence'::regclass), '_DATASET_' || role.name, uid(), null,now(),now(), role.userid, 'rw------',null )
 		returning usergroup.usergroupid into curUserGroupId;
 		for roleDataset in select * from userroledataset rds where rds.userroleid = role.userroleid
 		loop 
@@ -91,7 +91,7 @@ loop
 	if exists ( select 1 from program_userroles urp where urp.userroleid = role.userroleid )
 	then 
 		insert into usergroup (usergroupid, name, uid, code, lastupdated, created, userid, publicaccess, lastupdatedby)
-		values ( nextval('hibernate_sequence'::regclass), '_PROGRAM_' || role.name, uid(), null,null,now(), role.userid, 'rw------',null )
+		values ( nextval('hibernate_sequence'::regclass), '_PROGRAM_' || role.name, uid(), null,now(),now(), role.userid, 'rw------',null )
 		returning usergroup.usergroupid into curUserGroupId;
 		for roleProgram in select * from program_userroles urp where urp.userroleid = role.userroleid
 		loop 
