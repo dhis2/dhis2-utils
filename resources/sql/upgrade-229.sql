@@ -1,7 +1,11 @@
 
 -- 2.29 upgrade script
 
--- rename tables and columns from "tracked entity" to "tracked entity type"
+-- Update authorities from old to new dashboard app
+
+update userroleauthorities set authority = 'M_dhis-web-dashboard' where authority = 'M_dhis-web-dashboard-integration';
+
+-- Rename tables and columns from "tracked entity" to "tracked entity type"
 
 alter table trackedentity rename to trackedentitytype;
 alter table trackedentitytype rename trackedentityid to trackedentitytypeid;
@@ -20,7 +24,7 @@ alter table trackedentitytypeattributevalues rename trackedentityid to trackeden
 alter table trackedentitytranslations rename trackedentityid to trackedentitytypeid;            
 alter table trackedentitytranslations rename constraint fk_objecttranslation_trackedentityid to fk_objecttranslation_trackedentitytypeid;
 
--- grant data read sharing to users for data sets which have metadata read sharing 
+-- Grant data read sharing to users for data sets which have metadata read sharing 
 
 update dataset set publicaccess = 'rwr-----' where publicaccess = 'rw------';
 update dataset set publicaccess = 'r-r-----' where publicaccess = 'r-------';
@@ -38,11 +42,11 @@ update usergroupaccess set access = 'r-r-----' where access = 'r-------' and use
   union all select usergroupaccessid from dataelementcategoryoption);
 
 
--- add searchable column and set all tracked entity attributes searchable
+-- Add searchable column and set all tracked entity attributes searchable
 
 alter table program_attributes add column searchable boolean default true;
 	
--- ***** NOTE *****
+-- *** NOTE ***
 -- From 2.29 UserRole-DataSet and UserRole-Program relations are replace by new Data Sharing level
 -- To migrate apply new data sharing for existing data, do the following steps:
 -- 1) Execute below scripts.
