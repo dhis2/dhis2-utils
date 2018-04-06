@@ -70,6 +70,7 @@ declare roleDataset RECORD;
 declare curGroupAccessId int;
 declare roleProgram RECORD;
 declare programStage RECORD;
+declare option RECORD;
 begin
 for role in select * from userrole
 loop 
@@ -85,11 +86,29 @@ loop
 			returning usergroupaccessid into curGroupAccessId;
 			insert into datasetusergroupaccesses (datasetid, usergroupaccessid)
 			values ( roleDataset.datasetid, curGroupAccessId);
+			
+			for option in select distinct co.categoryoptionid, ds.datasetid 
+			from dataset ds inner join datasetelement dse on ds.datasetid = dse.datasetid 
+			inner join dataelement de on dse.dataelementid = de.dataelementid
+			inner join categorycombo cc on de.categorycomboid = cc.categorycomboid
+			inner join categorycombos_optioncombos coc on cc.categorycomboid = coc.categorycomboid
+			inner join categoryoptioncombos_categoryoptions coo on coc.categoryoptioncomboid = coo.categoryoptioncomboid
+			inner join dataelementcategoryoption co on coo.categoryoptionid = co.categoryoptionid
+			where ds.datasetid = roleDataset.datasetid
+			loop 
+				insert into usergroupaccess ( usergroupaccessid, access, usergroupid )
+				values ( nextval('hibernate_sequence'::regclass), 'r-rw----', curUserGroupId )
+				returning usergroupaccessid into curGroupAccessId;
+				insert into dataelementcategoryoptionusergroupaccesses (categoryoptionid, usergroupaccessid)
+				values (option.categoryoptionid, curGroupAccessId);
+			end loop;	
+
 			if not exists ( select 1 from usergroupmembers where usergroupid = curUserGroupId )
 			then 
 				insert into usergroupmembers ( usergroupid, userid )
 				select curUserGroupId, um.userid from userrolemembers um where um.userroleid = role.userroleid;
 			end if;
+
 		end loop;
 	end if;
 	if exists ( select 1 from program_userroles urp where urp.userroleid = role.userroleid )
