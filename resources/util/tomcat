@@ -41,16 +41,5 @@ update)
   sudo cp ${DHIS2_SOURCE_HOME}/dhis-2/dhis-web/dhis-web-portal/target/dhis.war ${TOMCAT_LOCAL}/webapps/
   echo Tomcat updated with latest WAR from src code
   ;;
-get)
-  if [ $# -eq 1 ]
-  then
-    echo "Usage: tomcat get [version]"
-  fi
-
-  sudo rm -rf ${TOMCAT_LOCAL}/webapps/dhis
-  sudo rm ${TOMCAT_LOCAL}/webapps/dhis.war
-  wget -O ${TOMCAT_LOCAL}/webapps/dhis.war https://stable.dhis2.org/${2}
-  echo Tomcat updated with WAR version ${2} from stable.dhis2.org
-  ;;
 esac
 exit 0
