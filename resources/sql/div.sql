@@ -431,7 +431,7 @@ or psi.executiondate > '2020-01-01';
 
 -- Get count of data values by year and month
 
-select extract(year from pe.startdate) as yr, extract(month from pe.startdate) as mo, count(*)
+select extract(year from pe.startdate)::integer as yr, extract(month from pe.startdate)::integer as mo, count(*)
 from datavalue dv
 inner join period pe on dv.periodid=pe.periodid
 where dv.value != '0'
@@ -440,7 +440,7 @@ order by yr, mo;
 
 -- Get count of data values by year
 
-select extract(year from pe.startdate) as yr, count(*)
+select extract(year from pe.startdate)::integer as yr, count(*)
 from datavalue dv
 inner join period pe on dv.periodid=pe.periodid
 where dv.value != '0'
@@ -454,6 +454,13 @@ from datavalue dv
 inner join dataelement de on dv.dataelementid=dv.dataelementid
 group by de
 order by c;
+
+-- Get count of analytics values by year and month
+
+select "monthly", "yearly", count(*)
+from analytics ax
+group by "monthly", "yearly"
+order by "monthly","yearly";
 
 -- Get count of data elements per program
 
