@@ -5,7 +5,7 @@
 
 -- Current queries
 
-select pid, datname, usename, query_start, now() - pg_stat_activity.query_start as duration, state, waiting, query from pg_catalog.pg_stat_activity;
+select pid, datname, usename, query_start, now() - pg_stat_activity.query_start as duration, state, query from pg_catalog.pg_stat_activity;
 
 -- Count of queries
 
@@ -13,7 +13,7 @@ select count(*) from pg_catalog.pg_stat_activity;
 
 -- Queries running for more than 5 minutes
 
-select pid, datname, usename, query_start, now() - pg_stat_activity.query_start as duration, state, waiting, query from pg_catalog.pg_stat_activity where (now() - pg_stat_activity.query_start) > interval '5 minutes';
+select pid, datname, usename, query_start, now() - pg_stat_activity.query_start as duration, state, query from pg_catalog.pg_stat_activity where (now() - pg_stat_activity.query_start) > interval '5 minutes';
 
 -- Count of queries running for more than 5 minutes
 
