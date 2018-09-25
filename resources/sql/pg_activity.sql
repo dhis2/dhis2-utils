@@ -48,7 +48,7 @@ declare
 	q record;
 	c integer := 0;
 begin
-	for q in select * from pg_catalog.pg_stat_activity where query not like '%pg_catalog%' and query != 'COMMIT' and (now() - pg_stat_activity.query_start) > interval '10 minutes'
+	for q in select * from pg_catalog.pg_stat_activity where query not like '%pg_catalog%' and (now() - pg_stat_activity.query_start) > interval '10 minutes'
 	loop
 		raise notice 'Terminating PID: %', q.pid;
 		perform pg_terminate_backend(q.pid);
