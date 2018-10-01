@@ -5,19 +5,19 @@
 
 -- Current queries
 
-select pid, datname, usename, query_start, now() - pg_stat_activity.query_start as duration, state, query from pg_catalog.pg_stat_activity;
+select pid, datname, usename, query_start, now() - pg_stat_activity.query_start as duration, state, query from pg_catalog.pg_stat_activity where state != 'idle' and query not ilike 'pg_stat_activity';
 
--- Count of queries
+-- Count of current queries
 
-select count(*) from pg_catalog.pg_stat_activity;
+select count(*) from pg_catalog.pg_stat_activity where state != 'idle' and query not ilike 'pg_stat_activity';
 
 -- Queries running for more than 5 minutes
 
-select pid, datname, usename, query_start, now() - pg_stat_activity.query_start as duration, state, query from pg_catalog.pg_stat_activity where (now() - pg_stat_activity.query_start) > interval '5 minutes';
+select pid, datname, usename, query_start, now() - pg_stat_activity.query_start as duration, state, query from pg_catalog.pg_stat_activity where (now() - pg_stat_activity.query_start) > interval '5 minutes' and state != 'idle' and query not ilike 'pg_stat_activity';
 
 -- Count of queries running for more than 5 minutes
 
-select count(*) from pg_catalog.pg_stat_activity where (now() - pg_stat_activity.query_start) > interval '5 minutes';
+select count(*) from pg_catalog.pg_stat_activity where (now() - pg_stat_activity.query_start) > interval '5 minutes' and state != 'idle' and query not ilike 'pg_stat_activity';
 
 -- Current locks
 
@@ -39,25 +39,25 @@ select pg_cancel_backend(_pid_);
 
 select pg_terminate_backend(_pid_);
 
--- Function for terminating slow queries
+-- Function for cancelling slow queries
 
-drop function if exists dhis_terminate_slow_queries;
-create function dhis_terminate_slow_queries() 
+drop function if exists dhis_cancel_slow_queries;
+create function dhis_cancel_slow_queries()
 returns integer as $$
 declare
 	q record;
 	c integer := 0;
 begin
-	for q in select * from pg_catalog.pg_stat_activity where query not like '%pg_catalog%' and (now() - pg_stat_activity.query_start) > interval '10 minutes'
+	for q in select * from pg_catalog.pg_stat_activity where (now() - pg_stat_activity.query_start) > interval '15 minutes' and state != 'idle' and query not ilike 'pg_stat_activity';
 	loop
 		raise notice 'Terminating PID: %', q.pid;
-		perform pg_terminate_backend(q.pid);
+		perform pg_cancel_backend(q.pid);
 		c := c + 1;
 	end loop;
 	return c;
 end;
 $$ language plpgsql;
 
--- Function invocation
+-- Terminate function invocation
 
-select dhis_terminate_slow_queries();
+select dhis_cancel_slow_queries();
