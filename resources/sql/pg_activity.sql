@@ -41,8 +41,8 @@ select pg_terminate_backend(_pid_);
 
 -- Function for terminating slow queries
 
-drop function if exists terminate_slow_queries;
-create function terminate_slow_queries() 
+drop function if exists dhis_terminate_slow_queries;
+create function dhis_terminate_slow_queries() 
 returns integer as $$
 declare
 	q record;
@@ -60,4 +60,4 @@ $$ language plpgsql;
 
 -- Function invocation
 
-select terminate_slow_queries();
+select dhis_terminate_slow_queries();
