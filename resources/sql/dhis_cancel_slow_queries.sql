@@ -13,7 +13,7 @@ declare
 begin
 	for q in select * from pg_catalog.pg_stat_activity where (now() - pg_stat_activity.query_start) > interval '15 minutes' and state != 'idle' and query not ilike '%pg_stat_activity%'
 	loop
-		raise notice 'Terminating PID: %', q.pid;
+		raise notice 'Cancelling query with PID: %', q.pid;
 		perform pg_cancel_backend(q.pid);
 		c := c + 1;
 	end loop;
