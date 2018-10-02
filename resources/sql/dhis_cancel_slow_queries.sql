@@ -3,7 +3,7 @@
 
 -- To invoke run $ select dhis_cancel_slow_queries();
 
-drop function if exists dhis_cancel_slow_queries;
+drop function if exists dhis_cancel_slow_queries();
 
 create function dhis_cancel_slow_queries()
 returns integer as $$
