@@ -6,7 +6,7 @@ TIMESTAMP=$(date '+%Y%m%d-%H%M%S')
 TAR_FILE="thread_dump_${TIMESTAMP}.tar.gz"
 OUTPUT_DIR="/tmp"
 DUMP_NO=4
-DUMP_PAUSE=1
+DUMP_PAUSE=10
 
 echo "Java PID: ${JAVA_PID}"
 echo "Java user: ${JAVA_USER}"
