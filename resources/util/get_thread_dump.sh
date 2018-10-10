@@ -16,7 +16,6 @@ echo "---"
 
 cd ${OUTPUT_DIR}
 
-#for n in {1..4}
 for n in $(seq 1 ${DUMP_NO})
 do
   OUTPUT_FILE="thread_dump_${TIMESTAMP}_${n}.txt"
