@@ -28,5 +28,5 @@ done
 tar -czf ${TAR_FILE} thread_dump_${TIMESTAMP}*.txt
 echo "---"
 echo "Wrote compressed tar archive to: ${OUTPUT_DIR}/${TAR_FILE}"
-echo "Done!"
 cd - > /dev/null
+echo "Done!"
