@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Script which creates thread dumps of the Java process using `jstack`.
+# Writes them to tmp folder and assembles a tar archive ready for download.
+
 JAVA_PID="$(pidof -s java)"
 JAVA_USER="$(ps -o user= -p ${JAVA_PID})"
 TIMESTAMP=$(date '+%Y%m%d-%H%M%S')
