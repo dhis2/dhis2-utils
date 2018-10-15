@@ -15,6 +15,10 @@ select count(*) from pg_catalog.pg_stat_activity where state != 'idle' and query
 
 select pid, datname, usename, query_start, now() - pg_stat_activity.query_start as duration, state, query from pg_catalog.pg_stat_activity where query not ilike '%pg_stat_activity%';
 
+-- Count of last queryes
+
+select count(*) from pg_catalog.pg_stat_activity where query not ilike '%pg_stat_activity%';
+
 -- Queries running for more than 1 minute
 
 select pid, datname, usename, query_start, now() - pg_stat_activity.query_start as duration, state, query from pg_catalog.pg_stat_activity where (now() - pg_stat_activity.query_start) > interval '5 minutes' and state != 'idle' and query not ilike '%pg_stat_activity%';
@@ -25,11 +29,15 @@ select count(*) from pg_catalog.pg_stat_activity where (now() - pg_stat_activity
 
 -- Current locks
 
-select pl.locktype, pl.pid, pl.mode, pl.granted, pa.datname, pa.client_addr, pa.query_start, pa.state, pa.query from pg_catalog.pg_locks pl left join pg_stat_activity pa on pl.pid = pa.pid;
+select pl.pid, pl.locktype, pl.mode, pl.granted, pa.datname, pa.client_addr, pa.query_start, pa.state, pa.query from pg_catalog.pg_locks pl left join pg_stat_activity pa on pl.pid = pa.pid;
 
 -- Count of locks
 
 select count(*) from pg_catalog.pg_locks;
+
+-- Count of connections
+
+select sum(numbackends) from pg_stat_database;
 
 -- Cancel query
 

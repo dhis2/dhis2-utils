@@ -387,9 +387,18 @@ limit 10000;
 
 select dv.created::date as d, count(*) as count
 from datavalue dv
-inner join period pe on dv.peri	odid=pe.periodid
+inner join period pe on dv.periodid=pe.periodid
 group by d
-order by d;
+order by d desc;
+
+-- Data values created by day, hour and minute
+
+select dv.created::date as d, extract(hour from dv.created) as h, extract(minute from dv.created) as m, count(*) as count
+from datavalue dv
+where dv.created >= '2018-07-1'
+group by d, extract(hour from dv.created), extract(minute from dv.created) 
+order by d desc, extract(hour from dv.created) desc, extract(minute from dv.created) desc;
+
 
 
 -- COMPLETE DATA SET REGISTRATIONS
