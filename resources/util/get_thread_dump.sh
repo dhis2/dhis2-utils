@@ -21,13 +21,13 @@ cd ${OUTPUT_DIR}
 
 for n in $(seq 1 ${DUMP_NO})
 do
-  OUTPUT_FILE="thread_dump_${TIMESTAMP}_${n}.txt"
+  OUTPUT_FILE="thread_dump_${TIMESTAMP}_${n}.log"
   sudo -u ${JAVA_USER} jstack -l ${JAVA_PID} > ${OUTPUT_FILE}
   echo "Wrote thread dump to: ${OUTPUT_DIR}/${OUTPUT_FILE}"
   sleep ${DUMP_PAUSE}
 done
 
-tar -czf ${TAR_FILE} thread_dump_${TIMESTAMP}*.txt
+tar -czf ${TAR_FILE} thread_dump_${TIMESTAMP}*.log
 echo "---"
 echo "Wrote compressed tar archive to: ${OUTPUT_DIR}/${TAR_FILE}"
 cd - > /dev/null
