@@ -67,6 +67,18 @@ function createSystemStat() {
 }
 
 #
+# Writes the last lines of the nginx access log file to a compressed
+# file in the tmp directory.
+#
+function createNginxLog() {
+  LOG_FILE="/var/log/nginx/access.log"
+  OUTPUT_FILE="${OUTPUT_DIR}/nginx_access_${TIMESTAMP}.log.gz"
+  tail -n 10000 ${LOG_FILE} | gzip > ${OUTPUT_FILE}
+  echo "Wrote nginx access log file to: ${OUTPUT_FILE}"
+  echo ""
+}
+
+#
 # Writes thread dumps of the Java process to a compressed archive in the
 # tmp directory.
 #
@@ -97,18 +109,6 @@ function createThreadDump() {
   echo ""
   echo "Wrote compressed tar archive to: ${OUTPUT_DIR}/${TAR_FILE}"
   cd - > /dev/null
-  echo ""
-}
-
-#
-# Writes the last lines of the nginx access log file to a compressed
-# file in the tmp directory.
-#
-function createNginxLog() {
-  LOG_FILE="/var/log/nginx/access.log"
-  OUTPUT_FILE="${OUTPUT_DIR}/nginx_access_${TIMESTAMP}.log.gz"
-  tail -n 10000 ${LOG_FILE} | gzip > ${OUTPUT_FILE}
-  echo "Wrote nginx access log file to: ${OUTPUT_FILE}"
   echo ""
 }
 
