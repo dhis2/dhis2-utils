@@ -385,20 +385,19 @@ limit 10000;
 
 -- Data values created by day
 
-select dv.created::date as d, count(*) as count
+select dv.created::date as d_day, count(*) as d_count
 from datavalue dv
-inner join period pe on dv.periodid=pe.periodid
-group by d
-order by d desc;
+where dv.lastupdated >= '2018-08-1'
+group by d_day
+order by d_day desc;
 
--- Data values created by day, hour and minute
+-- Data values created by day and hour
 
-select dv.created::date as d, extract(hour from dv.created) as h, extract(minute from dv.created) as m, count(*) as count
+select dv.created::date as d_day, extract(hour from dv.created) as d_hour, count(*) as d_count
 from datavalue dv
-where dv.created >= '2018-07-1'
-group by d, extract(hour from dv.created), extract(minute from dv.created) 
-order by d desc, extract(hour from dv.created) desc, extract(minute from dv.created) desc;
-
+where dv.lastupdated >= '2018-08-1'
+group by d_day, d_hour
+order by d_day desc, d_hour desc;
 
 
 -- COMPLETE DATA SET REGISTRATIONS

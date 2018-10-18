@@ -24,7 +24,6 @@ function checkLoad() {
     echo "High load detected on system!"
     echo ""
     createSystemStat
-    createNginxLog
     createThreadDump
   else
     echo "System looks OK"
@@ -63,18 +62,6 @@ function createSystemStat() {
   echo "" >> ${STAT_FILE}
   
   echo "Wrote system stat file to: ${STAT_FILE}"
-  echo ""
-}
-
-#
-# Writes the last lines of the nginx access log file to a compressed
-# file in the tmp directory.
-#
-function createNginxLog() {
-  LOG_FILE="/var/log/nginx/access.log"
-  OUTPUT_FILE="${OUTPUT_DIR}/nginx_access_${TIMESTAMP}.log.gz"
-  tail -n 10000 ${LOG_FILE} | gzip > ${OUTPUT_FILE}
-  echo "Wrote nginx access log file to: ${OUTPUT_FILE}"
   echo ""
 }
 
