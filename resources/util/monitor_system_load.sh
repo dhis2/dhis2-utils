@@ -1,5 +1,14 @@
 #!/bin/bash
 
+#
+# Script which can detect high CPU load on a system, and write a series
+# of system statistics to log. The first argument specifies the threshold
+# for system load based on 'loadavg'. Can typically be scheduled with a 
+# cron job to run every minute:
+#
+# * * * * * /usr/local/bin/monitor_system_load.sh 0.8
+#
+
 if [ $# -eq 0 ]; then
   echo -e "Usage: $0 <threshold>\n"
   exit 1
@@ -12,7 +21,6 @@ STAT_FILE="${OUTPUT_DIR}/system_stat.log"
 LOAD="$(cat /proc/loadavg | awk '{ print $1 }')"
 THRESHOLD=$1
 CURRENT_USER=$(whoami)
-
 
 #
 # Checks the system load based on 'loadavg' and outputs various system
