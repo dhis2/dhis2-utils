@@ -119,9 +119,7 @@ function createThreadDump() {
   echo ""
   echo "Wrote compressed tar archive to: ${OUTPUT_DIR}/${TAR_FILE}"
   echo ""
-  
-  rm ${FILE_PREFIX}_*.log
-  
+    
   cd - > /dev/null
 }
 

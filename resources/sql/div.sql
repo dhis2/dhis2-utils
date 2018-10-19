@@ -393,7 +393,7 @@ order by d_day desc;
 
 -- Data values created by day and hour
 
-select dv.created::date as d_day, extract(hour from dv.created) as d_hour, count(*) as d_count
+select dv.created::date as d_day, extract(hour from dv.lastupdated) as d_hour, count(*) as d_count
 from datavalue dv
 where dv.lastupdated >= '2018-08-1'
 group by d_day, d_hour

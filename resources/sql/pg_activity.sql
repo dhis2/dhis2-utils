@@ -69,3 +69,14 @@ where not blocked_locks.granted;
 -- Show performance related settings
 
 show max_connections; show shared_buffers; show work_mem; show maintenance_work_mem; show effective_cache_size; show checkpoint_completion_target; show synchronous_commit; show wal_writer_delay;
+
+-- Enable and disable logging
+
+alter system set log_statement = 'all';
+select pg_reload_conf();
+show log_statement;
+
+alter system set log_statement = 'none';
+select pg_reload_conf();
+show log_statement;
+
