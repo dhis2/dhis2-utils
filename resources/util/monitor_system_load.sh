@@ -3,10 +3,13 @@
 #
 # Script which can detect high CPU load on a system, and write a series
 # of system statistics to log. The first argument specifies the threshold
-# for system load based on 'loadavg'. Can typically be scheduled with a 
-# cron job to run every minute:
+# for system load based on 'loadavg'.
 #
-# * * * * * /usr/local/bin/monitor_system_load.sh 0.8
+# Requires that the folling tools are on the path: 'date', 'pidof', 'ps'.
+#
+# Can typically be scheduled with a cron job to run every minute:
+#
+# * * * * * /usr/local/bin/monitor_system_load.sh 0.8 >> /tmp/dhis2-monitoring-cron.log 2>&1
 #
 
 if [ $# -eq 0 ]; then
@@ -92,8 +95,8 @@ function createSystemStat() {
 # log directory.
 #
 function createThreadDump() {
-  JAVA_PID="$(pidof -s java)"
-  JAVA_USER="$(ps -o user= -p ${JAVA_PID})"
+  JAVA_PID="$(/usr/sbin/pidof -s java)"
+  JAVA_USER="$(/usr/bin/ps -o user= -p ${JAVA_PID})"
   FILE_PREFIX="thread_dump"
   TAR_FILE="${FILE_PREFIX}_${TIMESTAMP}.tar.gz"
   
@@ -110,7 +113,7 @@ function createThreadDump() {
   for n in $(seq 1 ${DUMP_NO})
   do
     OUTPUT_FILE="${FILE_PREFIX}_${TIMESTAMP}_${n}.log"
-    sudo -u ${JAVA_USER} jstack -l ${JAVA_PID} > ${OUTPUT_FILE}
+    sudo -u ${JAVA_USER} /usr/bin/jstack -l ${JAVA_PID} > ${OUTPUT_FILE}
     echo "Wrote thread dump to: ${OUTPUT_DIR}/${OUTPUT_FILE}"
     sleep ${DUMP_PAUSE}
   done

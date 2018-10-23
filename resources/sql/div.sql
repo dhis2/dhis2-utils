@@ -399,6 +399,11 @@ where dv.lastupdated >= '2018-08-1'
 group by d_day, d_hour
 order by d_day desc, d_hour desc;
 
+-- Data values since date
+
+select count(*) as d_count
+from datavalue dv
+where dv.lastupdated >= '2018-10-01';
 
 -- COMPLETE DATA SET REGISTRATIONS
 
