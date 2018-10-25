@@ -17,6 +17,8 @@ if [ $# -eq 0 ]; then
   exit 1
 fi
 
+export PATH="$PATH:/usr/bin:/usr/sbin:/usr/local/bin"
+
 TIMESTAMP=$(date '+%Y%m%d-%H%M%S')
 PRETTY_TIMESTAMP=$(date '+%Y/%m/%d %H:%M:%S')
 OUTPUT_DIR="/var/log/dhis2-monitoring"
@@ -95,8 +97,8 @@ function createSystemStat() {
 # log directory.
 #
 function createThreadDump() {
-  JAVA_PID="$(/usr/sbin/pidof -s java)"
-  JAVA_USER="$(/usr/bin/ps -o user= -p ${JAVA_PID})"
+  JAVA_PID="$(pidof -s java)"
+  JAVA_USER="$(ps -o user= -p ${JAVA_PID})"
   FILE_PREFIX="thread_dump"
   TAR_FILE="${FILE_PREFIX}_${TIMESTAMP}.tar.gz"
   
@@ -113,7 +115,7 @@ function createThreadDump() {
   for n in $(seq 1 ${DUMP_NO})
   do
     OUTPUT_FILE="${FILE_PREFIX}_${TIMESTAMP}_${n}.log"
-    sudo -u ${JAVA_USER} /usr/bin/jstack -l ${JAVA_PID} > ${OUTPUT_FILE}
+    sudo -u ${JAVA_USER} jstack -l ${JAVA_PID} > ${OUTPUT_FILE}
     echo "Wrote thread dump to: ${OUTPUT_DIR}/${OUTPUT_FILE}"
     sleep ${DUMP_PAUSE}
   done
