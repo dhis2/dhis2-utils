@@ -9,7 +9,7 @@
 #
 # Can typically be scheduled with a cron job to run every minute:
 #
-# * * * * * /usr/local/bin/monitor_system_load.sh 0.8 >> /tmp/dhis2-monitoring-cron.log 2>&1
+# * * * * * /usr/local/bin/monitor_system_load.sh 1.2 >> /tmp/dhis2-monitoring-cron.log 2>&1
 #
 
 if [ $# -eq 0 ]; then
@@ -65,16 +65,6 @@ function createSystemStat() {
   echo "---------------------------------------" >> ${STAT_FILE}
   echo "" >> ${STAT_FILE}
   
-  echo "free " >> ${STAT_FILE}
-  echo "---" >> ${STAT_FILE}
-  free -m >> ${STAT_FILE}
-  echo "" >> ${STAT_FILE}
-  
-  echo "vmstat" >> ${STAT_FILE}
-  echo "---" >> ${STAT_FILE}
-  vmstat -s >> ${STAT_FILE}
-  echo "" >> ${STAT_FILE}
-  
   echo "loadavg" >> ${STAT_FILE}
   echo "---" >> ${STAT_FILE}
   cat /proc/loadavg >> ${STAT_FILE}
@@ -84,6 +74,16 @@ function createSystemStat() {
   echo "---" >> ${STAT_FILE}
   uptime  >> ${STAT_FILE}
   echo "" >> ${STAT_FILE}
+  echo "" >> ${STAT_FILE}
+  
+  echo "free " >> ${STAT_FILE}
+  echo "---" >> ${STAT_FILE}
+  free -m >> ${STAT_FILE}
+  echo "" >> ${STAT_FILE}
+  
+  echo "vmstat" >> ${STAT_FILE}
+  echo "---" >> ${STAT_FILE}
+  vmstat -s >> ${STAT_FILE}
   echo "" >> ${STAT_FILE}
   
   echo "Wrote system stats to: ${STAT_FILE}"
