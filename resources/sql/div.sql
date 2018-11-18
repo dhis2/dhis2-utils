@@ -608,4 +608,8 @@ where not generate_series in (
   where categoryid=102
 );
 
+-- Install PostGIS in separate schema
 
+create schema postgis;
+create extension postgis with schema postgis;
+alter database dev set search_path to public, postgis;

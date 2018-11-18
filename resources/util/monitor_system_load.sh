@@ -9,7 +9,9 @@
 #
 # Can typically be scheduled with a cron job to run every minute:
 #
-# * * * * * /usr/local/bin/monitor_system_load.sh 1.2 >> /tmp/dhis2-monitoring-cron.log 2>&1
+# export VISUAL=nano; crontab -e
+#
+# * * * * * /root/bin/monitor_system_load.sh 1.2 >> /tmp/dhis2-monitoring-cron.log 2>&1
 #
 
 if [ $# -eq 0 ]; then
@@ -121,6 +123,7 @@ function createThreadDump() {
   done
 
   tar -czf ${TAR_FILE} ${FILE_PREFIX}_${TIMESTAMP}*.log
+  rm ${FILE_PREFIX}_${TIMESTAMP}*.log
   echo ""
   echo "Wrote compressed tar archive to: ${OUTPUT_DIR}/${TAR_FILE}"
   echo ""
