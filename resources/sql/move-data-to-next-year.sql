@@ -54,3 +54,14 @@ update trackedentitydatavalue set value = to_char((value::date + interval '1 yea
 where dataelementid in (
   select dataelementid from dataelement where valuetype in ('DATE','DATETIME') and domaintype = 'TRACKER'
 );
+
+-- Vacuum to remove dead tuples
+
+vacuum period;
+vacuum programstageinstance;
+vacuum programinstance;
+vacuum interpretation;
+vacuum mapview;
+vacuum eventreport;
+vacuum eventchart;
+vacuum trackedentitydatavalue;
