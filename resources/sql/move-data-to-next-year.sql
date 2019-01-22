@@ -21,18 +21,14 @@ where date_part('year', startdate)::int = 2017;
 update programstageinstance set 
 duedate = (duedate + interval '1 year'),
 executiondate = (executiondate + interval '1 year'),
-completeddate = (completeddate + interval '1 year'),
-created = (created + interval '1 year'),
-lastupdated = (lastupdated + interval '1 year');
+completeddate = (completeddate + interval '1 year');
 
 -- (Write) Move programinstance to next year
 
 update programinstance set
 incidentdate = (incidentdate + interval '1 year'),
 enrollmentdate = (enrollmentdate + interval '1 year'),
-enddate = (enddate + interval '1 year'),
-created = (created + interval '1 year'),
-lastupdated = (lastupdated + interval '1 year');
+enddate = (enddate + interval '1 year');
 
 -- (Write) Move interpretations created / lastupdated to next year
 
