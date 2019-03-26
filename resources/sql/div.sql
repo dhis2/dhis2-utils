@@ -405,6 +405,41 @@ select count(*) as d_count
 from datavalue dv
 where dv.lastupdated >= '2018-10-01';
 
+-- Data value count by period
+
+select ps.iso, count(ps.iso)
+from datavalue dv
+inner join "_periodstructure" ps on (dv.periodid=ps.periodid)
+group by ps.iso
+order by ps.iso asc;
+
+-- Get count of data values by year and month
+
+select extract(year from pe.startdate)::integer as yr, extract(month from pe.startdate)::integer as mo, count(*)
+from datavalue dv
+inner join period pe on dv.periodid=pe.periodid
+where dv.value != '0'
+group by yr, mo
+order by yr, mo;
+
+-- Get count of data values by year
+
+select extract(year from pe.startdate)::integer as yr, count(*)
+from datavalue dv
+inner join period pe on dv.periodid=pe.periodid
+where dv.value != '0'
+group by yr
+order by yr;
+
+-- Get count of datavalues by data element
+
+select de.name as de, count(*) as c
+from datavalue dv
+inner join dataelement de on dv.dataelementid=dv.dataelementid
+group by de
+order by c;
+
+
 -- COMPLETE DATA SET REGISTRATIONS
 
 -- Complete data set registration exploded view
@@ -442,38 +477,12 @@ delete from programstageinstance psi
 where psi.executiondate < '1960-01-01'
 or psi.executiondate > '2020-01-01';
 
--- Get count of data values by year and month
+-- Get count of events by year and month by executiondate
 
-select extract(year from pe.startdate)::integer as yr, extract(month from pe.startdate)::integer as mo, count(*)
-from datavalue dv
-inner join period pe on dv.periodid=pe.periodid
-where dv.value != '0'
+select extract(year from psi.executiondate)::integer as yr, extract(month from psi.executiondate)::integer as mo, count(*)
+from programstageinstance psi
 group by yr, mo
 order by yr, mo;
-
--- Get count of data values by year
-
-select extract(year from pe.startdate)::integer as yr, count(*)
-from datavalue dv
-inner join period pe on dv.periodid=pe.periodid
-where dv.value != '0'
-group by yr
-order by yr;
-
--- Get count of datavalues by data element
-
-select de.name as de, count(*) as c
-from datavalue dv
-inner join dataelement de on dv.dataelementid=dv.dataelementid
-group by de
-order by c;
-
--- Get count of analytics values by year and month
-
-select "monthly", "yearly", count(*)
-from analytics ax
-group by "monthly", "yearly"
-order by "monthly","yearly";
 
 -- Get count of data elements per program
 

@@ -9,9 +9,14 @@
 update period set 
 startdate = (startdate + interval '1 year')::date,
 enddate = (enddate + interval '1 year')::date
-where date_part('year', startdate)::int = 2018;
+where date_part('year', startdate)::int = 2019;
 
 update period set 
+startdate = (startdate + interval '1 year')::date,
+enddate = (enddate + interval '1 year')::date
+where date_part('year', startdate)::int = 2018;
+
+update period set -- Handle financial year data
 startdate = (startdate + interval '1 year')::date,
 enddate = (enddate + interval '1 year')::date
 where date_part('year', startdate)::int = 2017;
@@ -65,3 +70,4 @@ vacuum mapview;
 vacuum eventreport;
 vacuum eventchart;
 vacuum trackedentitydatavalue;
+
