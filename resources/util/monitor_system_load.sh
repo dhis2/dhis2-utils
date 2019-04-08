@@ -2,8 +2,9 @@
 
 #
 # Script which can detect high CPU load on a system, and write a series
-# of system statistics to log. The first argument specifies the threshold
-# for system load based on 'loadavg'.
+# of system statistics such as loadavg, free, vmstat to log, as well as
+# creating and storing thread dumps. The first argument specifies the 
+# threshold for system load based on 'loadavg'.
 #
 # Requires that the folling tools are on the path: 'date', 'pidof', 'ps'.
 #
