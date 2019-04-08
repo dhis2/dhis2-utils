@@ -280,12 +280,27 @@ where ura.authority = 'ALL';
 
 -- (Write) MD5 set password to "district" for admin user
 
-update users set password='48e8f1207baef1ef7fe478a57d19f2e5' where username='admin';
+update users set password='48e8f1207baef1ef7fe478a57d19f2e5', disabled = false where username='admin';
 
 -- (Write) Bcrypt set password to "district" for admin user
 
-update users set password='$2a$10$wjLPViry3bkYEcjwGRqnYO1bT2Kl.ZY0kO.fwFDfMX53hitfx5.3C' where username='admin';
+update users set password='$2a$10$wjLPViry3bkYEcjwGRqnYO1bT2Kl.ZY0kO.fwFDfMX53hitfx5.3C', disabled = false where username='admin';
 
+-- (Write) Add user to first user role with ALl authority 
+
+insert into userrolemembers (userid, userroleid)
+select userid, userroleid 
+from (
+  select u.userid 
+  from users u 
+  where u.username = 'admin'
+  limit 1) as userid, (
+
+  select ur.userroleid
+  from userrole ur 
+  inner join userroleauthorities ura on ur.userroleid=ura.userroleid 
+  where ura.authority = 'ALL'
+  limit 1) as userroleid;
 
 -- VALIDATION RULES
 
@@ -491,6 +506,18 @@ from program pr
 inner join programstage ps on pr.programid=ps.programid
 inner join programstagedataelement psd on ps.programstageid=psd.programstageid
 group by pr.name;
+
+-- Find invalid event values of value type date, replace "foo" with error hint
+
+select count(to_date(dv.value, 'YYYY-MM-DD')) 
+from trackedentitydatavalue dv 
+inner join dataelement de on dv.dataelementid=de.dataelementid 
+where de.valuetype='DATE';
+
+select * from trackedentitydatavalue dv 
+inner join dataelement de on dv.dataelementid=de.dataelementid 
+where de.valuetype='DATE' 
+and value like '%foo%';
 
 -- (Write) Generate random coordinates based on org unit location for events
 
