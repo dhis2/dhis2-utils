@@ -37,6 +37,7 @@ import java.util.Observer;
 import org.hisp.dhis.datageneration.cache.EntityCache;
 import org.hisp.dhis.datageneration.generator.unit.TeiUnit;
 import org.hisp.dhis.datageneration.id.IdFactory;
+import org.hisp.dhis.datageneration.id.SequenceUpdater;
 import org.hisp.dhis.datageneration.observer.ProgressUpdateEvent;
 import org.hisp.dhis.datageneration.writer.SqlStatementsWriter;
 import org.springframework.stereotype.Component;
@@ -61,13 +62,16 @@ public class TeiGenerator
 
     private final Observer observer;
 
+    private final SequenceUpdater sequenceUpdater;
+
     private final int CHUNK_SIZE = 5000;
 
-    public TeiGenerator( IdFactory idFactory, SqlStatementsWriter writer, Observer observer )
+    public TeiGenerator( IdFactory idFactory, SqlStatementsWriter writer, Observer observer, SequenceUpdater sequenceUpdater )
     {
         this.idFactory = idFactory;
         this.writer = writer;
         this.observer = observer;
+        this.sequenceUpdater = sequenceUpdater;
     }
 
     public void generate( DefaultGenerationOptions options, EntityCache entityCache )
@@ -76,9 +80,12 @@ public class TeiGenerator
         int currentChunkSize = 0;
         long processedChunks = 0;
 
-        // fetch the first available IDS from target tables
-        IdCounter counter = new IdCounter( "TEI", idFactory.getStartTeiId(), "PI",
-            idFactory.getStartProgramInstanceId(), "PSI", idFactory.getStartProgramStageInstanceId() );
+        // fetch the first available IDS from target tables //
+        IdCounter counter = new IdCounter(
+            "TEI", idFactory.getStartTeiId(),
+            "PI", idFactory.getStartProgramInstanceId(),
+            "PSI", idFactory.getStartProgramStageInstanceId()
+        );
 
         List<String> statements = new ArrayList<>();
         fireProgressEvent( processedChunks, totalChunks );
@@ -106,6 +113,11 @@ public class TeiGenerator
         }
         // flush remaining data
         writer.write( new File( options.getFile() ), statements );
+
+        // update sequences
+        sequenceUpdater.updateSequence("trackedentityinstance_sequence", counter.getCounter("TEI") + 100);
+        sequenceUpdater.updateSequence("programinstance_sequence", counter.getCounter("PI") + 100);
+        sequenceUpdater.updateSequence("programstageinstance_sequence", counter.getCounter("PSI") + 100);
     }
 
     private void fireProgressEvent( long processedChunks, long totalChunks )
@@ -120,5 +132,4 @@ public class TeiGenerator
             observer.update( this, new ProgressUpdateEvent( processedChunks, totalChunks, message ) );
         }
     }
-
 }

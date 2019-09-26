@@ -7,7 +7,12 @@ import com.vividsolutions.jts.geom.Point;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static net.andreinc.mockneat.unit.time.LocalDates.localDates;
 
@@ -34,4 +39,20 @@ public class RandomUtils
             .display( DateTimeFormatter.ISO_LOCAL_DATE ).get() + " 00:00:00";
     }
 
+    public static List<Integer> randomizeSequence( int collectionSize )
+    {
+        List<Integer> indexes = new ArrayList<>();
+        if ( collectionSize == 1 )
+        {
+            indexes.add( 0 );
+        }
+        else
+        {
+            indexes = IntStream.range( 0, collectionSize - 1 ).boxed()
+                .collect( Collectors.toCollection( ArrayList::new ) );
+            Collections.shuffle( indexes );
+            indexes = indexes.subList( 0, (collectionSize > indexes.size() ? indexes.size() - 1 : collectionSize) );
+        }
+        return indexes;
+    }
 }

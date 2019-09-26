@@ -86,4 +86,10 @@ public class IdCounter
     {
         return this.counters.get( counter );
     }
+
+    public void increment( String key )
+    {
+        Long c = counters.get( key );
+        counters.put( key, c + 1);
+    }
 }

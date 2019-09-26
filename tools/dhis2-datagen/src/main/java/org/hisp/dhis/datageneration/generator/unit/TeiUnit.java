@@ -31,7 +31,6 @@ package org.hisp.dhis.datageneration.generator.unit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.vividsolutions.jts.geom.Point;
-import lombok.extern.log4j.Log4j;
 import net.andreinc.mockneat.types.enums.StringType;
 import net.andreinc.mockneat.unit.objects.From;
 import net.andreinc.mockneat.unit.text.Strings;
@@ -42,6 +41,7 @@ import org.hisp.dhis.datageneration.domain.*;
 import org.hisp.dhis.datageneration.generator.DefaultGenerationOptions;
 import org.hisp.dhis.datageneration.generator.IdCounter;
 import org.hisp.dhis.datageneration.utils.CollectionSizer;
+import org.hisp.dhis.datageneration.utils.RandomUtils;
 import org.hisp.dhis.dxf2.events.event.DataValue;
 
 import java.time.format.DateTimeFormatter;
@@ -71,7 +71,7 @@ public class TeiUnit
 
     public List<String> get( DefaultGenerationOptions options, EntityCache entityCache, IdCounter idCounter )
     {
-        long defaultaoc = entityCache.getDefaultAttributeOptionComboId();
+        long defaultAoc = entityCache.getDefaultAttributeOptionComboId();
 
         List<String> statements = new ArrayList<>();
 
@@ -80,7 +80,6 @@ public class TeiUnit
 
         long teiId = idCounter.getCounter( "TEI" );
         long piId = idCounter.getCounter( "PI" );
-        long psiId = idCounter.getCounter( "PSI" );
 
         // pick a random OU from the program
         long ouId = From.from( program.getOrgUnits() ).get().getId();
@@ -104,6 +103,8 @@ public class TeiUnit
             // .column("created", "2014-03-26 15:40:12", TEXT_BACKSLASH)
             .get().toString() );
 
+        idCounter.increment("TEI");
+
         String created = localDateTime();
         String enrollmentDate = localDateTime();
         // Enrollment
@@ -122,14 +123,16 @@ public class TeiUnit
             .column( "deleted", "false", TEXT_BACKSLASH )
             .get().toString() );
 
+        idCounter.increment( "PI" );
+
         int eventsSize = CollectionSizer.getCollectionSize( options.getTeiGenerationOptions().getEventsRange() );
 
         ProgramStage programStage = From.from( program.getStages() ).get();
 
         // Events
         statements.add( Joiner.on( "\n" ).join( IntStream.rangeClosed( 1, eventsSize ).mapToObj( ev -> {
-            long eventId = psiId + 1;
-            return sqlInserts().tableName( "programstageinstance" )
+            long eventId = idCounter.getCounter( "PSI" );
+            String sql =  sqlInserts().tableName( "programstageinstance" )
                 .column( "programstageinstanceid", Long.toString( eventId ) )
                 .column( "programinstanceid", Long.toString( piId ) )
                 .column( "programstageid", Long.toString( programStage.getId() ) )
@@ -143,21 +146,23 @@ public class TeiUnit
                 .column( "uid", CodeGenerator.generateUid(), TEXT_BACKSLASH )
                 .column( "created", created, TEXT_BACKSLASH )
                 .column( "lastupdated", created, TEXT_BACKSLASH )
-                .column( "attributeoptioncomboid", Long.toString( defaultaoc ) )
+                .column( "attributeoptioncomboid", Long.toString( defaultAoc ) )
                 .column( "deleted", "false", TEXT_BACKSLASH )
                 .column( "eventdatavalues",
                     createDataValuesAsJson( programStage, options.getTeiGenerationOptions().getDataValueRange() ),
                     TEXT_BACKSLASH_NO_ESCAPE )
                 .get().toString();
+            idCounter.increment( "PSI" );
+            return sql;
         } ).collect( Collectors.toList() ) ) );
-
+        
         // how many program attributes to create //
         int attributeSize = CollectionSizer.getCollectionSize( options.getTeiGenerationOptions().getEventsRange(),
             program.getAttributes().size() );
+        
+        statements.add( Joiner.on( "\n" ).join( randomizeSequence( attributeSize ).stream().map( ev -> {
 
-        statements.add( Joiner.on( "\n" ).join( IntStream.rangeClosed( 1, attributeSize ).mapToObj( ev -> {
-
-            ProgramAttribute attribute = From.from( program.getAttributes() ).get();
+            ProgramAttribute attribute =  program.getAttributes().get( ev );
 
             return sqlInserts().tableName( "trackedentityattributevalue" )
                 .column( "trackedentityinstanceid", Long.toString( teiId ) )
@@ -181,34 +186,8 @@ public class TeiUnit
 
     private String createDataValuesAsJson( ProgramStage programStage, String dataValueSizeRange )
     {
-        int dataElementsSize = CollectionSizer.getCollectionSize( dataValueSizeRange,
-            programStage.getDataElements().size() );
-        List<Integer> indexes = new ArrayList<>();
-        if ( programStage.getDataElements().size() == 1 )
-        {
-            indexes.add( 0 );
-        }
-        else
-        {
+        List<Integer> indexes = randomizeSequence( programStage.getDataElements().size() );
 
-            // Generate a sequence of int from 0 to max data elements for given program
-            // stage
-            indexes = IntStream.range( 0, programStage.getDataElements().size() - 1 ).boxed()
-                .collect( Collectors.toCollection( ArrayList::new ) );
-            // randomize!
-            Collections.shuffle( indexes );
-            // pick only the first x numbers based on randomized user selection
-            // indexes = indexes.subList(0, dataElementsSize);
-            try
-            {
-                indexes = indexes.subList( 0,
-                    (dataElementsSize > indexes.size() ? indexes.size() - 1 : dataElementsSize) );
-            }
-            catch ( Exception e )
-            {
-                e.printStackTrace();
-            }
-        }
         List<String> values = new ArrayList<>();
 
         for ( Integer index : indexes )
