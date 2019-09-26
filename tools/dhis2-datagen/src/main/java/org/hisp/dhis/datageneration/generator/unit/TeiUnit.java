@@ -63,12 +63,14 @@ import static org.hisp.dhis.datageneration.utils.RandomUtils.*;
 /**
  * @author Luciano Fiandesio
  */
-public class TeiUnit implements Unit {
-
+public class TeiUnit
+    implements
+    Unit
+{
     private ObjectMapper mapper = new ObjectMapper();
 
-    public List<String> get(DefaultGenerationOptions options, EntityCache entityCache, IdCounter idCounter) {
-
+    public List<String> get( DefaultGenerationOptions options, EntityCache entityCache, IdCounter idCounter )
+    {
         long defaultaoc = entityCache.getDefaultAttributeOptionComboId();
 
         List<String> statements = new ArrayList<>();
@@ -76,130 +78,140 @@ public class TeiUnit implements Unit {
         // Get a program that is type Tracker
         Program program = getRandomTrackerProgram( entityCache );
 
-        long teiId = idCounter.getCounter("TEI");
-        long piId = idCounter.getCounter("PI");
-        long psiId = idCounter.getCounter("PSI");
+        long teiId = idCounter.getCounter( "TEI" );
+        long piId = idCounter.getCounter( "PI" );
+        long psiId = idCounter.getCounter( "PSI" );
 
         // pick a random OU from the program
-        long ouId = From.from(program.getOrgUnits()).get().getId();
+        long ouId = From.from( program.getOrgUnits() ).get().getId();
 
         statements.add( sqlInserts().tableName( "trackedentityinstance" )
-                .column( "trackedentityinstanceid", Long.toString( teiId ) )
-                .column( "organisationunitid", Long.toString( ouId ) )
-                .column( "uid", CodeGenerator.generateUid(), TEXT_BACKSLASH )
-                .column( "created", localDateTime(), TEXT_BACKSLASH )
-                .column( "lastupdated", localDateTime(), TEXT_BACKSLASH )
-                .column( "trackedentitytypeid", program.getTeiType().toString() )
-                .column( "inactive", "false", TEXT_BACKSLASH )
-                // .column("lastupdatedby", localDates().thisYear().display(BASIC_ISO_DATE))
-                .column( "createdatclient", localDateTime(), TEXT_BACKSLASH )
-                // .column("lastupdatedatclient",
-                .column( "deleted", "false", TEXT_BACKSLASH )
-                // .column("geometry", localDates().thisYear().display(BASIC_ISO_DATE))
-                .column( "featuretype", "NONE", TEXT_BACKSLASH )
-                // .column("coordinates", localDates().thisYear().display(BASIC_ISO_DATE))
-                // .column("code", strings().size(5), TEXT_BACKSLASH)
-                // .column("created", "2014-03-26 15:40:12", TEXT_BACKSLASH)
-                .get().toString());
+            .column( "trackedentityinstanceid", Long.toString( teiId ) )
+            .column( "organisationunitid", Long.toString( ouId ) )
+            .column( "uid", CodeGenerator.generateUid(), TEXT_BACKSLASH )
+            .column( "created", localDateTime(), TEXT_BACKSLASH )
+            .column( "lastupdated", localDateTime(), TEXT_BACKSLASH )
+            .column( "trackedentitytypeid", program.getTeiType().toString() )
+            .column( "inactive", "false", TEXT_BACKSLASH )
+            // .column("lastupdatedby", localDates().thisYear().display(BASIC_ISO_DATE))
+            .column( "createdatclient", localDateTime(), TEXT_BACKSLASH )
+            // .column("lastupdatedatclient",
+            .column( "deleted", "false", TEXT_BACKSLASH )
+            // .column("geometry", localDates().thisYear().display(BASIC_ISO_DATE))
+            .column( "featuretype", "NONE", TEXT_BACKSLASH )
+            // .column("coordinates", localDates().thisYear().display(BASIC_ISO_DATE))
+            // .column("code", strings().size(5), TEXT_BACKSLASH)
+            // .column("created", "2014-03-26 15:40:12", TEXT_BACKSLASH)
+            .get().toString() );
 
         String created = localDateTime();
         String enrollmentDate = localDateTime();
         // Enrollment
         statements.add( sqlInserts().tableName( "programinstance" )
-                .column( "programinstanceid", Long.toString( piId ) )
-                .column( "enrollmentdate", enrollmentDate, TEXT_BACKSLASH )
-                .column( "programid", program.getId().toString() )
-                .column( "status", "COMPLETED", TEXT_BACKSLASH )
-                .column( "uid", CodeGenerator.generateUid(), TEXT_BACKSLASH )
-                .column( "created", created, TEXT_BACKSLASH )
-                .column( "lastUpdated", created, TEXT_BACKSLASH )
-                .column( "trackedentityinstanceid", Long.toString( teiId ) )
-                .column( "organisationunitid", Long.toString( ouId ) )
-                .column( "incidentdate", enrollmentDate, TEXT_BACKSLASH )
-                .column( "createdatclient", localDateTime(), TEXT_BACKSLASH )
-                .column( "deleted", "false", TEXT_BACKSLASH )
-                .get().toString());
+            .column( "programinstanceid", Long.toString( piId ) )
+            .column( "enrollmentdate", enrollmentDate, TEXT_BACKSLASH )
+            .column( "programid", program.getId().toString() )
+            .column( "status", "COMPLETED", TEXT_BACKSLASH )
+            .column( "uid", CodeGenerator.generateUid(), TEXT_BACKSLASH )
+            .column( "created", created, TEXT_BACKSLASH )
+            .column( "lastUpdated", created, TEXT_BACKSLASH )
+            .column( "trackedentityinstanceid", Long.toString( teiId ) )
+            .column( "organisationunitid", Long.toString( ouId ) )
+            .column( "incidentdate", enrollmentDate, TEXT_BACKSLASH )
+            .column( "createdatclient", localDateTime(), TEXT_BACKSLASH )
+            .column( "deleted", "false", TEXT_BACKSLASH )
+            .get().toString() );
 
         int eventsSize = CollectionSizer.getCollectionSize( options.getTeiGenerationOptions().getEventsRange() );
 
         ProgramStage programStage = From.from( program.getStages() ).get();
 
         // Events
-        statements.add( Joiner.on( "\n" ).join( IntStream.rangeClosed( 1, eventsSize ).mapToObj(ev -> {
+        statements.add( Joiner.on( "\n" ).join( IntStream.rangeClosed( 1, eventsSize ).mapToObj( ev -> {
             long eventId = psiId + 1;
             return sqlInserts().tableName( "programstageinstance" )
-                    .column( "programstageinstanceid", Long.toString( eventId ) )
-                    .column( "programinstanceid", Long.toString( piId ) )
-                    .column( "programstageid", Long.toString( programStage.getId() ) )
-                    .column( "duedate", localDateTimeInFuture(), TEXT_BACKSLASH )
-                    // .column( "executiondate", rndFactory.dateTimesInFuture(), TEXT_BACKSLASH )
-                    // TODO ok to be null ?
-                    // .column( "completed", rndFactory.dateTimesInFuture(), TEXT_BACKSLASH ) TODO
-                    // ok to be null ?
-                    .column( "organisationunitid", Long.toString( ouId ) )
-                    .column( "status", "ACTIVE", TEXT_BACKSLASH )
-                    .column( "uid", CodeGenerator.generateUid(), TEXT_BACKSLASH )
-                    .column( "created", created, TEXT_BACKSLASH )
-                    .column( "lastupdated", created, TEXT_BACKSLASH )
-                    .column( "attributeoptioncomboid", Long.toString( defaultaoc ) )
-                    .column( "deleted", "false", TEXT_BACKSLASH )
-                    .column( "eventdatavalues", createDataValuesAsJson(programStage, options.getTeiGenerationOptions().getDataValueRange() ), TEXT_BACKSLASH_NO_ESCAPE  )
-                    .get().toString();
+                .column( "programstageinstanceid", Long.toString( eventId ) )
+                .column( "programinstanceid", Long.toString( piId ) )
+                .column( "programstageid", Long.toString( programStage.getId() ) )
+                .column( "duedate", localDateTimeInFuture(), TEXT_BACKSLASH )
+                // .column( "executiondate", rndFactory.dateTimesInFuture(), TEXT_BACKSLASH )
+                // TODO ok to be null ?
+                // .column( "completed", rndFactory.dateTimesInFuture(), TEXT_BACKSLASH ) TODO
+                // ok to be null ?
+                .column( "organisationunitid", Long.toString( ouId ) )
+                .column( "status", "ACTIVE", TEXT_BACKSLASH )
+                .column( "uid", CodeGenerator.generateUid(), TEXT_BACKSLASH )
+                .column( "created", created, TEXT_BACKSLASH )
+                .column( "lastupdated", created, TEXT_BACKSLASH )
+                .column( "attributeoptioncomboid", Long.toString( defaultaoc ) )
+                .column( "deleted", "false", TEXT_BACKSLASH )
+                .column( "eventdatavalues",
+                    createDataValuesAsJson( programStage, options.getTeiGenerationOptions().getDataValueRange() ),
+                    TEXT_BACKSLASH_NO_ESCAPE )
+                .get().toString();
         } ).collect( Collectors.toList() ) ) );
 
         // how many program attributes to create //
-        int attributeSize = CollectionSizer.getCollectionSize(options.getTeiGenerationOptions().getEventsRange(), program.getAttributes().size());
+        int attributeSize = CollectionSizer.getCollectionSize( options.getTeiGenerationOptions().getEventsRange(),
+            program.getAttributes().size() );
 
-        statements.add( Joiner.on( "\n" )
-                .join( IntStream.rangeClosed( 1, attributeSize )
-                        .mapToObj( ev -> {
+        statements.add( Joiner.on( "\n" ).join( IntStream.rangeClosed( 1, attributeSize ).mapToObj( ev -> {
 
-                            ProgramAttribute attribute = From.from( program.getAttributes() ).get();
+            ProgramAttribute attribute = From.from( program.getAttributes() ).get();
 
-                            return sqlInserts().tableName( "trackedentityattributevalue" )
-                                    .column( "trackedentityinstanceid", Long.toString( teiId ) )
-                                    .column( "trackedentityattributeid", Long.toString( attribute.getId() ) )
-                                    .column( "value", rndValueFrom( attribute.getValueType() ), TEXT_BACKSLASH )
-                                    .column( "created", created, TEXT_BACKSLASH )
-                                    .column( "lastupdated", created, TEXT_BACKSLASH ).get().toString();
-                        } )
-                        .collect( Collectors.toList() ) ) );
+            return sqlInserts().tableName( "trackedentityattributevalue" )
+                .column( "trackedentityinstanceid", Long.toString( teiId ) )
+                .column( "trackedentityattributeid", Long.toString( attribute.getId() ) )
+                .column( "value", rndValueFrom( attribute.getValueType() ), TEXT_BACKSLASH )
+                .column( "created", created, TEXT_BACKSLASH )
+                .column( "lastupdated", created, TEXT_BACKSLASH ).get()
+                .toString();
+        } ).collect( Collectors.toList() ) ) );
 
         return statements;
     }
 
     private Program getRandomTrackerProgram( EntityCache entityCache )
     {
-        return From.from(
+        return From
+            .from(
                 entityCache.getPrograms().stream().filter( p -> p.getTeiType() != 0 ).collect( Collectors.toList() ) )
-                .get();
+            .get();
     }
 
     private String createDataValuesAsJson( ProgramStage programStage, String dataValueSizeRange )
     {
         int dataElementsSize = CollectionSizer.getCollectionSize( dataValueSizeRange,
-                programStage.getDataElements().size() );
+            programStage.getDataElements().size() );
         List<Integer> indexes = new ArrayList<>();
-        if (programStage.getDataElements().size() == 1) {
+        if ( programStage.getDataElements().size() == 1 )
+        {
             indexes.add( 0 );
-        } else {
+        }
+        else
+        {
 
-            // Generate a sequence of int from 0 to max data elements for given program stage
-            indexes = IntStream.range(0, programStage.getDataElements().size() - 1).boxed()
-                    .collect(Collectors.toCollection(ArrayList::new));
+            // Generate a sequence of int from 0 to max data elements for given program
+            // stage
+            indexes = IntStream.range( 0, programStage.getDataElements().size() - 1 ).boxed()
+                .collect( Collectors.toCollection( ArrayList::new ) );
             // randomize!
-            Collections.shuffle(indexes);
+            Collections.shuffle( indexes );
             // pick only the first x numbers based on randomized user selection
-            //indexes = indexes.subList(0, dataElementsSize);
-            try {
-                indexes = indexes.subList(0, (dataElementsSize > indexes.size() ? indexes.size() - 1 : dataElementsSize));
-            } catch (Exception e) {
+            // indexes = indexes.subList(0, dataElementsSize);
+            try
+            {
+                indexes = indexes.subList( 0,
+                    (dataElementsSize > indexes.size() ? indexes.size() - 1 : dataElementsSize) );
+            }
+            catch ( Exception e )
+            {
                 e.printStackTrace();
             }
         }
         List<String> values = new ArrayList<>();
 
-        for (Integer index : indexes)
+        for ( Integer index : indexes )
         {
             StringBuilder sb = new StringBuilder();
 
@@ -215,13 +227,13 @@ public class TeiUnit implements Unit {
             {
                 e.printStackTrace(); // TODO
             }
-            values.add(sb.toString());
+            values.add( sb.toString() );
         }
-        return "{" + Joiner.on(",").join(values) + "}";
+        return "{" + Joiner.on( "," ).join( values ) + "}";
 
     }
 
-    private DataValue withRandomValue( DataElement dataElement)
+    private DataValue withRandomValue( DataElement dataElement )
     {
         DataValue dataValue = new DataValue();
         dataValue.setDataElement( dataElement.getUid() );
@@ -240,7 +252,8 @@ public class TeiUnit implements Unit {
         return dataValue;
     }
 
-    private String rndValueFrom(ValueType valueType) {
+    private String rndValueFrom( ValueType valueType )
+    {
         String val = null;
 
         if ( valueType.isBoolean() )
@@ -263,7 +276,7 @@ public class TeiUnit implements Unit {
 
         else if ( valueType.isNumeric() )
         {
-            val = String.valueOf( ints().range( 1, 10000 ).get());
+            val = String.valueOf( ints().range( 1, 10000 ).get() );
         }
         else if ( valueType.isDecimal() )
         {
@@ -271,7 +284,7 @@ public class TeiUnit implements Unit {
         }
         else if ( valueType.isText() )
         {
-            val = Strings.strings().type(StringType.LETTERS).get();
+            val = Strings.strings().type( StringType.LETTERS ).get();
         }
         else if ( valueType.isOrganisationUnit() )
         {
