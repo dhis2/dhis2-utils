@@ -36,9 +36,11 @@ import lombok.Getter;
  */
 @Getter
 @AllArgsConstructor
-public class CategoryOptionCombo {
-
+public class CategoryOptionCombo
+{
     private Long id;
+
     private String name;
+
     private boolean defaultCoc;
 }

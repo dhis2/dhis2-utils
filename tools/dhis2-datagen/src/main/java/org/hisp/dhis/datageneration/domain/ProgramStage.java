@@ -14,5 +14,4 @@ public class ProgramStage
     private String uid;
 
     private List<DataElement> dataElements;
-
 }

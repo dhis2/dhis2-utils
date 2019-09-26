@@ -60,6 +60,4 @@ public class TeiGenerationOptions
     private String dataValueRange;
 
     private Long defaultAoc;
-
-
 }

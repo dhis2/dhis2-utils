@@ -88,5 +88,4 @@ public class ProgressBar
     {
         started = false;
     }
-
 }

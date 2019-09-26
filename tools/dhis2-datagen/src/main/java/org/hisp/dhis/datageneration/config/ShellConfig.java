@@ -41,7 +41,6 @@ import org.springframework.context.annotation.Lazy;
 @Configuration
 public class ShellConfig
 {
-
     @Bean
     public ShellHelper shellHelper( @Lazy Terminal terminal )
     {

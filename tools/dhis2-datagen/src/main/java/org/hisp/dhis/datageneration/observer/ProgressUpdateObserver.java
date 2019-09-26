@@ -45,7 +45,6 @@ public class ProgressUpdateObserver
     implements
     Observer
 {
-
     private ProgressBar progressBar;
 
     private ShellHelper shellHelper;

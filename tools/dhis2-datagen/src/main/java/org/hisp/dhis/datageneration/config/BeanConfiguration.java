@@ -42,7 +42,6 @@ import org.springframework.core.io.FileSystemResource;
 @Configuration
 public class BeanConfiguration
 {
-
     private static final String DEFAULT_ENV_VAR = "DHIS2_HOME";
 
     private static final String DEFAULT_SYS_PROP = "dhis2.home";

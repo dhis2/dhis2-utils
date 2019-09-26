@@ -31,7 +31,8 @@ package org.hisp.dhis.datageneration.shell;
 /**
  * @author Luciano Fiandesio
  */
-public enum PromptColor {
+public enum PromptColor
+{
     BLACK(0),
     RED(1),
     GREEN(2),

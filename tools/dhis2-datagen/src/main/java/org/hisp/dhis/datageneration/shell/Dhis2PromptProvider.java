@@ -41,7 +41,6 @@ public class Dhis2PromptProvider
     implements
     PromptProvider
 {
-
     @Override
     public AttributedString getPrompt()
     {

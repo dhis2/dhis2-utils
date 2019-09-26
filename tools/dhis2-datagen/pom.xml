@@ -11,8 +11,8 @@
     <groupId>org.hisp.dhis</groupId>
     <artifactId>datagen</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>datagen</name>
-    <description>Demo project for Spring Boot</description>
+    <name>dhis2-datagen</name>
+    <description>Mass data generator for DHIS2</description>
     <properties>
         <java.version>1.8</java.version>
     </properties>

@@ -34,9 +34,9 @@ import java.util.List;
 /**
  * @author Luciano Fiandesio
  */
-public interface SqlStatementsWriter {
+public interface SqlStatementsWriter
+{
+    void write( File file, StringBuilder sb );
 
-    void write(File file, StringBuilder sb);
-
-    void write(File file, List<String> data);
+    void write( File file, List<String> data );
 }

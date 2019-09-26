@@ -16,5 +16,4 @@ public class DataElement
     private ValueType valueType;
 
     private List<String> optionSet;
-
 }

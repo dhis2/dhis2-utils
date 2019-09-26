@@ -80,7 +80,6 @@ public class IdCounter
             Long c = counters.get( key );
             counters.put( key, c + number );
         }
-
     }
 
     public Long getCounter( String counter )

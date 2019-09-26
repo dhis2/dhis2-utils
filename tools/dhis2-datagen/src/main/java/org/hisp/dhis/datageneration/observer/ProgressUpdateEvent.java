@@ -38,7 +38,6 @@ import lombok.Setter;
 @Setter
 public class ProgressUpdateEvent
 {
-
     Long currentCount;
 
     Long totalCount;

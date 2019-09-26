@@ -31,6 +31,7 @@ package org.hisp.dhis.datageneration.generator.unit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.vividsolutions.jts.geom.Point;
+import lombok.extern.log4j.Log4j;
 import net.andreinc.mockneat.types.enums.StringType;
 import net.andreinc.mockneat.unit.objects.From;
 import net.andreinc.mockneat.unit.text.Strings;
@@ -178,14 +179,24 @@ public class TeiUnit implements Unit {
     {
         int dataElementsSize = CollectionSizer.getCollectionSize( dataValueSizeRange,
                 programStage.getDataElements().size() );
+        List<Integer> indexes = new ArrayList<>();
+        if (programStage.getDataElements().size() == 1) {
+            indexes.add( 0 );
+        } else {
 
-        // Generate a sequence of int from 0 to max data elements for given program stage
-        List<Integer> indexes = IntStream.range(0, programStage.getDataElements().size() -1).boxed()
-                .collect(Collectors.toCollection(ArrayList::new));
-        // randomize!
-        Collections.shuffle(indexes);
-        // pick only the first x numbers based on randomized user selection
-        indexes = indexes.subList(0, dataElementsSize);
+            // Generate a sequence of int from 0 to max data elements for given program stage
+            indexes = IntStream.range(0, programStage.getDataElements().size() - 1).boxed()
+                    .collect(Collectors.toCollection(ArrayList::new));
+            // randomize!
+            Collections.shuffle(indexes);
+            // pick only the first x numbers based on randomized user selection
+            //indexes = indexes.subList(0, dataElementsSize);
+            try {
+                indexes = indexes.subList(0, (dataElementsSize > indexes.size() ? indexes.size() - 1 : dataElementsSize));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         List<String> values = new ArrayList<>();
 
         for (Integer index : indexes)

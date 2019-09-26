@@ -42,7 +42,6 @@ import org.springframework.context.annotation.DependsOn;
 @Configuration
 public class DataSourceConfig
 {
-
     @Value( "${connection.username}" )
     private String userName;
 
@@ -62,5 +61,4 @@ public class DataSourceConfig
         return DataSourceBuilder.create().driverClassName( driver ).username( userName ).password( password ).url( url )
             .build();
     }
-
 }

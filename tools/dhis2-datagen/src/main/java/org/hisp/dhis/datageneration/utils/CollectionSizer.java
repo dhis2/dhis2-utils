@@ -35,7 +35,6 @@ import static net.andreinc.mockneat.unit.types.Ints.ints;
  */
 public class CollectionSizer
 {
-
     /**
      *
      * @param range
@@ -58,7 +57,7 @@ public class CollectionSizer
         {
             max = collectionSize;
         }
-        return ints().rangeClosed( min, max ).get() - 1;
+        return min == max ? min : ints().rangeClosed( min, max ).get() - 1;
     }
 
     public static int getCollectionSize( String range )

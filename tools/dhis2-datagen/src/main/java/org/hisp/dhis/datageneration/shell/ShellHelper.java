@@ -28,7 +28,6 @@ package org.hisp.dhis.datageneration.shell;
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 import org.jline.terminal.Terminal;
 import org.jline.utils.AttributedStringBuilder;
 import org.jline.utils.AttributedStyle;
@@ -37,23 +36,25 @@ import org.springframework.beans.factory.annotation.Value;
 /**
  * @author Luciano Fiandesio
  */
-public class ShellHelper {
+public class ShellHelper
+{
 
-    @Value("${shell.out.info}")
+    @Value( "${shell.out.info}" )
     public String infoColor;
 
-    @Value("${shell.out.success}")
+    @Value( "${shell.out.success}" )
     public String successColor;
 
-    @Value("${shell.out.warning}")
+    @Value( "${shell.out.warning}" )
     public String warningColor;
 
-    @Value("${shell.out.error}")
+    @Value( "${shell.out.error}" )
     public String errorColor;
 
     private Terminal terminal;
 
-    public ShellHelper(Terminal terminal) {
+    public ShellHelper( Terminal terminal )
+    {
         this.terminal = terminal;
     }
 
@@ -61,38 +62,45 @@ public class ShellHelper {
      * Construct colored message in the given color.
      *
      * @param message message to return
-     * @param color   color to print
+     * @param color color to print
      * @return colored message
      */
-    public String getColored(String message, PromptColor color) {
-        return (new AttributedStringBuilder()).append(message, AttributedStyle.DEFAULT.foreground(color.toJlineAttributedStyle())).toAnsi();
+    public String getColored( String message, PromptColor color )
+    {
+        return (new AttributedStringBuilder())
+            .append( message, AttributedStyle.DEFAULT.foreground( color.toJlineAttributedStyle() ) ).toAnsi();
     }
 
-    public String getInfoMessage(String message) {
-        return getColored(message, PromptColor.valueOf(infoColor));
+    public String getInfoMessage( String message )
+    {
+        return getColored( message, PromptColor.valueOf( infoColor ) );
     }
 
-    public String getSuccessMessage(String message) {
-        return getColored(message, PromptColor.valueOf(successColor));
+    public String getSuccessMessage( String message )
+    {
+        return getColored( message, PromptColor.valueOf( successColor ) );
     }
 
-    public String getWarningMessage(String message) {
-        return getColored(message, PromptColor.valueOf(warningColor));
+    public String getWarningMessage( String message )
+    {
+        return getColored( message, PromptColor.valueOf( warningColor ) );
     }
 
-    public String getErrorMessage(String message) {
-        return getColored(message, PromptColor.valueOf(errorColor));
+    public String getErrorMessage( String message )
+    {
+        return getColored( message, PromptColor.valueOf( errorColor ) );
     }
 
-    //--- Print methods -------------------------------------------------------
+    // --- Print methods -------------------------------------------------------
 
     /**
      * Print message to the console in the default color.
      *
      * @param message message to print
      */
-    public void print(String message) {
-        print(message, null);
+    public void print( String message )
+    {
+        print( message, null );
     }
 
     /**
@@ -100,8 +108,9 @@ public class ShellHelper {
      *
      * @param message message to print
      */
-    public void printSuccess(String message) {
-        print(message, PromptColor.valueOf(successColor));
+    public void printSuccess( String message )
+    {
+        print( message, PromptColor.valueOf( successColor ) );
     }
 
     /**
@@ -109,8 +118,9 @@ public class ShellHelper {
      *
      * @param message message to print
      */
-    public void printInfo(String message) {
-        print(message, PromptColor.valueOf(infoColor));
+    public void printInfo( String message )
+    {
+        print( message, PromptColor.valueOf( infoColor ) );
     }
 
     /**
@@ -118,8 +128,9 @@ public class ShellHelper {
      *
      * @param message message to print
      */
-    public void printWarning(String message) {
-        print(message, PromptColor.valueOf(warningColor));
+    public void printWarning( String message )
+    {
+        print( message, PromptColor.valueOf( warningColor ) );
     }
 
     /**
@@ -127,32 +138,37 @@ public class ShellHelper {
      *
      * @param message message to print
      */
-    public void printError(String message) {
-        print(message, PromptColor.valueOf(errorColor));
+    public void printError( String message )
+    {
+        print( message, PromptColor.valueOf( errorColor ) );
     }
 
     /**
      * Generic Print to the console method.
      *
      * @param message message to print
-     * @param color   (optional) prompt color
+     * @param color (optional) prompt color
      */
-    public void print(String message, PromptColor color) {
+    public void print( String message, PromptColor color )
+    {
         String toPrint = message;
-        if (color != null) {
-            toPrint = getColored(message, color);
+        if ( color != null )
+        {
+            toPrint = getColored( message, color );
         }
-        terminal.writer().println(toPrint);
+        terminal.writer().println( toPrint );
         terminal.flush();
     }
 
-    //--- set / get methods ---------------------------------------------------
+    // --- set / get methods ---------------------------------------------------
 
-    public Terminal getTerminal() {
+    public Terminal getTerminal()
+    {
         return terminal;
     }
 
-    public void setTerminal(Terminal terminal) {
+    public void setTerminal( Terminal terminal )
+    {
         this.terminal = terminal;
     }
 }

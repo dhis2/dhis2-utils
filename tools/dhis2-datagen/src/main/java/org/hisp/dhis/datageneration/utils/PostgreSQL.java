@@ -40,7 +40,6 @@ import net.andreinc.mockneat.unit.text.sql.SQLEscaper;
  */
 public class PostgreSQL
 {
-
     private PostgreSQL()
     {
     }

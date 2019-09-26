@@ -45,7 +45,6 @@ public class FileWriter
     implements
     SqlStatementsWriter
 {
-
     public void write( File file, StringBuilder sb )
     {
         if ( !file.exists() )
@@ -72,7 +71,8 @@ public class FileWriter
     }
 
     @Override
-    public void write(File file, List<String> statements) {
+    public void write( File file, List<String> statements )
+    {
         if ( !file.exists() )
         {
             try
@@ -97,12 +97,12 @@ public class FileWriter
     }
 
     private void write( List<String> records, Writer writer )
-            throws IOException
+        throws IOException
     {
         // long start = System.currentTimeMillis();
         for ( String record : records )
         {
-            writer.write( record + "\n");
+            writer.write( record + "\n" );
         }
         writer.flush();
         writer.close();

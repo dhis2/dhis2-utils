@@ -35,14 +35,11 @@ import java.util.Observable;
 import java.util.Observer;
 
 import org.hisp.dhis.datageneration.cache.EntityCache;
-import org.hisp.dhis.datageneration.domain.CategoryOptionCombo;
 import org.hisp.dhis.datageneration.generator.unit.TeiUnit;
 import org.hisp.dhis.datageneration.id.IdFactory;
 import org.hisp.dhis.datageneration.observer.ProgressUpdateEvent;
 import org.hisp.dhis.datageneration.writer.SqlStatementsWriter;
 import org.springframework.stereotype.Component;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.java.Log;
 
@@ -60,83 +57,67 @@ public class TeiGenerator
 
     private final IdFactory idFactory;
 
-    private final EntityCache entityCache;
-
     private final SqlStatementsWriter writer;
 
     private final Observer observer;
 
-    private ObjectMapper mapper;
+    private final int CHUNK_SIZE = 5000;
 
-    private final int CHUNCK_SIZE = 5000;
-
-    public TeiGenerator(EntityCache entityCache, IdFactory idFactory, SqlStatementsWriter writer, Observer observer)
+    public TeiGenerator( IdFactory idFactory, SqlStatementsWriter writer, Observer observer )
     {
-        this.entityCache = entityCache;
         this.idFactory = idFactory;
         this.writer = writer;
         this.observer = observer;
-
-        mapper =  new ObjectMapper();
     }
 
     public void generate( DefaultGenerationOptions options, EntityCache entityCache )
     {
-        // TODO does it make sense to randomize this?
-        long defaultaoc = entityCache.getCategoryOptionCombos().stream().filter( CategoryOptionCombo::isDefaultCoc )
-            .findFirst().get().getId();
-
-
-
-        long totalChunks = (options.getQuantity() < CHUNCK_SIZE ? 1 : options.getQuantity() / CHUNCK_SIZE);
+        long totalChunks = (options.getQuantity() < CHUNK_SIZE ? 1 : options.getQuantity() / CHUNK_SIZE);
         int currentChunkSize = 0;
         long processedChunks = 0;
 
         // fetch the first available IDS from target tables
-        IdCounter counter = new IdCounter(
-            "TEI", idFactory.getStartTeiId(),
-            "PI", idFactory.getStartProgramInstanceId(),
-            "PSI", idFactory.getStartProgramStageInstanceId());
+        IdCounter counter = new IdCounter( "TEI", idFactory.getStartTeiId(), "PI",
+            idFactory.getStartProgramInstanceId(), "PSI", idFactory.getStartProgramStageInstanceId() );
 
         List<String> statements = new ArrayList<>();
-        fireProgressEvent( processedChunks, totalChunks);
+        fireProgressEvent( processedChunks, totalChunks );
         for ( int i = 0; i < options.getQuantity(); i++ )
         {
-
-            statements.addAll(new TeiUnit().get(options, entityCache, counter));
+            statements.addAll( new TeiUnit().get( options, entityCache, counter ) );
 
             currentChunkSize++;
 
-            if ( currentChunkSize == CHUNCK_SIZE)
+            if ( currentChunkSize == CHUNK_SIZE )
             {
                 // flush to file the current chunk
                 writer.write( new File( options.getFile() ), statements );
                 // Reset StringBuilder
                 statements = new ArrayList<>();
-                //
-                counter.updateAll( (long) CHUNCK_SIZE );
+                // update counters
+                counter.updateAll( (long) CHUNK_SIZE );
                 // reset chunk count
                 currentChunkSize = 0;
                 // increment number of processed chunks so far
-                processedChunks ++;
+                processedChunks++;
                 // send event for progress bar in CLI
-                fireProgressEvent( processedChunks, totalChunks);
+                fireProgressEvent( processedChunks, totalChunks );
             }
         }
         // flush remaining data
         writer.write( new File( options.getFile() ), statements );
     }
-    
-    private void fireProgressEvent( long processedChuncks, long totalChuncks )
+
+    private void fireProgressEvent( long processedChunks, long totalChunks )
     {
         if ( observer != null )
         {
             String message = "";
-            if ( processedChuncks < totalChuncks )
+            if ( processedChunks < totalChunks )
             {
                 message = ":: please WAIT ::";
             }
-            observer.update( this, new ProgressUpdateEvent( processedChuncks, totalChuncks, message ) );
+            observer.update( this, new ProgressUpdateEvent( processedChunks, totalChunks, message ) );
         }
     }
 

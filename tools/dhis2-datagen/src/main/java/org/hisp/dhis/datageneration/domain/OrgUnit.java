@@ -38,7 +38,6 @@ import lombok.Getter;
 @AllArgsConstructor
 public class OrgUnit
 {
-
     private Long id;
 
     private String uid;

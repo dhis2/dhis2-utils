@@ -37,8 +37,8 @@ import org.hisp.dhis.common.ValueType;
  */
 @AllArgsConstructor
 @Getter
-public class ProgramAttribute {
-
+public class ProgramAttribute
+{
     private Long id;
 
     private String uid;

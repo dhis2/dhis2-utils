@@ -39,7 +39,6 @@ public class StartIdSupplier
     implements
     Supplier<Long>
 {
-
     private final String table;
 
     private final JdbcTemplate jdbcTemplate;

@@ -37,7 +37,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class IdFactory
 {
-
     private final JdbcTemplate jdbcTemplate;
 
     public IdFactory( JdbcTemplate jdbcTemplate )
