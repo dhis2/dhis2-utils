@@ -3,12 +3,14 @@
 # Utility script for dropping and restoring databases
 # from the dhis2-demo-db Github repository.
 #
+# Change the `DB_BASE_DIR` variable to match your environment.
+#
 # Example usage: dhis-restore-db "dev" "2.32"
 #
 
-TMP_DIR="/tmp"
 DB_BASE_DIR="/home/lars/dev/src/dhis2-demo-db/sierra-leone"
 DB_FILE="dhis2-db-sierra-leone"
+TMP_DIR="/tmp"
 
 if [ $# -eq 0 ]; then
   echo -e "Usage: $0 <instance> [<instance>..]\n"

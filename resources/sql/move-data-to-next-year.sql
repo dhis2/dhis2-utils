@@ -51,8 +51,6 @@ update eventreport set enddate = (enddate + interval '1 year') where enddate is 
 update eventchart set startdate = (startdate + interval '1 year') where startdate is not null;
 update eventchart set enddate = (enddate + interval '1 year') where enddate is not null;
 
--- Demo db specific statements
-
 -- (Write) Move date event values to next year
 
 update trackedentitydatavalue set value = to_char((value::date + interval '1 year'), 'YYYY-MM-dd') 

@@ -454,6 +454,22 @@ inner join dataelement de on dv.dataelementid=dv.dataelementid
 group by de
 order by c;
 
+-- Drop and recreate foreign keys on data values for faster delete operations
+
+alter table datavalue drop constraint fk_datavalue_attributeoptioncomboid;
+alter table datavalue drop constraint fk_datavalue_categoryoptioncomboid;
+alter table datavalue drop constraint fk_datavalue_dataelementid;
+alter table datavalue drop constraint fk_datavalue_organisationunitid;
+alter table datavalue drop constraint fk_datavalue_periodid;
+
+alter table datavalue add constraint fk_datavalue_attributeoptioncomboid foreign key (attributeoptioncomboid) references categoryoptioncombo(categoryoptioncomboid);
+alter table datavalue add constraint fk_datavalue_categoryoptioncomboid foreign key (categoryoptioncomboid) references categoryoptioncombo(categoryoptioncomboid);
+alter table datavalue add constraint fk_datavalue_dataelementid foreign key (dataelementid) references dataelement(dataelementid);
+alter table datavalue add constraint fk_datavalue_organisationunitid foreign key (sourceid) references organisationunit(organisationunitid);
+alter table datavalue add constraint fk_datavalue_periodid foreign key (periodid) references period(periodid);
+
+
+
 
 -- COMPLETE DATA SET REGISTRATIONS
 
