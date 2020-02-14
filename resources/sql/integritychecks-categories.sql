@@ -1,4 +1,6 @@
 
+-- Contains various integrity checks as SQL statements for the category related tables, each should ideally return no rows
+
 -- Get category option combos without category options
 
 select * from categoryoptioncombo where categoryoptioncomboid not in (select distinct categoryoptioncomboid from categoryoptioncombos_categoryoptions);
@@ -162,7 +164,7 @@ select cc.categorycomboid, cc.name from categorycombo cc where cc.categorycomboi
 select distinct categorycomboid from dataelement);
 
 
--- WRITE
+-- WRITE BE CAREFUL
 
 -- Repair missing link row between default category and default category option
 
