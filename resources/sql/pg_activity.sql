@@ -83,7 +83,8 @@ select pg_terminate_backend(_pid_);
 
 -- Blocked and blocking activity
 
-select blocked_locks.pid as blocked_pid, blocked_activity.usename as blocked_user, blocking_locks.pid as blocking_pid, blocking_activity.usename as blocking_user, blocked_activity.query as blocked_statement, blocking_activity.query as current_statement_in_blocking_process
+select blocked_locks.pid as blocked_pid, blocked_activity.usename as blocked_user, blocking_locks.pid as blocking_pid, 
+    blocking_activity.usename as blocking_user, blocked_activity.query as blocked_statement, blocking_activity.query as current_statement_in_blocking_process
 from pg_catalog.pg_locks blocked_locks
     join pg_catalog.pg_stat_activity blocked_activity on blocked_activity.pid = blocked_locks.pid
     join pg_catalog.pg_locks blocking_locks on blocking_locks.locktype = blocked_locks.locktype
