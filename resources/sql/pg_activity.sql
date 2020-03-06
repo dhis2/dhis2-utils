@@ -68,7 +68,6 @@ from pg_catalog.pg_locks pl
 inner join pg_stat_activity pa on pl.pid = pa.pid
 where (now() - pa.query_start) > interval '10 minutes';
 
-
 -- Count of connections
 
 select sum(numbackends) 
