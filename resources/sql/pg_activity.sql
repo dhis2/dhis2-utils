@@ -68,7 +68,6 @@ from pg_catalog.pg_locks pl
 inner join pg_stat_activity pa on pl.pid = pa.pid
 where (now() - pa.query_start) > interval '10 minutes';
 
-
 -- Count of connections
 
 select sum(numbackends) 
@@ -114,4 +113,12 @@ show log_statement;
 alter system set log_statement = 'none';
 select pg_reload_conf();
 show log_statement;
+
+-- List tables by size
+
+select table_name, pg_relation_size(quote_ident(table_name))
+from information_schema.tables
+where table_schema = 'public'
+order by 2 desc;
+
 
