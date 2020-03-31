@@ -12,4 +12,5 @@ DELETE FROM trackedentityattributevalue WHERE length(value) > 1200;
 ALTER TABLE trackedentityattributevalue ALTER COLUMN value SET DATA TYPE VARCHAR(1200);
 
 -- Adding the btree index (Done by DHIS2 during upgrade)
-CREATE INDEX in_trackedentity_attribute_value ON trackedentityattributevalue USING btree (trackedentityattributeid, LOWER(value));
+CREATE INDEX in_trackedentity_attribute_value 
+ON trackedentityattributevalue USING btree (trackedentityattributeid, LOWER(value));
