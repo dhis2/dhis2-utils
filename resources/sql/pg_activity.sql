@@ -34,11 +34,19 @@ select count(*)
 from pg_catalog.pg_stat_activity 
 where query not ilike '%pg_stat_activity%';
 
+-- Queries running for more than 5 seconds
+
+select pid, datname, usename, query_start, now() - pg_stat_activity.query_start as duration, state, query 
+from pg_catalog.pg_stat_activity 
+where (now() - pg_stat_activity.query_start) > interval '5 seconds' 
+and state != 'idle' 
+and query not ilike '%pg_stat_activity%';
+
 -- Queries running for more than 1 minute
 
 select pid, datname, usename, query_start, now() - pg_stat_activity.query_start as duration, state, query 
 from pg_catalog.pg_stat_activity 
-where (now() - pg_stat_activity.query_start) > interval '5 minutes' 
+where (now() - pg_stat_activity.query_start) > interval '1 minutes' 
 and state != 'idle' 
 and query not ilike '%pg_stat_activity%';
 
@@ -56,17 +64,24 @@ select pl.pid, pl.locktype, pl.mode, pl.granted, pa.datname, pa.client_addr, pa.
 from pg_catalog.pg_locks pl 
 left join pg_stat_activity pa on pl.pid = pa.pid;
 
--- Count of locks
+-- Locks older than 5 seconds
 
-select count(*) 
-from pg_catalog.pg_locks;
+select pl.pid, pl.locktype, pl.mode, pl.granted, pa.datname, pa.client_addr, pa.query_start, pa.state, pa.query
+from pg_catalog.pg_locks pl
+left join pg_stat_activity pa on pl.pid = pa.pid
+where (now() - pa.query_start) > interval '5 seconds';
 
 -- Locks older than 10 minutes
 
 select pl.pid, pl.locktype, pl.mode, pl.granted, pa.datname, pa.client_addr, pa.query_start, pa.state, pa.query
 from pg_catalog.pg_locks pl
-inner join pg_stat_activity pa on pl.pid = pa.pid
+left join pg_stat_activity pa on pl.pid = pa.pid
 where (now() - pa.query_start) > interval '10 minutes';
+
+-- Count of locks
+
+select count(*) 
+from pg_catalog.pg_locks;
 
 -- Count of connections
 
