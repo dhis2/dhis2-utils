@@ -60,20 +60,20 @@ and query not ilike '%pg_stat_activity%';
 
 -- Current locks
 
-select pl.pid, pl.locktype, pl.mode, pl.granted, pa.datname, pa.client_addr, pa.query_start, pa.state, pa.query 
+select pl.pid, pl.locktype, pl.mode, pl.granted, pa.datname, pa.client_addr, pa.query_start, pa.state, substring(pa.query for 1000)
 from pg_catalog.pg_locks pl 
 left join pg_stat_activity pa on pl.pid = pa.pid;
 
 -- Locks older than 5 seconds
 
-select pl.pid, pl.locktype, pl.mode, pl.granted, pa.datname, pa.client_addr, pa.query_start, pa.state, pa.query
+select pl.pid, pl.locktype, pl.mode, pl.granted, pa.datname, pa.client_addr, pa.query_start, pa.state, substring(pa.query for 1000)
 from pg_catalog.pg_locks pl
 left join pg_stat_activity pa on pl.pid = pa.pid
 where (now() - pa.query_start) > interval '5 seconds';
 
 -- Locks older than 10 minutes
 
-select pl.pid, pl.locktype, pl.mode, pl.granted, pa.datname, pa.client_addr, pa.query_start, pa.state, pa.query
+select pl.pid, pl.locktype, pl.mode, pl.granted, pa.datname, pa.client_addr, pa.query_start, pa.state, substring(pa.query for 1000)
 from pg_catalog.pg_locks pl
 left join pg_stat_activity pa on pl.pid = pa.pid
 where (now() - pa.query_start) > interval '10 minutes';
