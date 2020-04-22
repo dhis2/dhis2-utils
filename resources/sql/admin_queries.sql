@@ -515,6 +515,13 @@ from programstageinstance psi
 group by yr, mo
 order by yr, mo;
 
+-- Get counts of events by year by executiondate
+
+select extract(year from psi.executiondate)::integer as yr, count(*)
+from programstageinstance psi
+group by yr
+order by yr;
+
 -- Get count of data elements per program
 
 select pr.name,count(psd.uid)
