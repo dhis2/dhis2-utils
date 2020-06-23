@@ -1,17 +1,40 @@
+<!doctype html>
 <html>
 <head>
+<title>Query viewer</title>
 <style type="text/css">
 
+html, body {
+	font: arial, sans-serif;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+}
+
+h1 {	
+	font-size: 2.5em;
+	color: #555;
+}
+
 #container {
-	width: 95%; 
-	margin: 5% auto;
+	width: 95%;
+	height: 100%;
+	margin: 1em auto 0 auto;
+	padding: 0;
 }
 
 #query {
 	width: 98%;
-	height: 78%;
+	height: 70%;
 	font-size: 2.5em;
 	margin-bottom: 10px;
+	margin: 0;
+	padding: 0;
+}
+
+#btnArea {
+	padding: 1em 0;
 }
 
 .main-btn {
@@ -68,7 +91,7 @@ app.getUnFormattedQuery = function(query) {
 	return unFormattedQuery;
 };
 
-app.getQueryResult = function() {
+app.getQueryResponse = function() {
 	const query = document.getElementById('query').value;
 	const unFormattedQuery = app.getUnFormattedQuery(query);
 	window.location.href = unFormattedQuery;
@@ -81,19 +104,15 @@ app.clearQuery = function() {
 </script>
 </head>
 <body>
-
-<div id="container">
-	
-<textarea id="query" placeholder="Enter query"></textarea>
-
-<div>
-<input type="button" class="main-btn" onclick="app.formatQuery()" value="Format">
-<input type="button" class="main-btn" onclick="app.unFormatQuery()" value="Un-format">
-<input type="button" class="main-btn" onclick="app.clearQuery()" value="Clear">
-<input type="button" class="main-btn" onclick="app.getQueryResult()" value="Get result">
+	<div id="container">
+	<h1>Query Viewer</h1>
+	<textarea id="query" placeholder="Enter query"></textarea>
+	<div id="btnArea">
+		<input type="button" class="main-btn" onclick="app.formatQuery()" value="Format">
+		<input type="button" class="main-btn" onclick="app.unFormatQuery()" value="Un-format">
+		<input type="button" class="main-btn" onclick="app.getQueryResponse()" value="Get response">
+		<input type="button" class="main-btn" onclick="app.clearQuery()" value="Clear">
+	</div>
 </div>
-
-</div>
-
 </body>
 </html>
