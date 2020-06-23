@@ -56,7 +56,7 @@ app.unFormatQuery = function() {
 
 app.getFormattedQuery = function(query) {
 	let formattedQuery = '';
-	
+
 	if (query && query.length > 1) {		
 		for (var i = 0; i < query.length; i++) {
 			let sb = query.substring(i, (i+1));
@@ -74,6 +74,7 @@ app.getFormattedQuery = function(query) {
 
 app.getUnFormattedQuery = function(query) {
 	let unFormattedQuery = '';
+	
 	if (query && query.length > 1) {	
 		for (var i = 0; i < query.length; i++) {
 			let sb = query.substring(i, (i+1));
