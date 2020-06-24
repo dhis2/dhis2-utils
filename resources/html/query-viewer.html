@@ -74,7 +74,7 @@ app.getFormattedQuery = function(query) {
 
 app.getUnFormattedQuery = function(query) {
 	let unFormattedQuery = '';
-	
+
 	if (query && query.length > 1) {	
 		for (var i = 0; i < query.length; i++) {
 			let sb = query.substring(i, (i+1));
@@ -103,7 +103,7 @@ app.clearQuery = function() {
 <body>
 	<div id="container">
 	<h1>Query Viewer</h1>
-	<textarea id="query" placeholder="Enter query"></textarea>
+	<textarea id="query" spellcheck="false" placeholder="Enter query"></textarea>
 	<div id="btnArea">
 		<input type="button" class="main-btn" onclick="app.formatQuery()" value="Format">
 		<input type="button" class="main-btn" onclick="app.unFormatQuery()" value="Un-format">
