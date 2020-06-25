@@ -29,12 +29,12 @@ h1 {
 	padding: 0;
 }
 
-#btnArea {
+#btn-area {
 	padding: 1em 0;
 }
 
 .main-btn {
-	font-size: 1.1em;
+	font-size: 1.2em;
 }
 
 </style>
@@ -56,7 +56,6 @@ app.unFormatQuery = function() {
 
 app.getFormattedQuery = function(query) {
 	let formattedQuery = '';
-
 	if (query && query.length > 1) {		
 		for (var i = 0; i < query.length; i++) {
 			let sb = query.substring(i, (i+1));
@@ -67,14 +66,12 @@ app.getFormattedQuery = function(query) {
 			
 			formattedQuery += sb;
 		}	
-	}
-	
+	}	
 	return formattedQuery;
 };
 
 app.getUnFormattedQuery = function(query) {
 	let unFormattedQuery = '';
-
 	if (query && query.length > 1) {	
 		for (var i = 0; i < query.length; i++) {
 			let sb = query.substring(i, (i+1));
@@ -83,8 +80,7 @@ app.getUnFormattedQuery = function(query) {
 				unFormattedQuery += sb;
 			}
 		}		
-	}
-	
+	}	
 	return unFormattedQuery;
 };
 
@@ -104,7 +100,7 @@ app.clearQuery = function() {
 	<div id="container">
 	<h1>Query Viewer</h1>
 	<textarea id="query" spellcheck="false" placeholder="Enter query"></textarea>
-	<div id="btnArea">
+	<div id="btn-area">
 		<input type="button" class="main-btn" onclick="app.formatQuery()" value="Format">
 		<input type="button" class="main-btn" onclick="app.unFormatQuery()" value="Un-format">
 		<input type="button" class="main-btn" onclick="app.getQueryResponse()" value="Get response">
