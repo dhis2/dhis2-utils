@@ -150,6 +150,15 @@ inner join organisationunit oulev2 on ct.uidlevel2=oulev2.uid
 inner join organisationunit oulev3 on ct.uidlevel3=oulev3.uid
 inner join categoryoptioncombo coc on ct.ao=coc.uid
 
+-- DATA SETS
+
+select ds.uid as ds_uid, ds.name as ds_name, (
+	select count(*)
+	from datasetelement dse
+	where ds.datasetid = dse.datasetid) as de_count
+from dataset ds
+order by de_count desc;
+
 
 -- ORGANISATION UNITS
 
