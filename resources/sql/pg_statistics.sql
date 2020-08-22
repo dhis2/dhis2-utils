@@ -1,4 +1,15 @@
 
+-- SIZE
+
+-- Get size of all tables
+
+select table_name, pg_size_pretty(pg_relation_size(quote_ident(table_name))) as table_size
+from information_schema.tables
+where table_schema = 'public'
+order by pg_relation_size(quote_ident(table_name)) desc;
+
+
+-- ANALYTICS
 
 -- Approximate count of rows in analytics tables
 
