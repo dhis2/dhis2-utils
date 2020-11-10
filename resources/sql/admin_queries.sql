@@ -423,6 +423,13 @@ where dv.lastupdated >= '2018-08-1'
 group by d_day, d_hour
 order by d_day desc, d_hour desc;
 
+-- Data values created by year and month
+
+select extract(year from dv.created)::integer as yr, extract(month from dv.created)::integer as mo, count(*)
+from datavalue dv
+group by yr, mo
+order by yr, mo;
+
 -- Data values since date
 
 select count(*) as d_count
@@ -442,7 +449,6 @@ order by ps.iso asc;
 select extract(year from pe.startdate)::integer as yr, extract(month from pe.startdate)::integer as mo, count(*)
 from datavalue dv
 inner join period pe on dv.periodid=pe.periodid
-where dv.value != '0'
 group by yr, mo
 order by yr, mo;
 
@@ -451,7 +457,6 @@ order by yr, mo;
 select extract(year from pe.startdate)::integer as yr, count(*)
 from datavalue dv
 inner join period pe on dv.periodid=pe.periodid
-where dv.value != '0'
 group by yr
 order by yr;
 
