@@ -1,13 +1,13 @@
 
 -- SIZE
 
--- Get size of all tables
+-- Get size of largest tables
 
-select table_name, pg_size_pretty(pg_relation_size(quote_ident(table_name))) as table_size
-from information_schema.tables
-where table_schema = 'public'
-order by pg_relation_size(quote_ident(table_name)) desc;
-
+select tb.table_schema as table_schema, tb.table_name, pg_size_pretty(pg_relation_size(quote_ident(tb.table_name))) as table_size
+from information_schema.tables tb
+where tb.table_schema = 'public'
+order by pg_relation_size(quote_ident(tb.table_name)) desc
+limit 100;
 
 -- ANALYTICS
 
