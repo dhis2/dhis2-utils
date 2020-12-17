@@ -48,6 +48,8 @@ class orgenerator:
             self.total_estimate+=self.MAX_CHILDREN**t
 
 
+    def estimate(self):
+        print(self.MAX_LEVELS,"levels with",self.MAX_CHILDREN,"children will give",self.total_estimate,"OUs.")
 
 
     def final(self):
@@ -196,13 +198,17 @@ if __name__ == "__main__":
     parser.add_argument('-b','--batch', action="store", help='batch size for import', required=False)
     parser.add_argument('-c','--coords', nargs=4, action="append", type=int, help='coordinates specifying boundary border [x,y,dx,dy]', required=False)
     parser.add_argument('-k','--kids', action="store", help='maximum sub-units (children or "kids") at each level', required=False)
+    parser.add_argument('-e','--estimate', action="store_true", help='just display an estimate of the total number of OUs, and exit')
 
     parser.set_defaults(levels=6,kids=10,user='admin',password='district',batch=1000, coords=[10,10,10,10])
     args = parser.parse_args()
 
     OUgen = orgenerator(args)
-    OUgen.orgUnitLevels()
-    #send the Levels first
-    OUgen.import_orgs()
-    OUgen.orgUnits()
-    OUgen.final()
+    if args.estimate:
+        OUgen.estimate()
+    else:
+        OUgen.orgUnitLevels()
+        #send the Levels first
+        OUgen.import_orgs()
+        OUgen.orgUnits()
+        OUgen.final()

@@ -32,6 +32,7 @@ pip3 install -r requirements.txt
     - DX=width along longitude in degrees
     - DY=height along latitude in degrees
 - `-b` `--batch` Batch size for POSTs to the importer (default=1000)
+- `-e` `--estimate` Just display estimated number of OUs and exit.
 
 #### mandatory
 
