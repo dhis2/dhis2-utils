@@ -23,7 +23,7 @@ pip3 install -r requirements.txt
 - `-h` `--help` display usage info
 - `-u` `--user` DHIS2 instance user (default=`admin`)
 - `-p` `--password` DHIS2 instance password (default=`district`)
-- `-l` `--levels` Levels in Org Unit hierarchy (default=7, max=7)
+- `-l` `--levels` Levels in Org Unit hierarchy (default=6, max=7)
 - `-k` `--kids` Number of child OUs (kids) as each level (default=10, max=26)
 - `-c` `--coords` Rectangle defining the outer Org Unit boundary (default= 10 10 10 10)
     --coords X Y DX DY, where
