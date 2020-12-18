@@ -57,3 +57,5 @@ python3 orgenerator.py -s https://test.performance32.dhis2.org/phil  -l 5 -b 500
 > **NOTE**
 >
 > The amount of org units is calculated as: kids^^(levels-1) + kids^^(levels-2) + ... + kids^0
+>
+> **Add `-e` or `--estimate` to your command to get the number of OUs without generating them**
