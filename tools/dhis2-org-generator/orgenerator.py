@@ -143,6 +143,9 @@ class orgenerator:
     # add coordinates and send
     def coordinates(self,orgtree, x, y, width, height):
 
+        if orgtree["level"] == 1:
+            self.ou_builder(orgtree)
+
         # if type(orgtree) is dict:
         if "children" in orgtree:
             values = [100]*len(orgtree["children"])
@@ -168,8 +171,6 @@ class orgenerator:
                 if "children" in c:
                     self.coordinates(c,x,y,dx,dy)
                 index+=1
-        if orgtree["level"] == 1:
-            self.ou_builder(orgtree)
 
     def orgUnitLevels(self):
         self.myorgs={"organisationUnitLevels": []}
