@@ -23,7 +23,13 @@ import numpy as np
 import logzero
 import sys
 
-api_source = Api.from_auth_file('./auth.json')
+try:
+    f = open("./auth.json")
+except IOError:
+    print("Please provide file auth.json with credentials for DHIS2 server")
+    exit(1)
+else:
+    api_source = Api.from_auth_file('./auth.json')
 
 program_orgunits = list()
 program_teas = list()
@@ -40,7 +46,14 @@ logzero.logfile(log_file)
 
 scope = ['https://spreadsheets.google.com/feeds',
          'https://www.googleapis.com/auth/drive']
-credentials = ServiceAccountCredentials.from_json_keyfile_name('dummy-data-297922-97b90db83bdc.json', scope)
+google_spreadshseet_credentials = 'dummy-data-297922-97b90db83bdc.json'
+try:
+    f = open(google_spreadshseet_credentials)
+except IOError:
+    print("Please provide file with google spreadsheet credentials")
+    exit(1)
+else:
+    credentials = ServiceAccountCredentials.from_json_keyfile_name(google_spreadshseet_credentials, scope)
 
 import argparse
 my_parser = argparse.ArgumentParser(description='Create dummy data in an instance using a Google Spreadsheet')
@@ -84,7 +97,7 @@ try:
     if df_params[df_params.PARAMETER == "server_url"].shape[0] == 1:
         server_url = df_params[df_params.PARAMETER == "server_url"]['VALUE'].tolist()[0]
         if not pd.isnull(server_url) and server_url != "":
-            # Open auth json, credentials will be the same
+            # Whether the file exists has been verified at the beginning of the execution
             with open('./auth.json', 'r') as json_file:
                 credentials = json.load(json_file)
             api_source = Api(server_url, credentials['dhis']['username'], credentials['dhis']['password'])

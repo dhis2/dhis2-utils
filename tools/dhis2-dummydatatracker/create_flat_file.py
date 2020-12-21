@@ -10,7 +10,15 @@ from gspread_dataframe import get_as_dataframe, set_with_dataframe
 from gspread_formatting import *
 import re
 
-api_source = Api.from_auth_file('./auth.json')
+
+try:
+    f = open("./auth.json")
+except IOError:
+    print("Please provide file auth.json with credentials for DHIS2 server")
+    exit(1)
+else:
+    api_source = Api.from_auth_file('./auth.json')
+
 # If no file path is specified, it tries to find a file called dish.json in:
 #
 # the DHIS_HOME environment variable
@@ -151,8 +159,16 @@ def create_google_spreadsheet(program, df, share_with):
     scope = ['https://spreadsheets.google.com/feeds',
              'https://www.googleapis.com/auth/drive']
 
+    google_spreadshseet_credentials = 'dummy-data-297922-97b90db83bdc.json'
     try:
-        credentials = ServiceAccountCredentials.from_json_keyfile_name('dummy-data-297922-97b90db83bdc.json', scope)
+        f = open(google_spreadshseet_credentials)
+    except IOError:
+        print("Please provide file with google spreadsheet credentials")
+        exit(1)
+    else:
+        credentials = ServiceAccountCredentials.from_json_keyfile_name(google_spreadshseet_credentials, scope)
+
+    try:
         gc = gspread.authorize(credentials)
         mode='update'
         try:
