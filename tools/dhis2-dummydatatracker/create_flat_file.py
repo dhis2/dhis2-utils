@@ -263,7 +263,7 @@ def main():
 
     my_parser = argparse.ArgumentParser(prog='create_flat_file',
                                         description='Create dummy data flat file in Google Spreadsheets',
-                                        epilog="python create_flat_file Lt6P15ps7f6 --with_teis_from_ou=GZ5Ty90HtW --share_with=johndoe@dhis2.org"
+                                        epilog="python create_flat_file Lt6P15ps7f6 --with_teis_from=GZ5Ty90HtW --share_with=johndoe@dhis2.org"
                                                "\npython create_flat_file Lt6P15ps7f6 --repeat_stage Hj38Uhfo012 5 --repeat_stage 77Ujkfoi9kG 3 --share_with=person1@dhis2.org --share_with=person2@dhis2.org",
                                         formatter_class=argparse.RawDescriptionHelpFormatter)
     my_parser.add_argument('Program_UID', metavar='program_uid', type=str,
