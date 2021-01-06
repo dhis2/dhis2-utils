@@ -372,9 +372,11 @@ def main():
             sys.exit()
 
     if isinstance(program, dict):
-        orgunits_uid = json_extract_nested_ids(program, 'organisationUnits')
-        if args.OrgUnit is not None and args.OrgUnit not in orgunits_uid:
-            logger.error('The organisation unit ' + args.OrgUnit + ' is not assigned to program ' + program_uid)
+        # If the program has many org units assigned, this can take a long time to run!!!
+        # orgunits_uid = json_extract_nested_ids(program, 'organisationUnits')
+        # if args.OrgUnit is not None and args.OrgUnit not in orgunits_uid:
+        #     logger.error('The organisation unit ' + args.OrgUnit + ' is not assigned to program ' + program_uid)
+        # print('Number of OrgUnits:' + str(len(orgunits_uid)))
 
         programStages_uid = json_extract_nested_ids(program, 'programStages')
         if args.repeat_stage is not None:
@@ -399,7 +401,6 @@ def main():
                                       "filter": "id:in:[" + ','.join(teas_uid) + "]"}).json()[
             'trackedEntityAttributes']
         TEAs = reindex(TEAs, 'id')
-        print('Number of OrgUnits:' + str(len(orgunits_uid)))
 
         # Add the first row with eventDate and Enrollment label
         enrollmentDateLabel = "Enrollment date"
@@ -503,29 +504,36 @@ def main():
 
                     for dataElement in programStageSection['dataElements']:
                         dataElement_id = dataElement['id']
-                        dataElement_def = dataElements[dataElement_id]
-                        dataElement_PS = dataElements_programStage[dataElement_id]
-                        print('DE: ' + dataElement_def['name'] + " (" + dataElement_def['valueType'] + ")")
-                        optionSet_def = ""
+                        # This will fail if the DE is present in the PSSection but not in the PS, so we check first
+                        # if the key exists. If not, we warn the user and skip this
+                        if dataElement_id not in dataElements:
+                            logger.warning("Data Element with UID " + dataElement_id +
+                                           " is present in program stage section but not assigned to the program stage")
+                            logger.warning("SKIPPING")
+                        else:
+                            dataElement_def = dataElements[dataElement_id]
+                            dataElement_PS = dataElements_programStage[dataElement_id]
+                            print('DE: ' + dataElement_def['name'] + " (" + dataElement_def['valueType'] + ")")
+                            optionSet_def = ""
 
-                        if 'optionSet' in dataElement_def:
-                            optionSet = dataElement_def['optionSet']['id']
-                            if optionSet not in optionSetDict:
-                                options = api_source.get('options', params={"paging": "false",
-                                                                            "order": "sortOrder:asc",
-                                                                            "fields": "id,code",
-                                                                            "filter": "optionSet.id:eq:" + optionSet}).json()[
-                                    'options']
-                                optionsList = json_extract(options, 'code')
-                                optionSetDict[optionSet] = optionsList
+                            if 'optionSet' in dataElement_def:
+                                optionSet = dataElement_def['optionSet']['id']
+                                if optionSet not in optionSetDict:
+                                    options = api_source.get('options', params={"paging": "false",
+                                                                                "order": "sortOrder:asc",
+                                                                                "fields": "id,code",
+                                                                                "filter": "optionSet.id:eq:" + optionSet}).json()[
+                                        'options']
+                                    optionsList = json_extract(options, 'code')
+                                    optionSetDict[optionSet] = optionsList
 
-                            optionSet_def = '\n'.join(optionSetDict[optionSet])
+                                optionSet_def = '\n'.join(optionSetDict[optionSet])
 
-                        df = df.append({"Stage": "", "Section": section_label,
-                                        "TEA / DE / eventDate": dataElement_def['name'],
-                                        "UID": dataElement_id, "valueType": dataElement_def['valueType'],
-                                        "optionSet": optionSet_def, "mandatory": dataElement_PS['compulsory']},
-                                       ignore_index=True)
+                            df = df.append({"Stage": "", "Section": section_label,
+                                            "TEA / DE / eventDate": dataElement_def['name'],
+                                            "UID": dataElement_id, "valueType": dataElement_def['valueType'],
+                                            "optionSet": optionSet_def, "mandatory": dataElement_PS['compulsory']},
+                                           ignore_index=True)
                         if section_label != "":
                             section_label = ""
 
