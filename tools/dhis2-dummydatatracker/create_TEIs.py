@@ -705,6 +705,10 @@ def from_df_to_TEI_json(df_replicas, tei_template, event_template, df_ou_ratio=N
             random_ou = dict()
             random_ou['id'] = ou_values[int(tei_column.split("_")[1])-1]
 
+        tei["trackedEntityInstance"] = trackedEntityInstance_UID
+        tei["trackedEntityType"] = trackedEntityType_UID
+        tei["orgUnit"] = random_ou['id']
+
         # Slice df per enrollment/stage
         for i in range(0, len(stage_indexes)):
             if (i + 1) != len(stage_indexes):
@@ -983,16 +987,14 @@ def main():
 
         # Get orgUnits of program
         orgunits_uid = json_extract_nested_ids(program, 'organisationUnits')
-        program_orgunits = api_source.get('organisationUnits',
+        all_orgunits_at_level = api_source.get('organisationUnits',
                                   params={"paging": "false",
-                                  "filter":"id:in:["+','.join(orgunits_uid)+"]",
+                                          "filter": "level:eq:"+str(orgUnit_level),
                                           "fields":"id,name,level"}).json()['organisationUnits']
-        # We cannot apply to filters unfortunately "filter": "level:eq:"+str(orgUnit_level),
-        only_single_level_OUs = list()
-        for ou in program_orgunits:
-            if ou['level'] == orgUnit_level:
-                only_single_level_OUs.append({"id":ou['id'], "name":ou['name']})
-        program_orgunits = only_single_level_OUs
+        program_orgunits = list()
+        for ou in all_orgunits_at_level:
+            if ou['id'] in orgunits_uid:
+                program_orgunits.append(ou)
 
         df_ou_distrib = None
         if df_distrib is not None and df_distrib[df_distrib.NAME == 'Organisation Unit'].shape[0] > 0:
@@ -1088,6 +1090,8 @@ def main():
                     df_ratio["RATIO"] = pd.to_numeric(df_ratio["RATIO"])
                     if sum(df_ratio["RATIO"].tolist()) == 0.0:
                         df_ratio = None
+                else:
+                    df_ratio = None
                 replicas = from_df_to_TEI_json(create_replicas_from_df(df, tei_id, start_date, end_date, row['NUMBER'], df_distrib), tei_template, event_template, df_ratio)
                 post_chunked_data(api_source, replicas, 'trackedEntityInstances', chunk_size)
                 #post_to_server(api_source, {'trackedEntityInstances': replicas}, 'trackedEntityInstances')
