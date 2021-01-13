@@ -105,7 +105,13 @@ def add_json_tei_to_metadata_df(json_tei, df):
         for event in json_events:
             # Considering here that program stages appear in order but it might be better to loop through them in order
             program_stage_uid = event['programStage']
-            pos[program_stage_uid] = set_value(df, program_stage_uid, event['eventDate'][0:10])
+            # if the programme allows for the future scheduling of events,
+            # this will mean that even though the event date is mandatory,
+            # scheduled events which have not yet happen, will not yet have an event date
+            if 'eventDate' in event:
+                pos[program_stage_uid] = set_value(df, program_stage_uid, event['eventDate'][0:10])
+            else:
+                pos[program_stage_uid] = set_value(df, program_stage_uid, '')
             if pos == -1:  # There was a problem
                 return False
             if 'dataValues' in event:
