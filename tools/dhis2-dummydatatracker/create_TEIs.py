@@ -986,7 +986,7 @@ def main():
         trackedEntityType_UID = program['trackedEntityType']['id']
 
         # Get orgUnits of program
-        orgunits_uid = json_extract_nested_ids(program, 'organisationUnits')
+        orgunits_uid = json_extract(program['organisationUnits'], 'id')
         all_orgunits_at_level = api_source.get('organisationUnits',
                                   params={"paging": "false",
                                           "filter": "level:eq:"+str(orgUnit_level),
