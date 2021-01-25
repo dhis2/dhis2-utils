@@ -236,6 +236,7 @@ def validate_value(value_type, value, optionSet = list()):
 
     correct = False
 
+
     if len(optionSet) > 0: # It is an option
         if value in optionSet:
             correct = True
@@ -275,11 +276,20 @@ def validate_value(value_type, value, optionSet = list()):
         value = value.lower()
         if value == 'true':
             correct = True
+        elif value == 1 or value == '1':
+            correct = True
+            value = 'True'
     elif value_type == 'BOOLEAN':
         value = value.lower()
         if value in ['true', 'false']:
             correct = True
-        if value in ['yes', 'no']:
+        elif value == 1 or value == '1':
+            correct = True
+            value = 'True'
+        elif value == 0 or value == '0':
+            correct = True
+            value = 'False'
+        elif value in ['yes', 'no']:
             correct = True
     elif value_type == 'TIME':
         if isTimeFormat(value):
