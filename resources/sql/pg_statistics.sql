@@ -13,7 +13,7 @@ where tb.table_schema = 'public'
 order by pg_relation_size(quote_ident(tb.table_name)) desc
 limit 100;
 
--- Get size of database temp files
+-- Get size of temp files being created since database was created
 
 select datname, temp_files, temp_bytes as temp_files_size_bytes, pg_size_pretty(temp_bytes) as temp_files_size_pretty
 from pg_stat_database db
