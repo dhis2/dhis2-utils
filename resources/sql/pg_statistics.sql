@@ -1,6 +1,10 @@
 
 -- SIZE
 
+-- Get size of database
+
+select pg_size_pretty(pg_database_size('dhis2'));
+
 -- Get size of largest tables
 
 select tb.table_schema as table_schema, tb.table_name, pg_size_pretty(pg_relation_size(quote_ident(tb.table_name))) as table_size
