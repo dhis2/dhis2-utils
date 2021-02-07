@@ -3,6 +3,8 @@
 # Installs YourKit Java Profiler
 # Run as root with 'sudo ./install_yjp.sh'
 #
+# Requires 'wget' and 'unzip'
+#
 # Enable with:
 # JAVA_OPTS="$JAVA_OPTS -agentpath:/path/to/libyjpagent.so"
 
