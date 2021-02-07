@@ -2,6 +2,9 @@
 
 # Installs YourKit Java Profiler
 # Run as root with 'sudo ./install_yjp.sh'
+#
+# Enable with:
+# JAVA_OPTS="$JAVA_OPTS -agentpath:/path/to/libyjpagent.so"
 
 YJP_URL="https://s3-eu-west-1.amazonaws.com/content.dhis2.org/development/yjp/yjp.zip" 
 YJP_FILE="yjp.zip"
@@ -11,6 +14,7 @@ AGENT_FILE="${INSTALL_DIR}/yjp/bin/linux-x86-64/libyjpagent.so"
 echo "Dowloading YourKit archive.."
 
 rm -f ${YJP_FILE}
+rm -rf /tmp/yjp
 
 wget ${YJP_URL}
 
@@ -32,7 +36,7 @@ mv /tmp/yjp ${INSTALL_DIR}
 
 if [ -f "${AGENT_FILE}" ]; then
   echo "Agent successfully installed at: ${AGENT_FILE}"
-  echo "Add the following to JAVA_OPTS:"
+  echo "Enable agent by adding to JAVA_OPTS:"
   echo "-agentpath:${AGENT_FILE}"
 else
   echo "Installation failed"
