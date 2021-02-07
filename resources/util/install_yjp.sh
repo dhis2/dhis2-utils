@@ -58,5 +58,5 @@ else
   echo "-agentpath:${AGENT_FILE}"
 fi
 
-echo "Installation done"
+echo "Installation done, restart Tomcat for changes to take effect"
 echo ""
