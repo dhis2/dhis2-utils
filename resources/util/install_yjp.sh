@@ -49,6 +49,7 @@ echo "Enabling agent.."
 
 if [ -d "${TOMCAT_CONF_DIR}" ]; then
   echo "JAVA_OPTS=\"\$JAVA_OPTS -agentpath:${AGENT_FILE}\"" > ${TOMCAT_CONF_FILE}
+  chown root:tomcat ${TOMCAT_CONF_FILE}
 
   if [ -f "${TOMCAT_CONF_FILE}" ]; then
     echo "Tomcat conf file created: ${TOMCAT_CONF_FILE}"
