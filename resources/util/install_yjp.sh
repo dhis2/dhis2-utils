@@ -61,5 +61,7 @@ else
   echo "-agentpath:${AGENT_FILE}"
 fi
 
+rm -f ${YJP_FILE}
+
 echo "Installation done, restart Tomcat for changes to take effect"
 echo ""
