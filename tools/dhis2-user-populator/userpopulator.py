@@ -26,7 +26,7 @@ def generate_ids(count):
     except:
         return []
 
-# fetch UI Locales available an instance
+# fetch UI Locales available in instance
 def get_locales():
     try:
         req = requests.get(base_url+'/api/locales/ui.json',
@@ -47,7 +47,7 @@ def get_users_for_group(group_id):
         print('Could not fetch users for group id {0}'.format(group_id))
         return ''
 
-
+# fetch resources
 def get_resource(name, key):
     try:
         req = requests.get(base_url + '/api/{0}.json?paging=false'.format(name),
@@ -68,15 +68,15 @@ def create_users(payload):
     except Exception as e:
         print(e)
 
-
+# fetch all user roles 
 def get_user_roles():
     return get_resource('userRoles', 'userRoles')
 
-
+# fetch all org units
 def get_organisation_units():
     return get_resource('organisationUnits', 'organisationUnits')
 
-
+# fetch all user groups
 def get_user_groups():
     return get_resource('userGroups', 'userGroups')
 
@@ -118,23 +118,34 @@ def update_user_locales(entries):
         except Exception as e:
             print(e)
 
-# create userGroup payload
+# prepare userGroups payload
 def create_user_groups(user_group_combos):
     try:
-        group_ids = set([group["groupId"] for group in user_group_combos])
+        group_ids_list = []
+        for i in user_group_combos:
+            for k, v in i.items():
+                if k == "groupId":
+                    for x in v:
+                        group_ids_list.append(x)
+        group_ids = set(group_ids_list)
 
         user_groups = []
 
         for group_id in group_ids:
-            group_combos = filter(
-                lambda x: x["groupId"] == group_id, user_group_combos)
+            group_combos = list(
+                filter(lambda x: group_id in x['groupId'], user_group_combos))
+            id_index = 0
+            if group_id in group_combos[0]['groupId']:
+                id_index = group_combos[0]['groupId'].index(group_id)
+            # print(id_index)
+
             user_ids_in_memory = [combo["userId"] for combo in group_combos]
             mapped_user_ids_in_memory = list(map(
                 lambda x: {"id": x}, user_ids_in_memory))
-            users = get_users_for_group(group_id) + mapped_user_ids_in_memory
-
+            users = users = get_users_for_group(
+                group_id) + mapped_user_ids_in_memory
             user_group = {
-                "name": list(filter(lambda x: x["groupId"] == group_id, user_group_combos))[0]["groupName"],
+                "name": list(filter(lambda x: group_id in x['groupId'], user_group_combos))[0]["groupName"][id_index],
                 "id": group_id,
                 "users": users
             }
@@ -144,7 +155,7 @@ def create_user_groups(user_group_combos):
         print('Exception in create user groups {0}'.format(e))
         return []
 
-# create users payload
+# prepare users payload
 def create_user_list(entries):
     organisation_units = get_organisation_units()
     user_groups = get_user_groups()
@@ -158,6 +169,10 @@ def create_user_list(entries):
 
     for index, row in enumerate(entries):
         user_id = user_ids[index]
+        user_roles_split = row['userRoles'].split(", ")
+        oucapture_split = row['organisationUnits'].split(", ")
+        ououtput_split = row['organisationUnits'].split(", ")
+        user_groups_split = row['userGroups'].split(", ")
         user = {
             "id": user_id,
             "firstName": row['firstName'],
@@ -165,28 +180,19 @@ def create_user_list(entries):
             "userCredentials": {
                 "username": row['username'],
                 "password": row['password'],
-                "userRoles": [
-                    {
-                        "id": get_resource_id(row['userRoles'], user_roles)
-                    }
-                ]
+                "userRoles": list(map(lambda x: {"id": get_resource_id(
+                    x, user_roles)}, user_roles_split))
             },
-            "organisationUnits": [
-                {
-                    "id": get_resource_id(row['organisationUnits'], organisation_units)
-                }
-            ],
-            "dataViewOrganisationUnits": [
-                {
-                    "id": get_resource_id(row['dataViewOrganisationUnits'], organisation_units)
-                }
-            ]
+            "organisationUnits": list(map(lambda x: {"id": get_resource_id(
+                x, organisation_units)}, oucapture_split)),
+            "dataViewOrganisationUnits": list(map(lambda x: {"id": get_resource_id(
+                x, organisation_units)}, ououtput_split))
         }
 
         user_group_combo = {
             "userId": user_id,
-            "groupName": row["userGroups"],
-            "groupId": get_resource_id(row['userGroups'], user_groups),
+            "groupName": user_groups_split,
+            "groupId": list(map(lambda x: get_resource_id(x, user_groups), user_groups_split)),
         }
 
         user_group_combos.append(user_group_combo)
@@ -205,7 +211,7 @@ if __name__ == '__main__':
         "users": users,
         "userGroups": user_groups
     }
-    # print(payload)
+    print(payload)
     # print(user_locales)
     print('Importing users and updating usergroups...')
     create_users(payload)
