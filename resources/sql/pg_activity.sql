@@ -120,13 +120,24 @@ where not blocked_locks.granted;
 
 show max_connections; show shared_buffers; show work_mem; show maintenance_work_mem; show effective_cache_size; show checkpoint_completion_target; show synchronous_commit; show wal_writer_delay;
 
--- Enable and disable logging
+-- Enable full logging
 
 alter system set log_statement = 'all';
 select pg_reload_conf();
 show log_statement;
 
+-- Enable slow query logging (in ms)
+
+alter system set log_statement = 'ddl';
+alter system set log_min_duration_statement = 500;
+select pg_reload_conf();
+show log_statement;
+show log_min_duration_statement;
+
+-- Disable logging
+
 alter system set log_statement = 'none';
+alter system set log_min_duration_statement = -1;
 select pg_reload_conf();
 show log_statement;
 
