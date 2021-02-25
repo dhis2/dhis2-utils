@@ -73,4 +73,50 @@ python delete_TEIs.py
 python delete_sh.py 1xOeOpz4lSTdtiAJTuLwx40GgC5n9fkH2gltiB-sHmwg
 ```	
 
+## Workflow
 
+- First time dummy data is going to be injected
+	- Call create_flat_file to generate the spreadsheet. Please communicate the ID of the spreadsheet to the team and save it here: https://docs.google.com/spreadsheets/d/1YcP829U70qIqPcU8mQACkPLP2PzwPB-s6RnbVQaMubQ/edit#gid=0
+	-  Create the primal TEIs. 
+		-  Using DHIS2 UI by creating them in ONE OU and using parameter -wtf when you can create_flat_file
+		-  Using the spreadsheet. Make sure the mandatory fields are filled and pay special attention to the value type of the data you enter.
+	- Create a DISTRIBUTION Sheet if needed. It allows customizing the way the values for Data Elements and Tracked Entity Attributes are created. It also allows controlling the enrollment date of the TEIs created as well as the OU where they are enrolled and subsequent events are registered. The sheet must contains the columns: UID, NAME (optional), VALUE, TEI_1, TEI_2.... Columns TEI_X contain the ratio to apply for each possible value (options) or value range (number)
+	An example:
+	| UID         | NAME                                      | VALUE                 | TEI\_0 | TEI\_1 |
+	| ----------- | ----------------------------------------- | --------------------- | ------ | ------ |
+	| Xh88p1nyefp | Enrollment date                           | 2018-12-01:2018-12-28 |        | 0.05   |
+	|             |                                           | 2019-01-01:2019-01-28 |        | 0.05   |
+	|             |                                           | 2019-02-01:2019-02-28 | 0.1    | 0.05   |
+	|             |                                           | 2019-03-01:2019-03-28 | 0.1    | 0.05   |
+	|             |                                           | 2019-04-01:2019-04-28 | 0.1    | 0.05   |
+	| Jt68iauILtD | HIV Case Surveillance Gender M, F, TG     | Male                  | 0      | 1      |
+	|             |                                           | Female                | 0      | 0      |
+	|             |                                           | TG                    | 1      | 0      |
+	|             |                                           | OTHER                 | 0      | 0      |
+	| mAWcalQYYyk | HIV Case Surveillance Date of birth (age) | 0:4                   |        | 0      |
+	|             |                                           | 5:9                   | 0      | 0      |
+	|             |                                           | 10:14                 | 0      | 0.1    |
+	|             |                                           | 15:19                 | 0.2    | 0.1    |
+	|             |                                           | 20:24                 | 0.3    | 0.3    |
+	|             |                                           | 25:50                 | 0.4    | 0.4    |
+	|             |                                           | 51:80                 | 0.1    | 0.1    |
+	|             |                                           |                       |        |        |
+	| cDt3CvgtlQs | HIV Probable Mode of Transmission         | HETEROSEXUAL          | 0      | 0.4    |
+	|             |                                           | INJECTINGDRUG         | 0.2    | 0.1    |
+	|             |                                           | MOTHERTOCHILD         | 0.1    | 0      |
+	|             |                                           | OTHERUNDETERMINED     | 0.2    | 0.1    |
+	|             |                                           | HOMOSEX               | 0.1    | 0.35   |
+	|             |                                           | Commercial\_Sex       | 0.4    | 0.05   |
+
+	We can read this as follows: For TEI_0, 20% of the total TEIs to generate must have an age between 15 and 19, 30% an age between 20 and 24 and so forth.
+	
+	- When the spreadsheet is ready please review the following parameters:
+		- NUMBER_REPLICAS: make sure the identifiers match the columns in DUMMY_DATA, i.e. if you have a primal TEI called TEI_1, TEI_1 must be present in the rows of NUMBER_REPLICAS if you want to create replicas of this TEI.
+		- PARAMETERS: verify server_url, orgUnit_level and metadata_version. Make sure server_url is empty if you want to simple use the server specified in auth.json or that the server url is correct. Make sure orgUnit_level corresponds to the facility level in your OU tree. **Remember that the spreadsheet is a collaborative tool and many users have access to it**, so somebody might have changed the parameters without warning the implementer.
+
+- Spreadsheet already exists and you want to inject new dummy data.	
+	- First and most important: **RUN create_flat_file to update the metadata in the spreadsheet**
+	- Adjust the primal TEIs if necessary so they match the latest metadata for the package. For example, if a new DE has been added and it is mandatory, you need to make sure this DE has a value for all the primal TEIs.
+	- If adjusting the primal TEIs is too cumbersome, feel free to create them again using the UI and importing them by using -wtf parameter in create_flat_file.
+
+When the metadata is up to date, the primal TEIs are created and NUMBER_REPLICAS, PARAMETERS and DISTRIBUTION sheets have been correctly configured, you are ready to call create_TEIs with the id of the spreadsheet. The data entered for the primal TEIs will be validated and, if errors are found, they will be highlighted in red in DUMMY_DATA sheet. A new sheet containing the results of the validation will also be added to the spreadsheet for your convinience. If no errors are found or parameter ignore_errors = True, the script will start injecting TEIs in the target server specified by server_url in chunks of max_chunk_size.
