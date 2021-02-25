@@ -278,17 +278,17 @@ def validate_value(value_type, value, optionSet = list()):
             correct = True
         elif value == 1 or value == '1':
             correct = True
-            value = 'True'
+            value = 'true'
     elif value_type == 'BOOLEAN':
         value = value.lower()
         if value in ['true', 'false']:
             correct = True
         elif value == 1 or value == '1':
             correct = True
-            value = 'True'
+            value = 'true'
         elif value == 0 or value == '0':
             correct = True
-            value = 'False'
+            value = 'false'
         elif value in ['yes', 'no']:
             correct = True
     elif value_type == 'TIME':
@@ -318,6 +318,9 @@ def validate_value(value_type, value, optionSet = list()):
         # Longitude must a number between -180 and 180
         # Value comes in the form: '[164,72197,-67,617041]'
         correct = isLongLat(value)
+    elif value_type == 'EMAIL':
+        if re.match(r"[^@]+@[^@]+\.[^@]+", value):
+            correct = True
     else:
         logger.info('Warning, type ' + value_type + ' not supported')
 
@@ -494,7 +497,7 @@ def create_dummy_value(uid, gender='M'):
 
     elif value_type == 'ORGANISATION_UNIT':
         random_ou = choice(program_orgunits)
-        value = random_ou['id']
+        value = random_ou['parent']['id'] # Assign OU from where the patient is coming to the parent
 
     elif value_type == 'PHONE_NUMBER':
         value = faker.phone_number()
@@ -989,9 +992,9 @@ def main():
     if isinstance(program, dict):
         # Check metadata version
         if program_metadata_version != 0 and program_metadata_version != program['version']:
-            logger.error("The flat file was created with program version = " + str(program_metadata_version) +
+            logger.warning("The flat file was created with program version = " + str(program_metadata_version) +
                          ' but the current version for this program is ' + str(program['version']))
-            exit(1)
+            #exit(1)
 
         trackedEntityType_UID = program['trackedEntityType']['id']
 
@@ -1000,7 +1003,7 @@ def main():
         all_orgunits_at_level = api_source.get('organisationUnits',
                                   params={"paging": "false",
                                           "filter": "level:eq:"+str(orgUnit_level),
-                                          "fields":"id,name,level"}).json()['organisationUnits']
+                                          "fields":"id,name,level,parent"}).json()['organisationUnits']
         program_orgunits = list()
         for ou in all_orgunits_at_level:
             if ou['id'] in orgunits_uid:
@@ -1108,8 +1111,9 @@ def main():
                 list_of_TEIs = list_of_TEIs + replicas
                 logger.info("--- Elapsed time = %s seconds ---" % (time.time() - start_time))
             else:
-                if tei_id != '' and tei_id not in df.columns:
-                    logger.warning('The PRIMAL_ID ' + tei_id + ' in NUMBER_REPLICAS do not match the IDs in DUMMY DATA:')
+                if tei_id not in df.columns:
+                    if not pd.isnull(tei_id) and tei_id != "":
+                        logger.warning('The PRIMAL_ID ' + tei_id + ' in NUMBER_REPLICAS do not match the IDs in DUMMY DATA:')
                     [logger.warning(col) for col in df.columns.tolist() if 'TEI_' in col]
 
                 else:
