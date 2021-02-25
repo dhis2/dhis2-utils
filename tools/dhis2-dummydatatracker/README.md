@@ -75,6 +75,9 @@ python delete_sh.py 1xOeOpz4lSTdtiAJTuLwx40GgC5n9fkH2gltiB-sHmwg
 
 ## Workflow
 
+- Make sure your local files are up to date and contain the latest version in master. See [git pull](https://bit.ly/3uGypaO)
+- 
+
 - First time dummy data is going to be injected
 	- Call create_flat_file to generate the spreadsheet. Please communicate the ID of the spreadsheet to the team and save it here: https://docs.google.com/spreadsheets/d/1YcP829U70qIqPcU8mQACkPLP2PzwPB-s6RnbVQaMubQ/edit#gid=0
 	-  Create the primal TEIs. 
@@ -82,31 +85,33 @@ python delete_sh.py 1xOeOpz4lSTdtiAJTuLwx40GgC5n9fkH2gltiB-sHmwg
 		-  Using the spreadsheet. Make sure the mandatory fields are filled and pay special attention to the value type of the data you enter.
 	- Create a DISTRIBUTION Sheet if needed. It allows customizing the way the values for Data Elements and Tracked Entity Attributes are created. It also allows controlling the enrollment date of the TEIs created as well as the OU where they are enrolled and subsequent events are registered. The sheet must contains the columns: UID, NAME (optional), VALUE, TEI_1, TEI_2.... Columns TEI_X contain the ratio to apply for each possible value (options) or value range (number)
 	An example:
-	| UID         | NAME                                      | VALUE                 | TEI\_0 | TEI\_1 |
-	| ----------- | ----------------------------------------- | --------------------- | ------ | ------ |
-	| Xh88p1nyefp | Enrollment date                           | 2018-12-01:2018-12-28 |        | 0.05   |
-	|             |                                           | 2019-01-01:2019-01-28 |        | 0.05   |
-	|             |                                           | 2019-02-01:2019-02-28 | 0.1    | 0.05   |
-	|             |                                           | 2019-03-01:2019-03-28 | 0.1    | 0.05   |
-	|             |                                           | 2019-04-01:2019-04-28 | 0.1    | 0.05   |
-	| Jt68iauILtD | HIV Case Surveillance Gender M, F, TG     | Male                  | 0      | 1      |
-	|             |                                           | Female                | 0      | 0      |
-	|             |                                           | TG                    | 1      | 0      |
-	|             |                                           | OTHER                 | 0      | 0      |
-	| mAWcalQYYyk | HIV Case Surveillance Date of birth (age) | 0:4                   |        | 0      |
-	|             |                                           | 5:9                   | 0      | 0      |
-	|             |                                           | 10:14                 | 0      | 0.1    |
-	|             |                                           | 15:19                 | 0.2    | 0.1    |
-	|             |                                           | 20:24                 | 0.3    | 0.3    |
-	|             |                                           | 25:50                 | 0.4    | 0.4    |
-	|             |                                           | 51:80                 | 0.1    | 0.1    |
-	|             |                                           |                       |        |        |
-	| cDt3CvgtlQs | HIV Probable Mode of Transmission         | HETEROSEXUAL          | 0      | 0.4    |
-	|             |                                           | INJECTINGDRUG         | 0.2    | 0.1    |
-	|             |                                           | MOTHERTOCHILD         | 0.1    | 0      |
-	|             |                                           | OTHERUNDETERMINED     | 0.2    | 0.1    |
-	|             |                                           | HOMOSEX               | 0.1    | 0.35   |
-	|             |                                           | Commercial\_Sex       | 0.4    | 0.05   |
+	
+
+| UID         | NAME                                      | VALUE                 | TEI\_0 | TEI\_1 |
+| :---------- | :---------------------------------------: | :-------------------: | :----: | -----: |
+| Xh88p1nyefp | Enrollment date                           | 2018-12-01:2018-12-28 |        | 0.05   |
+|             |                                           | 2019-01-01:2019-01-28 |        | 0.05   |
+|             |                                           | 2019-02-01:2019-02-28 | 0.1    | 0.05   |
+|             |                                           | 2019-03-01:2019-03-28 | 0.1    | 0.05   |
+|             |                                           | 2019-04-01:2019-04-28 | 0.1    | 0.05   |
+| Jt68iauILtD | HIV Case Surveillance Gender M, F, TG     | Male                  | 0      | 1      |
+|             |                                           | Female                | 0      | 0      |
+|             |                                           | TG                    | 1      | 0      |
+|             |                                           | OTHER                 | 0      | 0      |
+| mAWcalQYYyk | HIV Case Surveillance Date of birth (age) | 0:4                   |        | 0      |
+|             |                                           | 5:9                   | 0      | 0      |
+|             |                                           | 10:14                 | 0      | 0.1    |
+|             |                                           | 15:19                 | 0.2    | 0.1    |
+|             |                                           | 20:24                 | 0.3    | 0.3    |
+|             |                                           | 25:50                 | 0.4    | 0.4    |
+|             |                                           | 51:80                 | 0.1    | 0.1    |
+|             |                                           |                       |        |        |
+| cDt3CvgtlQs | HIV Probable Mode of Transmission         | HETEROSEXUAL          | 0      | 0.4    |
+|             |                                           | INJECTINGDRUG         | 0.2    | 0.1    |
+|             |                                           | MOTHERTOCHILD         | 0.1    | 0      |
+|             |                                           | OTHERUNDETERMINED     | 0.2    | 0.1    |
+|             |                                           | HOMOSEX               | 0.1    | 0.35   |
+|             |                                           | Commercial\_Sex       | 0.4    | 0.05   |
 
 	We can read this as follows: For TEI_0, 20% of the total TEIs to generate must have an age between 15 and 19, 30% an age between 20 and 24 and so forth.
 	
