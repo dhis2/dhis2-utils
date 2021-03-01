@@ -119,8 +119,8 @@ def add_json_tei_to_metadata_df(json_tei, df):
                     if dataValue["dataElement"] not in list_of_UIDs:
                         logger.error('Data Element = ' + dataValue["dataElement"] + ' in TEI = ' + json_tei[
                             'trackedEntityInstance'] + ' not present in df')
-                        return False
-                    result = set_value(df, dataValue["dataElement"], dataValue["value"], pos[program_stage_uid])
+                    else:
+                        result = set_value(df, dataValue["dataElement"], dataValue["value"], pos[program_stage_uid])
                     if result == -1:
                         # Check that the DE is assigned to the proram stage
                         program_stage_info = api_source.get('programStages/' + program_stage_uid,
