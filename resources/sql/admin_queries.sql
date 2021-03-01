@@ -205,24 +205,6 @@ and (
   or cast(substring(coordinates from '\[(.+?\..+?),.+?\..+?\]') as double precision) > 43
 );
 
--- (Write) Replace first digit in invalid uid with letter a
-
-update organisationunit set uid = regexp_replace(uid,'\d','a') where uid SIMILAR TO '[0-9]%';
-
--- (Write) Insert random org unit codes
-
-create function setrandomcode() returns integer AS $$
-declare ou integer;
-begin
-for ou in select organisationunitid from _orgunitstructure where level=6 loop
-  execute 'update organisationunit set code=(select substring(cast(random() as text),5,6)) where organisationunitid=' || ou;
-end loop;
-return 1;
-end;
-$$ language plpgsql;
-
-select setrandomcode();
-
 
 -- USERS
 
@@ -297,6 +279,7 @@ from (
   where ura.authority = 'ALL'
   limit 1) as userroleid;
 
+
 -- VALIDATION RULES
 
 -- Display validation rules which includes the given data element uid
@@ -307,22 +290,30 @@ inner join expression le on vr.leftexpressionid=le.expressionid
 inner join expression re on vr.rightexpressionid=re.expressionid
 where le.expression ~ 'OuudMtJsh2z'
 or re.expression  ~ 'OuudMtJsh2z'
-  
--- (Write) Delete validation rules and clean up expressions
 
-delete from validationrule where name = 'abc';
-delete from expressiondataelement where expressionid not in (
-  select leftexpressionid from validationrule
-  union all
-  select rightexpressionid from validationrule
-);
-delete from expression where expressionid not in (
-  select leftexpressionid from validationrule
-  union all
-  select rightexpressionid from validationrule
-);
 
 -- DASHBOARDS
+
+-- Visualizations ordered by count of data items
+
+select v.uid as viz_uid, v.name as viz_name, count(vd.datadimensionitemid) as data_dim_item_count
+from visualization v
+inner join visualization_datadimensionitems vd on v.visualizationid = vd.visualizationid 
+group by v.uid, v.name
+order by data_dim_item_count desc
+limit 100;
+
+-- Dashboards ordered by count of data items in visualizations in dashboard items
+
+select d.uid dashboard_uid, d.name as dashboard_name, count(vd.datadimensionitemid) as data_dim_item_count
+from dashboard d
+inner join dashboard_items dis on d.dashboardid = dis.dashboardid 
+inner join dashboarditem di on dis.dashboarditemid = di.dashboarditemid 
+inner join visualization v on di.visualizationid = v.visualizationid 
+inner join visualization_datadimensionitems vd on v.visualizationid = vd.visualizationid 
+group by d.uid, d.name
+order by data_dim_item_count desc
+limit 100;
 
 -- (Write) Remove orphaned dashboard items
 
@@ -578,78 +569,6 @@ where psi.programinstanceid in (
   from programinstance pi
   inner join program pr on pi.programid=pr.programid
   where pr.uid = 'bMcwwoVnbSR');
-
-
--- APPROVAL
-
--- Display dataapproval overview
-
-select dal.name as approvallevel_name, dal.uid as approvallevel_uid, ds.name as dataset_name, ds.uid as dataset_uid, 
-pe.startdate, pe.enddate, pt.name as periodtype_name, ou.name as orgunit_name, ou.uid as orgunit_uid, 
-aocn.categoryoptioncomboname as attroptioncombo_name, aoc.uid as attroptioncombo_uid, da.accepted, da.created, u.username as creator_username
-from dataapproval da
-inner join dataapprovallevel dal on da.dataapprovallevelid=dal.dataapprovallevelid
-inner join dataset ds on da.datasetid=ds.datasetid
-inner join period pe on da.periodid=pe.periodid
-inner join periodtype pt on pe.periodtypeid=pt.periodtypeid
-inner join organisationunit ou on ou.organisationunitid=da.organisationunitid
-inner join categoryoptioncombo aoc on da.attributeoptioncomboid=aoc.categoryoptioncomboid
-inner join _categoryoptioncomboname aocn on da.attributeoptioncomboid=aocn.categoryoptioncomboid
-inner join users u on da.creator=u.userid
-limit 1000;
-
-
--- SQL VIEWS
-
--- Generate SQL statements for dropping all SQL views
--- 1. Save to file with psql -d db -U user -f script.sql > drop.sql
--- 2. Clean up file and drop views with psql -d db -U user -f drop.sql
-
-select 'drop view ' || table_name || ';'
-from information_schema.views
-where table_schema not in ('pg_catalog', 'information_schema')
-and table_name !~ '^pg_' and table_name ~ '^_view';
-
-
--- SHARING
-
--- Remove rows in usergroupaccess which are no longer referenced
-
-delete from usergroupaccess where usergroupaccessid not in (
-select usergroupaccessid from categorycombousergroupaccesses
-union all select usergroupaccessid from categoryoptiongroupsetusergroupaccesses
-union all select usergroupaccessid from categoryoptiongroupusergroupaccesses
-union all select usergroupaccessid from chartusergroupaccesses
-union all select usergroupaccessid from constantusergroupaccesses
-union all select usergroupaccessid from dashboardusergroupaccesses
-union all select usergroupaccessid from dataapprovallevelusergroupaccesses
-union all select usergroupaccessid from dataapprovalworkflowusergroupaccesses
-union all select usergroupaccessid from dataelementcategoryoptionusergroupaccesses
-union all select usergroupaccessid from dataelementcategoryusergroupaccesses
-union all select usergroupaccessid from dataelementgroupsetusergroupaccesses
-union all select usergroupaccessid from dataelementgroupusergroupaccesses
-union all select usergroupaccessid from dataelementusergroupaccesses
-union all select usergroupaccessid from datasetusergroupaccesses
-union all select usergroupaccessid from documentusergroupaccesses
-union all select usergroupaccessid from eventchartusergroupaccesses
-union all select usergroupaccessid from eventreportusergroupaccesses
-union all select usergroupaccessid from indicatorgroupsetusergroupaccesses
-union all select usergroupaccessid from indicatorgroupusergroupaccesses
-union all select usergroupaccessid from indicatorusergroupaccesses
-union all select usergroupaccessid from interpretationusergroupaccesses
-union all select usergroupaccessid from mapusergroupaccesses
-union all select usergroupaccessid from optionsetusergroupaccesses
-union all select usergroupaccessid from orgunitgroupsetusergroupaccesses
-union all select usergroupaccessid from orgunitgroupusergroupaccesses
-union all select usergroupaccessid from programindicatorusergroupaccesses
-union all select usergroupaccessid from programusergroupaccesses
-union all select usergroupaccessid from reporttableusergroupaccesses
-union all select usergroupaccessid from reportusergroupaccesses
-union all select usergroupaccessid from sqlviewusergroupaccesses
-union all select usergroupaccessid from trackedentityattributeusergroupaccesses
-union all select usergroupaccessid from usergroupusergroupaccesses
-union all select usergroupaccessid from userroleusergroupaccesses
-union all select usergroupaccessid from validationrulegroupusergroupaccesses);
 
 
 -- VARIOUS
