@@ -19,6 +19,11 @@ select datname, temp_files, temp_bytes as temp_files_size_bytes, pg_size_pretty(
 from pg_stat_database db
 where datname = 'dhis2';
 
+-- Approximate count of rows in datavalue
+
+select reltuples::bigint as approximate_row_count 
+from pg_class 
+where relname = 'datavalue';
 
 -- ANALYTICS
 
