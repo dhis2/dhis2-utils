@@ -368,6 +368,14 @@ where dv.dataelementid in (
   inner join dataset ds on dse.datasetid=ds.datasetid
   where ds.uid='j38YW1Am7he');
 
+-- (Write) Delete zero data values
+
+delete from datavalue where value in ('0', '0.0', '0.00');
+
+-- (Write) Prune deleted data values
+
+delete from datavalue where deleted is true;
+
 -- Data value exploded view
 
 select de.name as dename, de.uid as deuid, 
