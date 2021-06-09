@@ -14,7 +14,7 @@ Python 3.6+ is required.
 
 ### example
 
-`package_metadata_validator.py -f AEFI_TRACKER.json`
+`metadata_package_validator.py -f AEFI_TRACKER.json`
 
 ## List of validations
 
