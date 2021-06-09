@@ -6,7 +6,7 @@ import sys
 
 
 def main():
-    any_error = False
+    any_error = False  # This variable is used for checking if any error has been detected by the validator
     my_parser = argparse.ArgumentParser(description='Metadata package validator')
     my_parser.add_argument('-f', '--file', action="store", dest="input_filename", type=str, help='input filename')
     args = my_parser.parse_args()
@@ -42,7 +42,6 @@ def main():
     # Validation for options
     o_mq_2 = {}
     for option in package["options"]:
-
         # Group options by optionSet (for O-MQ-2)
         optionSet = option["optionSet"]["id"]
         if optionSet in o_mq_2:
@@ -53,19 +52,20 @@ def main():
 
     # O-MQ-2: Expected sortOrder for options of an optionSet (starts at 1 and ends at the size of the list of options)
     for optionSet_uid, sortOrders in o_mq_2.items():
-        sortOrders.sort() # Order array of sortOrders
+        sortOrders.sort()  # Order array of sortOrders
 
-        size = len(sortOrders)
-        if (sortOrders[0] == 1) and (sortOrders[size - 1] == size):
+        optionSet_size = len(sortOrders)
+        if (sortOrders[0] == 1) and (sortOrders[optionSet_size - 1] == optionSet_size):
             pass  # Everything is OK
         else:
-            optionSet_name = myutils.get_name_by_type_and_uid(package=package,type="optionSets", uid=optionSet_uid)
-            message = "O-MQ-2 - The optionSet '" + optionSet_name + "' (" + optionSet_uid + ") has errors in the sortOrder. Current sortOrder: "+", ".join([str(int) for int in sortOrders])
+            optionSet_name = myutils.get_name_by_type_and_uid(package=package, type="optionSets", uid=optionSet_uid)
+            message = "O-MQ-2 - The optionSet '" + optionSet_name + "' (" + optionSet_uid + ") has errors in the sortOrder. Current sortOrder: "+", ".join([str(i) for i in sortOrders])
             logging.error(message)
             any_error = True
 
     logger.info('-------------------------------------Finished validation-------------------------------------')
 
+    # if there was any error, exit with code -1
     if any_error:
         sys.exit(-1)
 
