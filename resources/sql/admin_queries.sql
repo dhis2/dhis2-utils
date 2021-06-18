@@ -378,10 +378,8 @@ delete from datavalue where deleted is true;
 
 -- Data value exploded view
 
-
-
 select de.name as de_name, de.uid as de_uid, de.code as de_code, 
-pe.startdate as pe_start, pe.enddate as pe_end, pt.name as pt_name, 
+pe.startdate as pe_start, pe.enddate as pe_end, ps.iso as period_isoname, pt.name as pt_name, 
 ou.name as ou_name, ou.uid as ou_uid, ou.code as ou_code, ou.hierarchylevel as ou_level,
 coc.name as coc_name, coc.uid as coc_uid, coc.code as coc_code,
 aoc.name as aoc_name, aoc.uid as aoc_uid, aoc.code as aoc_code, dv.value as value
@@ -389,10 +387,10 @@ from datavalue dv
 inner join dataelement de on dv.dataelementid=de.dataelementid
 inner join period pe on dv.periodid=pe.periodid
 inner join periodtype pt on pe.periodtypeid=pt.periodtypeid
+left join _periodstructure ps on pe.periodid=ps.periodid 
 inner join organisationunit ou on dv.sourceid=ou.organisationunitid
 inner join categoryoptioncombo coc on dv.categoryoptioncomboid=coc.categoryoptioncomboid
-inner join categoryoptioncombo aoc on dv.attributeoptioncomboid=aoc.categoryoptioncomboid
-limit 10000;
+inner join categoryoptioncombo aoc on dv.attributeoptioncomboid=aoc.categoryoptioncomboid;
 
 -- Data values created by day
 
