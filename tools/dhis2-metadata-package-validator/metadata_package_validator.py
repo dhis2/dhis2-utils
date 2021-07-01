@@ -70,6 +70,7 @@ def main():
         # PR-ST-3: Program Rule without action
         if len(pr["programRuleActions"]) == 0:
             logger.error(f"PR-ST-3 Program Rule '{pr['name']}' ({pr['id']}) without Program Rule Action")
+            any_error = True
 
     logger.info('-------------------------------------Finished validation-------------------------------------')
 
