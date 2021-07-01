@@ -63,6 +63,14 @@ def main():
             logging.error(message)
             any_error = True
 
+    # Program Rules
+    if "programRules" not in package:
+        package["programRules"] = []
+    for pr in package["programRules"]:
+        # PR-ST-3: Program Rule without action
+        if len(pr["programRuleActions"]) == 0:
+            logger.error(f"PR-ST-3 Program Rule '{pr['name']}' ({pr['id']}) without Program Rule Action")
+
     logger.info('-------------------------------------Finished validation-------------------------------------')
 
     # if there was any error, exit with code -1
