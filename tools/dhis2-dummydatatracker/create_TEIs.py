@@ -571,13 +571,14 @@ def check_template_TEIs_in_cols(df, ws_dummy_data = None):
         for index, row in df_valitation_results.iterrows():
             if 'CELL' in row:
                 cell = row['CELL']
-                row_number = int(cell[1:])
-                if row_number % 2 == 0: # Even rows in white
-                    batch.format_cell_range(ws_dummy_data, cell + ':' + cell,
-                                            CellFormat(backgroundColor=Color(1, 1, 1)))
-                else: # Odd rows in light blue
-                    batch.format_cell_range(ws_dummy_data, cell + ':' + cell,
-                                            CellFormat(backgroundColor=Color(0.90, 0.95, 1)))
+                if not pd.isnull(cell[1:]):
+                    row_number = int(cell[1:])
+                    if row_number % 2 == 0: # Even rows in white
+                        batch.format_cell_range(ws_dummy_data, cell + ':' + cell,
+                                                CellFormat(backgroundColor=Color(1, 1, 1)))
+                    else: # Odd rows in light blue
+                        batch.format_cell_range(ws_dummy_data, cell + ':' + cell,
+                                                CellFormat(backgroundColor=Color(0.90, 0.95, 1)))
         batch.execute()
     except gspread.WorksheetNotFound:
         pass
