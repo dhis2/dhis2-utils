@@ -14,14 +14,14 @@ Use the package manager [pip](https://pip.pypa.io/en/stable/) to install require
 pip install -r requirements.txt
 ```
 
-Create/modify auth.json file containing the credentials of the default server to use. The script relies on a username 'robot' with SuperUser role to have an account in the server.
+Create/modify auth.json file containing the credentials of the default server to use. Use a Superuser account and provide the full URL without the /api part. See example below:
 
 ```json
 {
   "dhis": {
     "baseurl": "https://who-dev.dhis2.org/dev",
     "username": "admin",
-    "password": "TOPSECRET"
+    "password": "district"
   }
 }
 ```
