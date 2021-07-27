@@ -3,7 +3,7 @@ import logging
 import json
 import myutils
 import sys
-
+import collections
 
 def main():
     any_error = False  # This variable is used for checking if any error has been detected by the validator
@@ -71,6 +71,13 @@ def main():
         if len(pr["programRuleActions"]) == 0:
             logger.error(f"PR-ST-3 Program Rule '{pr['name']}' ({pr['id']}) without Program Rule Action")
             any_error = True
+
+    # PRV-MQ-1 More than one PRV with the same name
+    if "programRuleVariables" not in package:
+        package["programRuleVariables"] = []
+    prv_names = [prv["name"] for prv in package["programRuleVariables"]]
+    if len(prv_names) != len(set(prv_names)):
+        logger.error("PRV-MQ-1 - More than one PRV with the same name: "+str([item for item, count in collections.Counter(prv_names).items() if count > 1]))
 
     logger.info('-------------------------------------Finished validation-------------------------------------')
 
