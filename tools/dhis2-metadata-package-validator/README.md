@@ -19,6 +19,7 @@ Python 3.6+ is required.
 ## List of validations
 
 - `O-MQ-2`: Error. Expected sortOrder for options of an optionSet (starts at 1 and ends at the size of the list of options)
+- `OG-MQ-1`: Error. All options present in the optionGroups MUST belong to an optionSet.
 - `PR-ST-3`: Error. Program Rule without action
 - `PRV-MQ-1`: More than one PRV with the same name
 

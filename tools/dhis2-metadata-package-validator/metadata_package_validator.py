@@ -63,6 +63,22 @@ def main():
             logging.error(message)
             any_error = True
 
+    # -------------------------------------
+    # OG-MQ-1. All options in optionGroups must belong to an optionSet
+    if "optionGroups" not in package:
+        package["optionGroups"]=[]
+    option_uids_in_option_groups = myutils.json_extract_nested_ids(package["optionGroups"], "options")
+
+    if "optionSets" not in package:
+        package["optionSets"]=[]
+    option_uids_in_optionset = myutils.json_extract_nested_ids(package["optionSets"], "options")
+
+    for option_uid in option_uids_in_option_groups:
+        if option_uid not in option_uids_in_optionset:
+            logger.error("OG-MQ-1 - Option in OptionGroup but not in OptionSet." + myutils.get_name_and_uid(myutils.get_resource(package, "options", option_uid)))
+    # -------------------------------------
+
+
     # Program Rules
     if "programRules" not in package:
         package["programRules"] = []
