@@ -64,6 +64,7 @@ def main():
             any_error = True
 
     # -------------------------------------
+
     # OG-MQ-1. All options in optionGroups must belong to an optionSet
     if "optionGroups" not in package:
         package["optionGroups"]=[]
@@ -76,8 +77,22 @@ def main():
     for option_uid in option_uids_in_option_groups:
         if option_uid not in option_uids_in_optionset:
             logger.error("OG-MQ-1 - Option in OptionGroup but not in OptionSet." + myutils.get_name_and_uid(myutils.get_resource(package, "options", option_uid)))
+
     # -------------------------------------
 
+    def check_external(k,v):
+        if k == "externalAccess" and v==True:
+            logger.error("SHST-MQ-1 - There is a resource with external access. Suggestion: use grep command for finding '\"externalAccess\": true'")
+
+    myutils.iterate_complex(package, check_external)
+
+    def check_favorites(k,v):
+        if k == "favorites" and v:
+            logger.error("ALL-MQ-16. There is a reference to user ("+','.join(v)+") that saved the resource as favourite. Suggestion: use grep command for finding")
+
+    myutils.iterate_complex(package, check_favorites)
+
+    # -------------------------------------
 
     # Program Rules
     if "programRules" not in package:

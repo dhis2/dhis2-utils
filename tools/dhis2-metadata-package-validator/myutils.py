@@ -50,3 +50,21 @@ def json_extract_nested_ids(obj, key):
     # Make sure the returned list contains no duplicate UIDs
     return list(dict.fromkeys(values))
 
+
+def iterate_complex(d, func, level=1):
+    if isinstance(d, dict):
+        for k, v in d.items():
+            if isinstance(v, dict):
+                #print(level, "-", k)
+                iterate_complex(v, func, level+1)
+            elif (isinstance(v, list)):
+                #print(level, "-", k, ": list")
+                func(k, v)
+                for i in v:
+                    iterate_complex(i, func, level+1)
+            else:
+                #print(level, "-", k,":",v)
+                func(k, v)
+    else:
+        #print(level, "-", d)
+        pass
