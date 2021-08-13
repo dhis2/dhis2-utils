@@ -124,6 +124,27 @@ def main():
             de_name = myutils.get_name_by_type_and_uid(package, 'dataElements', de_uid)
             logging.error(f"PR-ST-4 Program Rule '{pr_name}' ({pr_uid}) in the PR Action uses a DE '{de_name}' ({de_uid}) that does not belong to the associated program.")
 
+
+    # PR-ST-5: Tracked Entity Attribute associated to a program rule action MUST belong to the program/TET that the program rule is associated to.
+    teas_program = []
+    program = package["programs"][0]
+    teas = program["programTrackedEntityAttributes"]
+    if "trackedEntityType" in program:
+        trackedEntityType_uid = program["trackedEntityType"]["id"]
+        for tet in package["trackedEntityTypes"]:
+            if tet["id"] == trackedEntityType_uid:
+                teas = teas + tet["trackedEntityTypeAttributes"]
+    for tea in teas:
+        teas_program.append(tea["trackedEntityAttribute"]["id"])
+
+    for pra in package["programRuleActions"]:
+        if "trackedEntityAttribute" in pra and pra["trackedEntityAttribute"]["id"] not in teas_program:
+            pr_uid = pra['programRule']['id']
+            pr_name = myutils.get_name_by_type_and_uid(package,'programRules',pr_uid)
+            tea_uid = pra['trackedEntityAttribute']['id']
+            tea_name = myutils.get_name_by_type_and_uid(package, 'trackedEntityAttribute', tea_uid)
+            logging.error(f"PR-ST-5 Program Rule '{pr_name}' ({pr_uid}) in the PR Action uses a TEA '{tea_name}' ({tea_uid}) that does not belong to the associated program.")
+
     logger.info('-------------------------------------Finished validation-------------------------------------')
 
     # if there was any error, exit with code -1
