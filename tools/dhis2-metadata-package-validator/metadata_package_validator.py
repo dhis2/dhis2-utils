@@ -110,6 +110,20 @@ def main():
     if len(prv_names) != len(set(prv_names)):
         logger.error("PRV-MQ-1 - More than one PRV with the same name: "+str([item for item, count in collections.Counter(prv_names).items() if count > 1]))
 
+    # PR-ST-4: Data element associated to a program rule action MUST belong to the program that the program rule is associated to.
+    de_in_program = []
+    for ps in package["programStages"]:
+        for psde in ps["programStageDataElements"]:
+            de_in_program.append(psde["dataElement"]["id"])
+
+    for pra in package["programRuleActions"]:
+        if "dataElement" in pra and pra["dataElement"]["id"] not in de_in_program:
+            pr_uid = pra['programRule']['id']
+            pr_name = myutils.get_name_by_type_and_uid(package,'programRules',pr_uid)
+            de_uid = pra['dataElement']['id']
+            de_name = myutils.get_name_by_type_and_uid(package, 'dataElements', de_uid)
+            logging.error(f"PR-ST-4 Program Rule '{pr_name}' ({pr_uid}) in the PR Action uses a DE '{de_name}' ({de_uid}) that does not belong to the associated program.")
+
     logger.info('-------------------------------------Finished validation-------------------------------------')
 
     # if there was any error, exit with code -1
