@@ -196,9 +196,13 @@ Call the script as follows:
 python populate_period_table.py period_type start_date end_date instance_url
 ```
 period_type can be Daily, Weekly, Monthly, Quarterly OR Yearly
+
 start_date in the format YYYY-MM-DD
+
 end_date in the format YYYY-MM-DD
+
 instance_url if you want to run it in an instance different from the one specified in auth.json (user credentials are the ones given in auth.json)
+
 
 For example:
 ```bash
