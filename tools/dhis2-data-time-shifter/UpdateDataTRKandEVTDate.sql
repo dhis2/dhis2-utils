@@ -1,4 +1,4 @@
-CREATE FUNCTION UpdateDataTRKandEVTDate (number_days integer) RETURNS boolean
+CREATE OR REPLACE FUNCTION UpdateDataTRKandEVTDate (number_days integer) RETURNS boolean
     LANGUAGE plpgsql
 AS
 $$

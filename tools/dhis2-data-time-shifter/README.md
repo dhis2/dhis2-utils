@@ -239,4 +239,43 @@ When we run the same SELECT on the period table, we can see that the missing mon
     80353 | 2020-12-01 | 2020-12-31
 ```
 
+## Setting up a cron to keep your data up to date
 
+An example below on how to make sure your data is updated when it corresponds by setting up a cronjob.
+We assume that you have data already in your system up to today's date. If that is not the case, you need to invoke the aforementioned functions to move it so it covers any date in the past until today.
+
+First thing is to edit your crontab for user postgres, which is the one who has access to the DB. You need to run the following as superuser:
+```bash
+sudo crontab -e -u postgres
+```
+
+Add the following lines:
+```
+0 0 * * *   psql -d covid-19 -a -f /var/lib/postgresql/UpdateDataAGGDate.sql 2>&1 >/dev/null | ts >> ~/shift_dates.log
+0 0 * * *   psql -d covid-19 -a -f /var/lib/postgresql/UpdateDataTRKandEVTDate.sql 2>&1 >/dev/null | ts >> ~/shift_dates.log
+
+1 0 * * *   psql -d covid-19 -c "SELECT UpdateDataTRKandEVTDate(1);" 2>&1 >/dev/null | ts >> ~/shift_dates.log
+
+15 0 * * *   psql -d covid-19 -c "SELECT UpdateDataAGGDate('Daily');" 2>&1 >/dev/null | ts >> ~/shift_dates.log
+20 0 * * MON psql -d covid-19 -c "SELECT UpdateDataAGGDate('Weekly');" 2>&1 >/dev/null | ts >> ~/shift_dates.log
+25 0 1 * *   psql -d covid-19 -c "SELECT UpdateDataAGGDate('Monthly');" 2>&1 >/dev/null | ts >> ~/shift_dates.log
+30 0 1 */3 * psql -d covid-19 -c "SELECT UpdateDataAGGDate('Quarterly');" 2>&1 >/dev/null | ts >> ~/shift_dates.log
+```
+
+The first two jobs make sure the functions which we are going to need are installed. It will run exactly at midnight everyday.
+
+The next line, will run one minute later everyday, and it shiftes tracker/event data by 1 day
+
+The last 4 lines take care of the aggregate data.
+
+- First job will move daily data to the next day everyday at 0.15. Since the job to shift tracker/event data is quite demanding, it is better to give it a reasonable time to finish before shifting aggregate data.
+- Next one runs every Monday, and it shiftes weekly data to the next period (next week)
+- The following one runs every 1st day of each month, and it shiftes monthly data to the next period (next month)
+- Then one job which runs at the first day of every quarter to move quarterly data to the next quarter, and so on...
+
+Once your crontab is modified, please save and restart the service to make sure your changes take effect
+```bash
+sudo systemctl restart cron
+```
+
+Note: I have used ts to add a timestamp to the log. It can be installed by running "sudo apt install moreutils", but using it is optional. 2>&1 >/dev/null makes sure we only get the errors in the log, shift_dates.log which is saved in the home folder of user postgres
