@@ -884,7 +884,9 @@ def create_replicas_from_df(df, column, start_date, end_date, number_of_replicas
                     else:
                         # Shift all dates
                         new_date = datetime.strptime(row[column], "%Y-%m-%d") + timedelta(days=days_to_shift)
-                        if new_date < datetime.today():
+                        # before it was new_date < datetime.today(), but if we check against end_date, it allows
+                        # creating events in the future
+                        if new_date.date() < end_date:
                             new_column.append(new_date.strftime("%Y-%m-%d"))
                         else:
                             new_column.append('')
