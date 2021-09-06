@@ -4,6 +4,7 @@ import json
 import myutils
 import sys
 import collections
+import re
 
 
 def main():
@@ -110,6 +111,20 @@ def main():
     prv_names = [prv["name"] for prv in package["programRuleVariables"]]
     if len(prv_names) != len(set(prv_names)):
         logger.error("PRV-MQ-1 - More than one PRV with the same name: "+str([item for item, count in collections.Counter(prv_names).items() if count > 1]))
+
+    forbidden = ["and", "or", "not"]  # (dhis version >= 2.34)
+    for prv in package["programRuleVariables"]:
+
+        if any([" "+substring+" " in prv["name"] for substring in forbidden]) or \
+           any([prv["name"].startswith(substring+" ") for substring in forbidden]) or \
+           any([prv["name"].endswith(" "+substring) for substring in forbidden]):
+            message = f"PRV-MQ-2: The PRV '{prv['name']}' ({prv['id']}) contains 'and/or/not'"
+            logger.error(message)
+
+        if not bool(re.match("^[a-zA-Z\d_\-\.\ ]+$", prv["name"])):
+            message = f"PRV-MQ-2: The PRV '{prv['name']}' ({prv['id']}) contains unexpected characters"
+            logger.error(message)
+
 
     # PR-ST-4: Data element associated to a program rule action MUST belong to the program that the program rule is associated to.
     de_in_program = []
