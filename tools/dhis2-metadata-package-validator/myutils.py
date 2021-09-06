@@ -1,6 +1,7 @@
 
-def get_name_by_type_and_uid(package, type, uid):
-    return next((x for x in package[type] if x["id"] == uid), None)["name"]
+def get_name_by_type_and_uid(package, resource_type, uid):
+    return next((x for x in package[resource_type] if x["id"] == uid), None)["name"]
+
 
 def json_extract_nested_ids(obj, key):
     """

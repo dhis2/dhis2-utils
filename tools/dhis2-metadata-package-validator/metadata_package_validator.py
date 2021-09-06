@@ -5,6 +5,7 @@ import myutils
 import sys
 import collections
 
+
 def main():
     any_error = False  # This variable is used for checking if any error has been detected by the validator
     my_parser = argparse.ArgumentParser(description='Metadata package validator')
@@ -58,7 +59,7 @@ def main():
         if (sortOrders[0] == 1) and (sortOrders[optionSet_size - 1] == optionSet_size):
             pass  # Everything is OK
         else:
-            optionSet_name = myutils.get_name_by_type_and_uid(package=package, type="optionSets", uid=optionSet_uid)
+            optionSet_name = myutils.get_name_by_type_and_uid(package=package, resource_type="optionSets", uid=optionSet_uid)
             message = "O-MQ-2 - The optionSet '" + optionSet_name + "' (" + optionSet_uid + ") has errors in the sortOrder. Current sortOrder: "+", ".join([str(i) for i in sortOrders])
             logging.error(message)
             any_error = True
@@ -67,26 +68,26 @@ def main():
 
     # OG-MQ-1. All options in optionGroups must belong to an optionSet
     if "optionGroups" not in package:
-        package["optionGroups"]=[]
+        package["optionGroups"] = []
     option_uids_in_option_groups = myutils.json_extract_nested_ids(package["optionGroups"], "options")
 
     if "optionSets" not in package:
-        package["optionSets"]=[]
+        package["optionSets"] = []
     option_uids_in_optionset = myutils.json_extract_nested_ids(package["optionSets"], "options")
 
     for option_uid in option_uids_in_option_groups:
         if option_uid not in option_uids_in_optionset:
-            logger.error("OG-MQ-1 - Option in OptionGroup but not in OptionSet." + myutils.get_name_and_uid(myutils.get_resource(package, "options", option_uid)))
+            logger.error(f"OG-MQ-1 - Option in OptionGroup but not in OptionSet. Option '{myutils.get_name_by_type_and_uid(package, 'options', option_uid)}' ({option_uid})")
 
     # -------------------------------------
 
-    def check_external(k,v):
-        if k == "externalAccess" and v==True:
+    def check_external(k, v):
+        if k == "externalAccess" and v is True:
             logger.error("SHST-MQ-1 - There is a resource with external access. Suggestion: use grep command for finding '\"externalAccess\": true'")
 
     myutils.iterate_complex(package, check_external)
 
-    def check_favorites(k,v):
+    def check_favorites(k, v):
         if k == "favorites" and v:
             logger.error("ALL-MQ-16. There is a reference to user ("+','.join(v)+") that saved the resource as favourite. Suggestion: use grep command for finding")
 
@@ -119,11 +120,10 @@ def main():
     for pra in package["programRuleActions"]:
         if "dataElement" in pra and pra["dataElement"]["id"] not in de_in_program:
             pr_uid = pra['programRule']['id']
-            pr_name = myutils.get_name_by_type_and_uid(package,'programRules',pr_uid)
+            pr_name = myutils.get_name_by_type_and_uid(package, 'programRules', pr_uid)
             de_uid = pra['dataElement']['id']
             de_name = myutils.get_name_by_type_and_uid(package, 'dataElements', de_uid)
             logging.error(f"PR-ST-4 Program Rule '{pr_name}' ({pr_uid}) in the PR Action uses a DE '{de_name}' ({de_uid}) that does not belong to the associated program.")
-
 
     # PR-ST-5: Tracked Entity Attribute associated to a program rule action MUST belong to the program/TET that the program rule is associated to.
     teas_program = []
@@ -140,7 +140,7 @@ def main():
     for pra in package["programRuleActions"]:
         if "trackedEntityAttribute" in pra and pra["trackedEntityAttribute"]["id"] not in teas_program:
             pr_uid = pra['programRule']['id']
-            pr_name = myutils.get_name_by_type_and_uid(package,'programRules',pr_uid)
+            pr_name = myutils.get_name_by_type_and_uid(package, 'programRules', pr_uid)
             tea_uid = pra['trackedEntityAttribute']['id']
             tea_name = myutils.get_name_by_type_and_uid(package, 'trackedEntityAttribute', tea_uid)
             logging.error(f"PR-ST-5 Program Rule '{pr_name}' ({pr_uid}) in the PR Action uses a TEA '{tea_name}' ({tea_uid}) that does not belong to the associated program.")
