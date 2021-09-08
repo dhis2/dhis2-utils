@@ -15,6 +15,16 @@ from numpy import isnan
 log_file = "./dummyDataAggregated.log"
 logzero.logfile(log_file)
 
+try:
+    f = open("./auth.json")
+except IOError:
+    print("Please provide file auth.json with credentials for DHIS2 server")
+    exit(1)
+else:
+    api_source = Api.from_auth_file('./auth.json')
+
+logger.warning("Server source running DHIS2 version {} revision {}"
+               .format(api_source.version, api_source.revision))
 
 def post_to_server(jsonObject, apiObject='metadata', strategy='CREATE_AND_UPDATE'):
     try:
@@ -195,9 +205,11 @@ def generate_dummy_value(dummy_data_params):
 
     return value
 
-# OUs in Training land
-# V5XvX1wr1kF,RI95HQRHbKc,WmxhguWbumu,Rl9q91m5t42,OkGC5y7DGYJ,VvmS1GadjMd,yvFsgkXpo8q,WMhj9GCexqQ,r2XpcXE2tdD,qj1PdaHFyei,uMYvwnQhA4f,Dp0pSGVjnNi
+
 def get_org_units(selection_type, value):
+
+    global api_source
+
     org_units = list()
     if selection_type == 'uid':
         # Hardcoded list of OU UIDs separated by commas
@@ -389,19 +401,6 @@ def main():
         logger.info("Reading " + filename + " for min/max value")
         df_min_max = pd.read_csv(filename, sep=None, engine='python')
 
-
-    # Create API access
-    # Print DHIS2 Info
-    try:
-        f = open("./auth.json")
-    except IOError:
-        print("Please provide file auth.json with credentials for DHIS2 server")
-        exit(1)
-    else:
-        api_source = Api.from_auth_file('./auth.json')
-
-    logger.warning("Server source running DHIS2 version {} revision {}"
-                   .format(api_source.version, api_source.revision))
 
     CC = api_source.get('categoryCombos', params={"paging": "false", "fields": "id,name,categoryOptionCombos"}).json()[
         'categoryCombos']
