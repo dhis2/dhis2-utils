@@ -6,7 +6,7 @@ import logzero
 from logzero import logger
 from datetime import date, datetime, timedelta
 from faker import Faker
-from random import randrange, random, choice, uniform, seed
+from random import randrange, random, choice, uniform, seed, sample
 import sys
 import pandas as pd
 from numpy import isnan
@@ -195,7 +195,7 @@ def generate_dummy_value(dummy_data_params):
     return value
 
 
-def get_org_units(selection_type, value):
+def get_org_units(selection_type, value, random_size = None):
 
     global api_source
 
@@ -233,8 +233,12 @@ def get_org_units(selection_type, value):
         OUs = api_source.get('organisationUnits',
                              params={"paging": "false", "fields": "id,name",
                                      "filter": ou_filter}).json()['organisationUnits']
+
         logger.warning("Found " + str(len(OUs)) + " OUs")
         org_units = extract_json_element_as_list(OUs, 'id')
+        if random_size is not None and len(org_units) > random_size:
+            logger.warning("Extracting random sample of " + str(random_size) + " size")
+            org_units = sample(org_units, random_size)
 
     return org_units
 
@@ -343,7 +347,7 @@ def main():
                                 'Eg: --use_flat_file=my_file.csv')
     my_parser.add_argument('-i', '--instance', action="store", dest="instance", type=str,
                            help='instance to use for dummy data injection (robot account is required!) - default is the URL in auth.json')
-    my_parser.add_argument('-ous_random_size', '--ours', action="store", dest="ous_random_size", type=str,
+    my_parser.add_argument('-ours', '--ous_random_size', action="store", dest="ous_random_size", type=str,
                            help='From all OUs selected from ous command, takes a random sample of ous_random_size')
 
     args = my_parser.parse_args()
@@ -381,7 +385,7 @@ def main():
             print('Please provide a value for org_unit_selection to create the dummy data')
         else:
             if len(args.org_unit_selection) >= 1:
-                ouUIDs = get_org_units(args.org_unit_selection[0], args.org_unit_selection[1])
+                ouUIDs = get_org_units(args.org_unit_selection[0], args.org_unit_selection[1], int(args.ous_random_size))
                 if len(ouUIDs) == 0:
                     print('The OU selection ' + args.org_unit_selection[0] + ' '
                           + args.org_unit_selection[1] + ' returned no result')
