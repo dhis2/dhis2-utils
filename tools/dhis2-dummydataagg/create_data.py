@@ -15,17 +15,6 @@ from numpy import isnan
 log_file = "./dummyDataAggregated.log"
 logzero.logfile(log_file)
 
-try:
-    f = open("./auth.json")
-except IOError:
-    print("Please provide file auth.json with credentials for DHIS2 server")
-    exit(1)
-else:
-    api_source = Api.from_auth_file('./auth.json')
-
-logger.warning("Server source running DHIS2 version {} revision {}"
-               .format(api_source.version, api_source.revision))
-
 def post_to_server(jsonObject, apiObject='metadata', strategy='CREATE_AND_UPDATE'):
     try:
         response = api_source.post(apiObject, params={'mergeMode': 'REPLACE', 'importStrategy': strategy},
@@ -327,6 +316,7 @@ def get_periods(frequency, start_date, end_date):
 
 def main():
     import argparse
+    global api_source
 
     my_parser = argparse.ArgumentParser(prog='dummy_data_agg',
                                         description='Create dummy data for aggregated datasets',
@@ -351,8 +341,31 @@ def main():
     my_parser.add_argument('-uf', '--use_flat_file', action="store", metavar='file_name', nargs=1,
                            help='Use spreadsheet for min/max values'
                                 'Eg: --use_flat_file=my_file.csv')
+    my_parser.add_argument('-i', '--instance', action="store", dest="instance", type=str,
+                           help='instance to use for dummy data injection (robot account is required!) - default is the URL in auth.json')
+    my_parser.add_argument('-ous_random_size', '--ours', action="store", dest="ous_random_size", type=str,
+                           help='From all OUs selected from ous command, takes a random sample of ous_random_size')
 
     args = my_parser.parse_args()
+
+    credentials_file = 'auth.json'
+
+    try:
+        f = open(credentials_file)
+    except IOError:
+        print("Please provide file auth.json with credentials for DHIS2 server")
+        exit(1)
+    else:
+        with open(credentials_file, 'r') as json_file:
+            credentials = json.load(json_file)
+        if args.instance is not None:
+            api_source = Api(args.instance, credentials['dhis']['username'], credentials['dhis']['password'])
+        else:
+            api_source = Api.from_auth_file(credentials_file)
+
+    logger.warning("Server source running DHIS2 version {} revision {}"
+                   .format(api_source.version, api_source.revision))
+
     #WHAT
     dsParam = args.Dataset
     # WHERE
