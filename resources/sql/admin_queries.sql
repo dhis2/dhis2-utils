@@ -222,7 +222,7 @@ select u.username, u.lastlogin, u.selfregistered, ui.surname, ui.firstname, ui.e
   )  as userroles, (
   select array_to_string( array(
     select name from organisationunit ou
-    join usermembership um using(organisationunitid)
+    join usermembership um using(ofrganisationunitid)
     where um.userinfoid=ui.userinfoid), ', ' )
   ) as orgunits
 from users u 
@@ -368,21 +368,29 @@ where dv.dataelementid in (
   inner join dataset ds on dse.datasetid=ds.datasetid
   where ds.uid='j38YW1Am7he');
 
+-- (Write) Delete zero data values
+
+delete from datavalue where value in ('0', '0.0', '0.00');
+
+-- (Write) Prune deleted data values
+
+delete from datavalue where deleted is true;
+
 -- Data value exploded view
 
-select de.name as dename, de.uid as deuid, 
-pe.startdate as pestart, pe.enddate as peend, pt.name as ptname, 
-ou.name as ouname, ou.uid as ouuid, 
-coc.name as cocname, coc.uid as cocuid, coc.categoryoptioncomboid as cocid, 
-aoc.name as aocname, aoc.uid as aocuid, aoc.categoryoptioncomboid as aocid, dv.value as dvval
+select de.name as de_name, de.uid as de_uid, de.code as de_code, 
+pe.startdate as pe_start, pe.enddate as pe_end, ps.iso as period_isoname, pt.name as pt_name, 
+ou.name as ou_name, ou.uid as ou_uid, ou.code as ou_code, ou.hierarchylevel as ou_level,
+coc.name as coc_name, coc.uid as coc_uid, coc.code as coc_code,
+aoc.name as aoc_name, aoc.uid as aoc_uid, aoc.code as aoc_code, dv.value as value
 from datavalue dv
 inner join dataelement de on dv.dataelementid=de.dataelementid
 inner join period pe on dv.periodid=pe.periodid
 inner join periodtype pt on pe.periodtypeid=pt.periodtypeid
+left join _periodstructure ps on pe.periodid=ps.periodid 
 inner join organisationunit ou on dv.sourceid=ou.organisationunitid
 inner join categoryoptioncombo coc on dv.categoryoptioncomboid=coc.categoryoptioncomboid
-inner join categoryoptioncombo aoc on dv.attributeoptioncomboid=aoc.categoryoptioncomboid
-limit 10000;
+inner join categoryoptioncombo aoc on dv.attributeoptioncomboid=aoc.categoryoptioncomboid;
 
 -- Data values created by day
 

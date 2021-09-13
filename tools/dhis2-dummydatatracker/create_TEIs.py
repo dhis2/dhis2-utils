@@ -91,6 +91,7 @@ try:
     df = get_as_dataframe(sh.worksheet("DUMMY_DATA"), evaluate_formulas=True, dtype=str)
     df = df.dropna(how='all', axis=1)
     df['mandatory'] = df['mandatory'].map({'True':True, 'TRUE':True, 'False':False, 'FALSE':False})
+
     df_params = get_as_dataframe(sh.worksheet("PARAMETERS"), evaluate_formulas=True, dtype=str)
     df_params = df_params.dropna(how='all', axis=1)
     df_params.fillna('', inplace=True)
@@ -232,14 +233,26 @@ def validate_value(value_type, value, optionSet = list()):
     # FILE_RESOURCE
     # ORGANISATION_UNIT
     # IMAGE
+    # The purpose of this is to make sure the value received is in the right format
+    # the spreadsheet values 1 are sometimes converted incorrectly into True, givin a false positive in the validation
+    def convert_trueORfalse_to_number(val):
+        if val.lower() == 'true' or val is True:
+            return '1'
+        elif val.lower() == 'false' or val is False:
+            return '0'
+        else:
+            return val
+
     global program_orgunits
 
     correct = False
 
 
     if len(optionSet) > 0: # It is an option
+        value = convert_trueORfalse_to_number(value)
         if value in optionSet:
             correct = True
+
     elif value_type == 'AGE': # Either an age in years/months/days or a date-of-birth (YYY-MM-DD)
         #if value.isnumeric() and 0 <= int(value) <= 120:
         if isDateFormat(value):
@@ -251,6 +264,7 @@ def validate_value(value_type, value, optionSet = list()):
     elif value_type == 'LONG_TEXT': # Always true
         correct = True
     elif value_type == 'INTEGER_ZERO_OR_POSITIVE':
+        value = convert_trueORfalse_to_number(value)
         if value.isnumeric() and 0 <= int(value):
             correct = True
             value = str(int(value)) # Cast float
@@ -259,14 +273,17 @@ def validate_value(value_type, value, optionSet = list()):
             correct = True
             value = str(int(value))  # Cast float
     elif value_type == 'INTEGER_POSITIVE':
+        value = convert_trueORfalse_to_number(value)
         if value.isnumeric() and 0 < int(value):
             correct = True
             value = str(int(value))  # Cast float
     elif value_type == 'INTEGER':
+        value = convert_trueORfalse_to_number(value)
         if value.isnumeric():
             correct = True
             value = str(int(value))  # Cast float
     elif value_type == 'NUMBER':
+        value = convert_trueORfalse_to_number(value)
         if value.isnumeric():
             correct = True
     elif value_type == 'DATE':
@@ -554,13 +571,14 @@ def check_template_TEIs_in_cols(df, ws_dummy_data = None):
         for index, row in df_valitation_results.iterrows():
             if 'CELL' in row:
                 cell = row['CELL']
-                row_number = int(cell[1:])
-                if row_number % 2 == 0: # Even rows in white
-                    batch.format_cell_range(ws_dummy_data, cell + ':' + cell,
-                                            CellFormat(backgroundColor=Color(1, 1, 1)))
-                else: # Odd rows in light blue
-                    batch.format_cell_range(ws_dummy_data, cell + ':' + cell,
-                                            CellFormat(backgroundColor=Color(0.90, 0.95, 1)))
+                if not pd.isnull(cell[1:]):
+                    row_number = int(cell[1:])
+                    if row_number % 2 == 0: # Even rows in white
+                        batch.format_cell_range(ws_dummy_data, cell + ':' + cell,
+                                                CellFormat(backgroundColor=Color(1, 1, 1)))
+                    else: # Odd rows in light blue
+                        batch.format_cell_range(ws_dummy_data, cell + ':' + cell,
+                                                CellFormat(backgroundColor=Color(0.90, 0.95, 1)))
         batch.execute()
     except gspread.WorksheetNotFound:
         pass
@@ -866,7 +884,9 @@ def create_replicas_from_df(df, column, start_date, end_date, number_of_replicas
                     else:
                         # Shift all dates
                         new_date = datetime.strptime(row[column], "%Y-%m-%d") + timedelta(days=days_to_shift)
-                        if new_date < datetime.today():
+                        # before it was new_date < datetime.today(), but if we check against end_date, it allows
+                        # creating events in the future
+                        if new_date.date() < end_date:
                             new_column.append(new_date.strftime("%Y-%m-%d"))
                         else:
                             new_column.append('')
@@ -1025,10 +1045,10 @@ def main():
 
         # We are assuming here that there is going to be always a default value for CO and COC
         attributeCategoryOptions_UID = api_source.get('categoryOptions',
-                                                      params={"filter":"displayName:eq:default"}).json()['categoryOptions'][0]['id']
+                                                      params={"filter":"name:in:[default,DEFAULT]"}).json()['categoryOptions'][0]['id']
         # We are assuming here that there is going to be always a default value for CO and COC
         attributeOptionCombo_UID = api_source.get('categoryOptionCombos',
-                                                      params={"filter":"displayName:eq:default"}).json()['categoryOptionCombos'][0]['id']
+                                                      params={"filter":"name:in:[default,DEFAULT]"}).json()['categoryOptionCombos'][0]['id']
 
         # Get Program Attributes
         teas_uid = json_extract_nested_ids(program, 'trackedEntityAttribute')
