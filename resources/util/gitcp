@@ -1,0 +1,11 @@
+#!/bin/bash
+
+git_commit_push () {
+  echo "* Add all files and commit.."
+  git add -A
+  git commit -m "\"${1}\""
+  echo "* Push to remote.."
+  git push
+}
+
+git_commit_push $1
