@@ -132,6 +132,8 @@ def main():
         for psde in ps["programStageDataElements"]:
             de_in_program.append(psde["dataElement"]["id"])
 
+    if "programRuleActions" not in package:
+        package["programRuleActions"] = []
     for pra in package["programRuleActions"]:
         if "dataElement" in pra and pra["dataElement"]["id"] not in de_in_program:
             pr_uid = pra['programRule']['id']
