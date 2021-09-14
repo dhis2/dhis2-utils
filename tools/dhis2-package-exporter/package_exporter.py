@@ -391,6 +391,8 @@ def get_hardcoded_values_in_fields(metaobj, metadata_type, fields):
                         pattern = compile(r'A\{([a-zA-Z0-9]{11})\}')
                     elif metadata_type == 'constants':
                         pattern = compile(r'C\{([a-zA-Z0-9]{11})\}')
+                    elif metadata_type == 'organisationUnitGroups':
+                        pattern = compile(r'OUG\{([a-zA-Z0-9]{11})\}')
                     else:
                         logger.error('Error in function get_hardcoded_values_in_fields: unknown type ' + metadata_type)
                     if second_level != "":
@@ -815,9 +817,18 @@ def get_category_elements(cat_combo_uid):
     cat['categoryCombos'] = list()
     cat['categoryOptionCombos'] = list()
 
+    cat['categoryCombos'].append(cat_combo_uid)
     # Get categoryCombos info, which will give us categoryOptionCombos and categories
-    catCombo = api_source.get('categoryCombos/'+cat_combo_uid, params={"fields":"id,name,categories,categoryOptionCombos"}).json()[metadata_type]
+    catCombo = api_source.get('categoryCombos/'+cat_combo_uid, params={"fields":"id,name,categories,categoryOptionCombos"}).json()
+    cat['categories'] = json_extract_nested_ids(catCombo, 'categories')
+    cat['categoryOptionCombos'] = json_extract_nested_ids(catCombo, 'categoryOptionCombos')
+    # Get category Option ids from categories
+    categories = api_source.get('categories', params={"fields":"id,name,categoryOptions",
+                                                      "filter":"id:in:["+','.join(cat['categories'])+"]"}).json()['categories']
+    for category in categories:
+        cat['categoryOptions'] += json_extract_nested_ids(category, 'categoryOptions')
 
+    return cat
 
 if __name__ == '__main__':
 
@@ -836,6 +847,7 @@ if __name__ == '__main__':
         'programs',
         'programStageSections', 'programStages',
         'programIndicatorGroups', 'programIndicators',
+        'organisationUnitGroups', # Assuming this will only be found in indicators
         'indicatorTypes', 'indicatorGroups', 'indicators',
         'programRuleVariables', 'programRuleActions', 'programRules',
         'visualizations', 'charts', 'maps', 'reportTables', 'eventReports', 'eventCharts', 'dashboards',
@@ -891,6 +903,7 @@ if __name__ == '__main__':
     indicatorGroups_uids = list()
     indicatorTypes_uids = list()
     legendSets_uids = list()
+    organisationUnitGroups_uids = list()
     predictorGroups_uids = list()
     programIndicators_uids = dict()
     programIndicators_uids['P'] = list()  # Program
@@ -900,6 +913,7 @@ if __name__ == '__main__':
     programStageSections_uids = list()
     trackedEntityTypes_uids = list()  # Normally only one :)
     optionSets_uids = list()
+    cat_uids = dict() # Contains all non DEFAULT uids of categoryOption, categories, CCs and COCs
     # Constants can be found in
     # programRules -> condition -> C{gYj2CUoep4O} == 2
     # programRuleActions -> data ????
@@ -929,6 +943,7 @@ if __name__ == '__main__':
         "optionGroups": "optionSet.id:in:[" + ','.join(optionSets_uids) + "]",
         "options": "optionSet.id:in:[" + ','.join(optionSets_uids) + "]",
         "optionSets": "id:in:[" + ','.join(optionSets_uids) + "]",
+        "organisationUnitGroups": "id:in:[" + ','.join(organisationUnitGroups_uids) + "]",
         "predictors": "name:like:" + package_prefix,
         "predictorGroups": "id:in:[" + ','.join(predictorGroups_uids) + "]",
         "programs": "id:eq:" + program_uid,
@@ -952,7 +967,7 @@ if __name__ == '__main__':
     try:
         program = api_source.get('programs/' + program_uid,
                                  params={"paging": "false",
-                                         "fields": "id,name,enrollmentDateLabel,programTrackedEntityAttributes,programStages,programRuleVariables,organisationUnits,trackedEntityType,version"}).json()
+                                         "fields": "id,name,enrollmentDateLabel,programTrackedEntityAttributes,programStages,programRuleVariables,organisationUnits,trackedEntityType,version,categoryCombo"}).json()
     except RequestException as e:
         if e.code == 404:
             logger.error('Program ' + program_uid + ' specified does not exist')
@@ -977,6 +992,10 @@ if __name__ == '__main__':
         else:
             health_area = ""
             separator = ""
+
+        # EVENT programs may have a categoryCombo field
+        if 'categoryCombo' in program and is_valid_uid(program['categoryCombo']['id']):
+            cat_uids = get_category_elements(program['categoryCombo']['id'])
 
         for metadata_type in reversed(metadata_import_order):
             if metadata_type in ["sections", "dataSets"]:  # Aggregate only
@@ -1119,6 +1138,11 @@ if __name__ == '__main__':
                 for index in range(0, len(metaobject)):
                     metaobject[index]["publicAccess"] = "r-------"
 
+            elif metadata_type[:3] == 'cat':
+                if metadata_type in cat_uids and len(cat_uids[metadata_type]) > 0:
+                    logger.info('Getting extra uids for ' + metadata_type)
+                    metaobject += get_metadata_element(metadata_type, 'id:in:[' + ','.join(cat_uids[metadata_type]) + ']')
+
             # Update dataframe reports
             update_last_updated(metaobject, metadata_type)
 
@@ -1137,6 +1161,8 @@ if __name__ == '__main__':
                 else:
                     logger.warning('There are org units assigned... Removing')
                     metaobject = remove_subset_from_set(metaobject, 'organisationUnits')
+                    if metadata_type == 'organisationUnitGroups':
+                        metaobject = remove_subset_from_set(metaobject, 'groupSets')
             # userAccesses needs to be also empty - so far, so good
             ## Make sure visualizations OUs are set to User OUs
             # if metadata_type in ['charts', 'reportTables', 'eventReports', 'maps']:
@@ -1484,6 +1510,13 @@ if __name__ == '__main__':
                 programIndicators_uids['I'] = get_hardcoded_values_in_fields(metaobject,
                                                                              'programIndicators',
                                                                              ['numerator', 'denominator'])
+
+                organisationUnitGroups_uids = get_hardcoded_values_in_fields(metaobject, 'organisationUnitGroups',
+                                                                             ['numerator', 'denominator'])
+                # We don't expect to find OUG references somewhere else, so we can add the filter already
+                if len(organisationUnitGroups_uids) > 0:
+                    metadata_filters["organisationUnitGroups"] = "id:in:[" + ','.join(organisationUnitGroups_uids) + "]"
+
                 # Scan for indicatorTypes
                 indicatorTypes_uids = json_extract_nested_ids(metaobject, 'indicatorType')
                 indicatorGroups_uids = json_extract_nested_ids(metaobject, 'indicatorGroups')
