@@ -113,6 +113,11 @@ try:
         df_distrib = df_distrib.dropna(how='all', axis=1)
         df_distrib.dropna(subset=["VALUE"], inplace=True)
         df_distrib = df_distrib.fillna('')
+    df_rules = None
+    if 'RULES' in worksheet_list:
+        df_rules = get_as_dataframe(sh.worksheet("RULES"), evaluate_formulas=True, dtype=str)
+        df_rules = df_rules.dropna(how='all')
+        df_rules = df_rules.dropna(how='all', axis=1)
 
 except:
     logger.error("Something went wrong when processing the spreadsheet")
@@ -806,7 +811,22 @@ def from_df_to_TEI_json(df_replicas, tei_template, event_template, df_ou_ratio=N
     return list_of_TEIs
 
 
-def create_replicas_from_df(df, column, start_date, end_date, number_of_replicas, df_distrib):
+def run_rules_in_df(df, rule):
+    string = rule.replace('#{', "df.loc['").replace('}', "']").replace('if', '')
+    expr_elements = list()
+    expr_elements.append(string.split(":")[0])
+    expr_elements.append(string.split(":")[1].split('=')[1])
+    expr_elements.append(string.split(":")[1].split('=')[0])
+    expression = expr_elements[2] + " = " + "np.where(" + ','.join(expr_elements) + ")"
+    expression = expression.strip()
+    df = df.set_index('UID')
+    exec(expression)
+    df = df.reset_index()
+
+    return df
+
+
+def create_replicas_from_df(df, column, start_date, end_date, number_of_replicas, df_distrib, df_rules):
 
     uids_to_distribute = list()
     distributed_values_per_id = dict()
@@ -912,6 +932,10 @@ def create_replicas_from_df(df, column, start_date, end_date, number_of_replicas
     df_replicas['UID'] = df['UID']
     df_replicas['Stage'] = df['Stage']
 
+    if df_rules is not None:
+        for index, row in df_rules.iterrows():
+            df_replicas = run_rules_in_df(df_replicas, row['EXPRESSION'])
+
     export_csv = df_replicas.to_csv(r'./replicas' + column + '.csv', index=None, header=True)
 
     return df_replicas
@@ -931,6 +955,7 @@ def main():
     global df_params
     global df
     global df_distrib
+    global df_rules
     #global number_replicas_file
 
     if 'PARAMETER' not in df_params.columns.tolist() or 'VALUE' not in df_params.columns.tolist():
@@ -1125,7 +1150,7 @@ def main():
                         df_ratio = None
                 else:
                     df_ratio = None
-                replicas = from_df_to_TEI_json(create_replicas_from_df(df, tei_id, start_date, end_date, row['NUMBER'], df_distrib), tei_template, event_template, df_ratio)
+                replicas = from_df_to_TEI_json(create_replicas_from_df(df, tei_id, start_date, end_date, row['NUMBER'], df_distrib, df_rules), tei_template, event_template, df_ratio)
                 post_chunked_data(api_source, replicas, 'trackedEntityInstances', chunk_size)
                 #post_to_server(api_source, {'trackedEntityInstances': replicas}, 'trackedEntityInstances')
                 list_of_TEIs = list_of_TEIs + replicas
