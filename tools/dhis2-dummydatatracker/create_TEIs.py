@@ -812,16 +812,69 @@ def from_df_to_TEI_json(df_replicas, tei_template, event_template, df_ou_ratio=N
 
 
 def run_rules_in_df(df, rule):
-    string = rule.replace('#{', "df.loc['").replace('}', "']").replace('if', '')
+    def num(s):
+        if s == '':
+            return 0
+        try:
+            return int(s)
+        except ValueError:
+            return float(s)
+
+    if pd.isnull(rule):
+        return df
+
     expr_elements = list()
-    expr_elements.append(string.split(":")[0])
-    expr_elements.append(string.split(":")[1].split('=')[1])
-    expr_elements.append(string.split(":")[1].split('=')[0])
-    expression = expr_elements[2] + " = " + "np.where(" + ','.join(expr_elements) + ")"
-    expression = expression.strip()
-    df = df.set_index('UID')
-    exec(expression)
-    df = df.reset_index()
+    value_type = 'string'
+    # If is kept there just to make it look nice, but it has only use for numeric types
+    # where the way to update the df is totally different
+    string = rule.replace('if', '')
+    z = re.match("(.*)(==|!=|<|>|>=|<=)(.*):(.*)=(.*)", string)
+    if z:
+        string = string.replace('#{', "df.loc['").replace('}', "']")
+        condition = z.groups()
+        if len(condition) == 5:
+            uid_pattern = re.compile("#\{([a-zA-Z0-9]{11})\}")
+            uid_list = uid_pattern.findall(rule)
+            if uid_list is None or len(uid_list) < 2:
+                logger.error("Rule " + rule + " has wrong UIDs")
+                exit(1)
+            # Check uids exist in df
+            for uid in uid_list:
+                if df[df.UID == uid].shape[0] == 0:
+                    logger.error("UID " + uid + " does NOT exist")
+                    exit(1)
+        else:
+            logger.error("Rule " + rule + " is NOT supported")
+    else:
+        logger.error("Rule " + rule + " is NOT supported")
+
+    # If it is a numeric value, we get ValueError exception due to the presence of NaNs or ''
+    # in that case, the only way I can make it work is by processing the TEIs one by one...
+    # Not very performant but... We could apply num function to the entire df, but I am uncertain
+    # about the impact that might have when posting the TEIs
+    if condition[2].strip().isdigit() or condition[2].strip().replace('.', '', 1).isdigit():
+        condition = rule.split(":")[0]
+        assignment = rule.split(":")[1]
+        for col in df.columns.tolist():
+            if 'TEI_' in col:
+                # We are assuming here a single UID in the condition and single UID in expression
+                # we could loop through for uid in uid_list: and call replace multiple times
+                new_condition = condition.replace("#{" + uid_list[0] + "}",
+                                                      "num(df[df.UID == '" + uid_list[0] + "']['"+col+"'].tolist()[0])")
+                new_assignment = assignment.replace("#{" + uid_list[1] + "}",
+                                                            "df.at[df[df.UID == '" + uid_list[1] + "'].index, '"+col+"']")
+
+                exec(new_condition + ":" + new_assignment)
+    else:
+        expr_elements.append(string.split(":")[0])
+        expr_elements.append(string.split(":")[1].split('=')[1])
+        expr_elements.append(string.split(":")[1].split('=')[0])
+        expression = expr_elements[2] + " = " + "np.where(" + ','.join(expr_elements) + ")"
+        expression = expression.strip()
+        df = df.set_index('UID')
+        # Replace NaN in Stage column
+        exec(expression)
+        df = df.reset_index()
 
     return df
 
