@@ -204,20 +204,22 @@ def create_google_spreadsheet(program, df, share_with):
         else:
             wks_number_replicas = sh.worksheet('NUMBER_REPLICAS')
         tmp_df = df.copy()
-        for tei_col in range(1, 6):
-            tmp_df['TEI_' + str(tei_col)] = ''
+        if mode == 'create':
+            for tei_col in range(1, 6):
+                tmp_df['TEI_' + str(tei_col)] = ''
         set_with_dataframe(wks_dd, tmp_df)
         # wks_dd.add_protected_range('A1:G'+str(df.shape[0]+2))
         wks_dd.freeze(cols=7)
         del tmp_df
         # wks_params = sh.add_worksheet(title="PARAMETERS", rows=df_params.shape[0], cols=df_params.shape[1])
         # wks_dd.add_protected_range('B2:B3')
-        set_with_dataframe(wks_params, df_params)
-        set_column_widths(wks_params, [('A', 200), ('B:', 100), ('C:', 600)])
-        # wks_number_replicas = sh.add_worksheet(title="NUMBER_REPLICAS", rows=df_number_replicas.shape[0],
-        #                                        cols=df_number_replicas.shape[1])
-        set_with_dataframe(wks_number_replicas, df_number_replicas)
-        set_column_widths(wks_number_replicas, [('A', 100), ('B:', 100)])
+        if mode == 'create':
+            set_with_dataframe(wks_params, df_params)
+            set_column_widths(wks_params, [('A', 200), ('B:', 100), ('C:', 600)])
+            # wks_number_replicas = sh.add_worksheet(title="NUMBER_REPLICAS", rows=df_number_replicas.shape[0],
+            #                                        cols=df_number_replicas.shape[1])
+            set_with_dataframe(wks_number_replicas, df_number_replicas)
+            set_column_widths(wks_number_replicas, [('A', 100), ('B:', 100)])
         # Add conditional format. Mandatory column in G position = TRUE should have bold text
         rule = ConditionalFormatRule(
             ranges=[GridRange.from_a1_range('G1:G2000', wks_dd)],
@@ -533,7 +535,10 @@ def main():
                                     optionsList = json_extract(options, 'code')
                                     optionSetDict[optionSet] = optionsList
 
-                                optionSet_def = '\n'.join(optionSetDict[optionSet])
+                                if len(optionsList) <= 20:  # 20 comes from Enzo Rossi :)
+                                    optionSet_def = '\n'.join(optionSetDict[optionSet])
+                                else:
+                                    optionSet_def = '\n'.join(optionSetDict[optionSet][:20]) + '\n(...)'
 
                             df = df.append({"Stage": "", "Section": section_label,
                                             "TEA / DE / eventDate": dataElement_def['name'],
@@ -560,7 +565,10 @@ def main():
                             optionsList = json_extract(options, 'code')
                             optionSetDict[optionSet] = optionsList
 
-                        optionSet_def = '\n'.join(optionSetDict[optionSet])
+                        if len(optionsList) <= 20: # 20 comes from Enzo Rossi :)
+                            optionSet_def = '\n'.join(optionSetDict[optionSet])
+                        else:
+                            optionSet_def = '\n'.join(optionSetDict[optionSet][:20]) + '\n(...)'
 
                         # print('    with optionSet = ' + dataElement['optionSet']['id'])
                     df = df.append({"Stage": "", "Section": "", "TEA / DE / eventDate": dataElement_def['name'],
