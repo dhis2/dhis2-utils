@@ -881,6 +881,13 @@ def run_rules_in_df(df, rule):
 
 def create_replicas_from_df(df, column, start_date, end_date, number_of_replicas, df_distrib, df_rules):
 
+    def post_processing_values(value_type, value_list):
+        if value_type in ['BOOLEAN', 'TRUE_ONLY']:
+            return [str(item).lower() for item in value_list]
+            # return [str(item).lower() if type(item) is bool else item for item in value_list]
+        else:
+            return value_list
+
     uids_to_distribute = list()
     distributed_values_per_id = dict()
     if df_distrib is not None and not df_distrib.empty:
@@ -967,10 +974,12 @@ def create_replicas_from_df(df, column, start_date, end_date, number_of_replicas
                                 skipStage = True
                                 logger.warning("Skipping stage, date = " + new_date.strftime("%Y-%m-%d"))
                 else:
+                    if row['UID'] in distributed_values_per_id:
+                        distributed_values_per_id[row['UID']] = post_processing_values(row['valueType'], distributed_values_per_id[row['UID']])
                     if index >= stage_indexes[1]:
                         # Do not do anything for stage data for now, unless ratios have been defined
                         if row['UID'] in distributed_values_per_id:
-                            new_column.append(distributed_values_per_id[row['UID']][(clone-1)])
+                            new_column.append(distributed_values_per_id[row['UID']][(clone - 1)])
                         else:
                             new_column.append(row[column])
                     else: # Enrollment
