@@ -1,57 +1,11 @@
-# todo: check that filter and expression in PIs are using only the DEs of the package
 # todo: check naming convention for option names
-
 import json
 import chardet
 from dhis2 import Api, RequestException, setup_logger, logger, is_valid_uid
 import sys
 import pandas as pd
 from re import match, findall, compile, search
-
 import argparse
-
-my_parser = argparse.ArgumentParser(description='Export package')
-my_parser.add_argument('program_uid', metavar='program_uid', type=str, help='the id of the program to use')
-my_parser.add_argument('health_area', metavar='health_area', type=str, help='the health_area of the package, e.g. HIV, TB, EPI, COVID19')
-my_parser.add_argument('intervention', metavar='intervention', type=str, help='the intervention, formerly the package prefix, i.e. CS, EIR, etc..')
-my_parser.add_argument('-v', '--version', action="store", dest="package_version", type=str,
-                       help='the package version to use')
-# my_parser.add_argument('-ha', '--health_area', action="store", dest="health_area", type=str,
-#                        help='the health_area of the package, e.g. HIV, TB, EPI, COVID19')
-my_parser.add_argument('-i', '--instance', action="store", dest="instance", type=str,
-                       help='instance to extract the package from (robot account is required!) - tracker_dev byu default')
-my_parser.add_argument('-desc', '--description', action="store", dest="description", type=str,
-                       help='Description of the package or any comments you want to add')
-
-args = my_parser.parse_args()
-
-credentials_file = 'auth.json'
-
-try:
-    f = open(credentials_file)
-except IOError:
-    print("Please provide file auth.json with credentials for DHIS2 server")
-    exit(1)
-else:
-    with open(credentials_file, 'r') as json_file:
-        credentials = json.load(json_file)
-    if args.instance is not None:
-        api_source = Api(args.instance, credentials['dhis']['username'], credentials['dhis']['password'])
-    else:
-        api_source = Api.from_auth_file(credentials_file)
-
-print("Server source for package extraction {}".format(api_source.base_url))
-print("Running DHIS2 version {} revision {}".format(api_source.version, api_source.revision))
-print("Username: {}".format(credentials['dhis']['username']))
-
-log_file = "./package_export.log"
-import os
-
-if os.path.exists(log_file):
-    os.remove(log_file)
-setup_logger(log_file)
-pd.set_option("display.max_rows", None, "display.max_columns", None, "max_colwidth", 1000)
-df_report_lastUpdated = pd.DataFrame({}, columns=['metadata_type', 'uid', 'name', 'last_updated', 'updated_by'])
 
 
 def get_metadata_element(metadata_type, filter=""):
@@ -660,7 +614,7 @@ def check_naming_convention(metaobj, health_area, package_prefix):
             filtered_list.append(element)
             continue
         # Prefix should come at the beginning
-        #if (element['name'].find(package_prefix)) == 0:
+        # if (element['name'].find(package_prefix)) == 0:
         if search(pattern="^" + health_area + "[ ]?-[ ]?" + package_prefix + "[.]?[0-9]{0,2}[ ]?-[ ]?", string=name):
             filtered_list.append(element)
     if len(filtered_list) == 0:
@@ -710,7 +664,7 @@ def check_issues_with_program_rules(metaobj, elem_list, elem_type='DE'):
         type = 'trackedEntityAttribute'
 
     # Get the elements to improve the verbose
-    DEs = get_metadata_element(type+"s", "id:in:["+','.join(elem_list)+"]")
+    DEs = get_metadata_element(type + "s", "id:in:[" + ','.join(elem_list) + "]")
 
     for UID in elem_list:
         # Find the name
@@ -770,7 +724,7 @@ def check_issues_with_program_rules(metaobj, elem_list, elem_type='DE'):
                     if found_prv:
                         for prv_name in prv_list:
                             # look for it in the condition:
-                            pattern = compile(r'\{('+prv_name+')\}')
+                            pattern = compile(r'\{(' + prv_name + ')\}')
                             z = pattern.findall(pr['condition'])
                             # Could this be also used in PRA data?
                             if z:
@@ -819,18 +773,71 @@ def get_category_elements(cat_combo_uid):
 
     cat['categoryCombos'].append(cat_combo_uid)
     # Get categoryCombos info, which will give us categoryOptionCombos and categories
-    catCombo = api_source.get('categoryCombos/'+cat_combo_uid, params={"fields":"id,name,categories,categoryOptionCombos"}).json()
+    catCombo = api_source.get('categoryCombos/' + cat_combo_uid,
+                              params={"fields": "id,name,categories,categoryOptionCombos"}).json()
     cat['categories'] = json_extract_nested_ids(catCombo, 'categories')
     cat['categoryOptionCombos'] = json_extract_nested_ids(catCombo, 'categoryOptionCombos')
     # Get category Option ids from categories
-    categories = api_source.get('categories', params={"fields":"id,name,categoryOptions",
-                                                      "filter":"id:in:["+','.join(cat['categories'])+"]"}).json()['categories']
+    categories = api_source.get('categories', params={"fields": "id,name,categoryOptions",
+                                                      "filter": "id:in:[" + ','.join(cat['categories']) + "]"}).json()[
+        'categories']
     for category in categories:
         cat['categoryOptions'] += json_extract_nested_ids(category, 'categoryOptions')
 
     return cat
 
-if __name__ == '__main__':
+
+def main():
+
+    global api_source
+    global userGroups_uids
+    global df_report_lastUpdated
+    global WHOAdmin_uid
+
+    my_parser = argparse.ArgumentParser(description='Export package')
+    my_parser.add_argument('program_uid', metavar='program_uid', type=str, help='the id of the program to use')
+    my_parser.add_argument('health_area', metavar='health_area', type=str,
+                           help='the health_area of the package, e.g. HIV, TB, EPI, COVID19')
+    my_parser.add_argument('intervention', metavar='intervention', type=str,
+                           help='the intervention, formerly the package prefix, i.e. CS, EIR, etc..')
+    my_parser.add_argument('-v', '--version', action="store", dest="package_version", type=str,
+                           help='the package version to use')
+    # my_parser.add_argument('-ha', '--health_area', action="store", dest="health_area", type=str,
+    #                        help='the health_area of the package, e.g. HIV, TB, EPI, COVID19')
+    my_parser.add_argument('-i', '--instance', action="store", dest="instance", type=str,
+                           help='instance to extract the package from (robot account is required!) - tracker_dev byu default')
+    my_parser.add_argument('-desc', '--description', action="store", dest="description", type=str,
+                           help='Description of the package or any comments you want to add')
+
+    args = my_parser.parse_args()
+
+    credentials_file = 'auth.json'
+
+    try:
+        f = open(credentials_file)
+    except IOError:
+        print("Please provide file auth.json with credentials for DHIS2 server")
+        exit(1)
+    else:
+        with open(credentials_file, 'r') as json_file:
+            credentials = json.load(json_file)
+        if args.instance is not None:
+            api_source = Api(args.instance, credentials['dhis']['username'], credentials['dhis']['password'])
+        else:
+            api_source = Api.from_auth_file(credentials_file)
+
+    print("Server source for package extraction {}".format(api_source.base_url))
+    print("Running DHIS2 version {} revision {}".format(api_source.version, api_source.revision))
+    print("Username: {}".format(credentials['dhis']['username']))
+
+    log_file = "./package_export.log"
+    import os
+
+    if os.path.exists(log_file):
+        os.remove(log_file)
+    setup_logger(log_file)
+    pd.set_option("display.max_rows", None, "display.max_columns", None, "max_colwidth", 1000)
+    df_report_lastUpdated = pd.DataFrame({}, columns=['metadata_type', 'uid', 'name', 'last_updated', 'updated_by'])
 
     # Iteration over this list happens in reversed order
     # Altering the order can cause the script to stop working
@@ -838,7 +845,7 @@ if __name__ == '__main__':
         'categoryOptions', 'categories', 'categoryCombos', 'categoryOptionCombos',
         'legendSets',  # used in indicators, optionGroups, programIndicators and trackedEntityAttributes
         'optionGroups', 'options', 'optionSets',
-        'constants', 'documents',  'attributes',
+        'constants', 'documents', 'attributes',
         'dataEntryForms', 'dataSets', 'sections',
         'dataElementGroups', 'dataElements',
         'predictorGroups', 'predictors',
@@ -847,7 +854,7 @@ if __name__ == '__main__':
         'programs',
         'programStageSections', 'programStages',
         'programIndicatorGroups', 'programIndicators',
-        'organisationUnitGroups', # Assuming this will only be found in indicators
+        'organisationUnitGroups',  # Assuming this will only be found in indicators
         'indicatorTypes', 'indicatorGroups', 'indicators',
         'programRuleVariables', 'programRuleActions', 'programRules',
         'visualizations', 'charts', 'maps', 'reportTables', 'eventReports', 'eventCharts', 'dashboards',
@@ -913,7 +920,7 @@ if __name__ == '__main__':
     programStageSections_uids = list()
     trackedEntityTypes_uids = list()  # Normally only one :)
     optionSets_uids = list()
-    cat_uids = dict() # Contains all non DEFAULT uids of categoryOption, categories, CCs and COCs
+    cat_uids = dict()  # Contains all non DEFAULT uids of categoryOption, categories, CCs and COCs
     # Constants can be found in
     # programRules -> condition -> C{gYj2CUoep4O} == 2
     # programRuleActions -> data ????
@@ -1094,7 +1101,7 @@ if __name__ == '__main__':
                 dataElements_with_program_prefix = list()
                 for prefix in all_package_prefixes:
                     dataElements_with_program_prefix += get_metadata_element(metadata_type,
-                                                                            "name:like:" + prefix)
+                                                                             "name:like:" + prefix)
                 # if len(dataElements_with_program_prefix) > len(dataElements_uids['PS']):
                 DEs_to_add = list()
                 for de in check_naming_convention(dataElements_with_program_prefix, health_area, package_prefix):
@@ -1141,7 +1148,8 @@ if __name__ == '__main__':
             elif metadata_type[:3] == 'cat':
                 if metadata_type in cat_uids and len(cat_uids[metadata_type]) > 0:
                     logger.info('Getting extra uids for ' + metadata_type)
-                    metaobject += get_metadata_element(metadata_type, 'id:in:[' + ','.join(cat_uids[metadata_type]) + ']')
+                    metaobject += get_metadata_element(metadata_type,
+                                                       'id:in:[' + ','.join(cat_uids[metadata_type]) + ']')
 
             # Update dataframe reports
             update_last_updated(metaobject, metadata_type)
@@ -1277,7 +1285,8 @@ if __name__ == '__main__':
                 if len(diff_data_dimension) > 0:
                     logger.error("Data dimension in analytics use dataElements not included in the package: "
                                  + str(diff_data_dimension) + "... Adding them")
-                    dataElements_in_data_dimension = get_metadata_element(metadata_type, "id:in:[" + ','.join(diff_data_dimension) + "]")
+                    dataElements_in_data_dimension = get_metadata_element(metadata_type, "id:in:[" + ','.join(
+                        diff_data_dimension) + "]")
                     dataElements_in_data_dimension = check_sharing(dataElements_in_data_dimension)
                     dataElements_in_data_dimension = clean_metadata(dataElements_in_data_dimension)
                     metaobject += dataElements_in_data_dimension
@@ -1312,11 +1321,13 @@ if __name__ == '__main__':
                                  + str(diff))
 
                 # Check PIs used in Analytics
-                diff_data_dimension = list(set(dataDimension_uids['programIndicator']).difference(programIndicators_uids['P']))
+                diff_data_dimension = list(
+                    set(dataDimension_uids['programIndicator']).difference(programIndicators_uids['P']))
                 if len(diff_data_dimension) > 0:
                     logger.error("Data dimension in analytics use programIndicators not included in the package: "
                                  + str(diff_data_dimension) + "... Adding them")
-                    programIndicators_in_data_dimension = get_metadata_element(metadata_type, "id:in:[" + ','.join(diff_data_dimension) + "]")
+                    programIndicators_in_data_dimension = get_metadata_element(metadata_type, "id:in:[" + ','.join(
+                        diff_data_dimension) + "]")
                     programIndicators_in_data_dimension = check_sharing(programIndicators_in_data_dimension)
                     programIndicators_in_data_dimension = clean_metadata(programIndicators_in_data_dimension)
                     metaobject += programIndicators_in_data_dimension
@@ -1345,8 +1356,9 @@ if __name__ == '__main__':
                         new_userGroups_uids.append(PNT['recipientUserGroup']['id'])
                 if len(new_userGroups_uids) > 0:
                     # Get those user Groups
-                    new_userGroups = get_metadata_element('userGroups', 'id:in:['+','.join(new_userGroups_uids)+']')
-                    logger.warning("ProgramNotificationTemplates use a userGroup recipient not included in the package... ADDING")
+                    new_userGroups = get_metadata_element('userGroups', 'id:in:[' + ','.join(new_userGroups_uids) + ']')
+                    logger.warning(
+                        "ProgramNotificationTemplates use a userGroup recipient not included in the package... ADDING")
                     for UG in new_userGroups:
                         logger.warning(" ! " + UG['id'] + " - " + UG['name'])
                     new_userGroups = clean_metadata(new_userGroups)
@@ -1370,7 +1382,8 @@ if __name__ == '__main__':
                 if len(diff_data_dimension) > 0:
                     logger.error("Data dimension in analytics use indicators not included in the package: "
                                  + str(diff_data_dimension) + "... Adding them")
-                    indicators_in_data_dimension = get_metadata_element(metadata_type, "id:in:[" + ','.join(diff_data_dimension) + "]")
+                    indicators_in_data_dimension = get_metadata_element(metadata_type,
+                                                                        "id:in:[" + ','.join(diff_data_dimension) + "]")
                     indicators_in_data_dimension = check_sharing(indicators_in_data_dimension)
                     indicators_in_data_dimension = clean_metadata(indicators_in_data_dimension)
                     metaobject += indicators_in_data_dimension
@@ -1574,3 +1587,7 @@ if __name__ == '__main__':
         df_report_lastUpdated.sort_values(by=['metadata_type']) \
             .groupby(['metadata_type']).size().reset_index(name='counts') \
             .to_csv(package_prefix + '_metadata_stats.csv', index=None, header=True)
+
+
+if __name__ == "__main__":
+    main()
