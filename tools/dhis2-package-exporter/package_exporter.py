@@ -795,7 +795,7 @@ def main():
     global WHOAdmin_uid
 
     my_parser = argparse.ArgumentParser(description='Export package')
-    my_parser.add_argument('program_uid', metavar='program_uid', type=str, help='the id of the program to use')
+    my_parser.add_argument('program_or_ds_uid', metavar='program_or_ds_uid', type=str, help='the id of the program to use')
     my_parser.add_argument('health_area', metavar='health_area', type=str,
                            help='the health_area of the package, e.g. HIV, TB, EPI, COVID19')
     my_parser.add_argument('intervention', metavar='intervention', type=str,
@@ -810,6 +810,21 @@ def main():
                            help='Description of the package or any comments you want to add')
 
     args = my_parser.parse_args()
+
+    # Prepare the log
+    log_file = "./package_export.log"
+    import os
+
+    if os.path.exists(log_file):
+        try:
+            os.remove(log_file)
+        except PermissionError:
+            pass
+    setup_logger(log_file)
+    pd.set_option("display.max_rows", None, "display.max_columns", None, "max_colwidth", 1000)
+    df_report_lastUpdated = pd.DataFrame({}, columns=['metadata_type', 'uid', 'name', 'last_updated', 'updated_by'])
+
+    # We need to connect to instance to be able to validate the parameters
 
     credentials_file = 'auth.json'
 
@@ -830,38 +845,113 @@ def main():
     print("Running DHIS2 version {} revision {}".format(api_source.version, api_source.revision))
     print("Username: {}".format(credentials['dhis']['username']))
 
-    log_file = "./package_export.log"
-    import os
-
-    if os.path.exists(log_file):
+    program_or_ds_uid = args.program_or_ds_uid
+    # At present, program uid is mandatory. For an agg package, we are going to allow also
+    # this uid to be a dataset uid. Still, it could be the case that we want to grab multiple
+    # datasets as part of a package. In this case we will use the keyword AGG instead of a uid
+    program_uid = None
+    program = None
+    dataset_uids = None
+    dataSets = None
+    if program_or_ds_uid != 'AGG':
+        if not is_valid_uid(program_or_ds_uid):
+            logger.error('The UID ' + program_or_ds_uid + ' is NOT valid')
+            exit(1)
+        # Check if it is a program
         try:
-            os.remove(log_file)
-        except PermissionError:
+            program = api_source.get('programs/' + program_or_ds_uid,
+                                     params={"paging": "false",
+                                             "fields": "id,name,enrollmentDateLabel,programTrackedEntityAttributes,programStages,programRuleVariables,organisationUnits,trackedEntityType,version,categoryCombo"}).json()
+        except RequestException as e:
+            # if e.code == 404:
+            #     logger.error('Program ' + program_uid + ' specified does not exist')
+            #     sys.exit()
             pass
-    setup_logger(log_file)
-    pd.set_option("display.max_rows", None, "display.max_columns", None, "max_colwidth", 1000)
-    df_report_lastUpdated = pd.DataFrame({}, columns=['metadata_type', 'uid', 'name', 'last_updated', 'updated_by'])
+        else:
+            program_uid = program_or_ds_uid
+        # Check if it is a dataSet
+        try:
+            dataSets = [ api_source.get('dataSets/' + program_or_ds_uid,
+                                     params={"paging": "false",
+                                             "fields": "*"}).json() ]
+        except RequestException as e:
+            # if e.code == 404:
+            #     logger.error('Program ' + program_uid + ' specified does not exist')
+            #     sys.exit()
+            pass
+        else:
+            dataset_uids = [program_or_ds_uid]
+    else:
+        # In order not to complicate things, we are going to leave the intervention as mandatory
+        # So if you want to grab all references for a package using a prefix, the script can be called
+        # with health area = intervention, same values for both parameters
+        # In other words, to get all dataSets we are going to consider the broader case of health area
+        try:
+            dataSets = api_source.get('dataSets',
+                                     params={"paging": "false",
+                                             "filter": "name:$like:"+args.health_area,
+                                             "fields": "*"}).json()['dataSets']
+        except RequestException as e:
+            # if e.code == 404:
+            #     logger.error('Program ' + program_uid + ' specified does not exist')
+            #     sys.exit()
+            pass
+        else:
+            dataset_uids = list()
+            for ds in dataSets:
+                dataset_uids.append(ds['id'])
 
-    # Iteration over this list happens in reversed order
-    # Altering the order can cause the script to stop working
-    metadata_import_order = [
-        'categoryOptions', 'categories', 'categoryCombos', 'categoryOptionCombos',
-        'legendSets',  # used in indicators, optionGroups, programIndicators and trackedEntityAttributes
-        'optionGroups', 'options', 'optionSets',
-        'constants', 'documents', 'attributes',
-        'dataEntryForms', 'dataSets', 'sections',
-        'dataElementGroups', 'dataElements',
-        'predictorGroups', 'predictors',
-        'trackedEntityAttributes', 'trackedEntityTypes', 'trackedEntityInstanceFilters',
-        'programNotificationTemplates',
-        'programs',
-        'programStageSections', 'programStages',
-        'programIndicatorGroups', 'programIndicators',
-        'organisationUnitGroups',  # Assuming this will only be found in indicators
-        'indicatorTypes', 'indicatorGroups', 'indicators',
-        'programRuleVariables', 'programRuleActions', 'programRules',
-        'visualizations', 'charts', 'maps', 'reportTables', 'eventReports', 'eventCharts', 'dashboards',
-        'package', 'users', 'userGroups']
+    if program_uid and program is not None:
+        logger.info('Exporting TKR/EVT program ' + program_uid)
+    elif dataset_uids and dataSets is not None and len(dataSets) > 0 and len(dataset_uids) > 0:
+        logger.info('Exporting AGG dataSet(s) ' + ','.join(dataset_uids))
+    else:
+        logger.error('The parameters (' + args.program_or_ds_uid + ',' + args.health_area + ',' +
+                     args.intervention + ') returned no result for programs or dataSets')
+        exit(1)
+
+    # Process now the prefix. We accept multiple prefixes
+    package_prefix = args.intervention
+    all_package_prefixes = [package_prefix]
+    if ',' in package_prefix:
+        all_package_prefixes = package_prefix.split(',')
+        package_prefix = all_package_prefixes[0]
+
+    if program_uid is not None:
+        # Iteration over this list happens in reversed order
+        # Altering the order can cause the script to stop working
+        metadata_import_order = [
+            'categoryOptions', 'categories', 'categoryCombos', 'categoryOptionCombos',
+            'legendSets',  # used in indicators, optionGroups, programIndicators and trackedEntityAttributes
+            'optionGroups', 'options', 'optionSets',
+            'constants', 'documents', 'attributes',
+            'dataEntryForms', 'dataSets', 'sections', # Some programs, like HIV, have dataSets
+            'dataElementGroups', 'dataElements',
+            'predictorGroups', 'predictors',
+            'trackedEntityAttributes', 'trackedEntityTypes', 'trackedEntityInstanceFilters',
+            'programNotificationTemplates',
+            'programs',
+            'programStageSections', 'programStages',
+            'programIndicatorGroups', 'programIndicators',
+            'organisationUnitGroups',  # Assuming this will only be found in indicators
+            'indicatorTypes', 'indicatorGroups', 'indicators',
+            'programRuleVariables', 'programRuleActions', 'programRules',
+            'visualizations', 'charts', 'maps', 'reportTables', 'eventReports', 'eventCharts', 'dashboards',
+            'package', 'users', 'userGroups']
+    # Dataset
+    else:
+        metadata_import_order = [
+            'categoryOptions', 'categories', 'categoryCombos', 'categoryOptionCombos',
+            'legendSets',  # used in indicators, optionGroups, programIndicators and trackedEntityAttributes
+            'optionGroups', 'options', 'optionSets',
+            'constants', 'documents', 'attributes',
+            'dataEntryForms', 'dataSets', 'sections', # Some programs, like HIV, have dataSets
+            'dataElementGroups', 'dataElements',
+            'predictorGroups', 'predictors',
+            'organisationUnitGroups',  # Assuming this will only be found in indicators
+            'indicatorTypes', 'indicatorGroups', 'indicators',
+            'visualizations', 'charts', 'maps', 'reportTables', 'eventReports', 'eventCharts', 'dashboards',
+            'package', 'users', 'userGroups']
 
     # Starting from >=2.34, charts and reportTables are called visualizations
     if '2.33' in api_source.version:
@@ -871,16 +961,6 @@ def main():
         # No need for charts and reportTables
         metadata_import_order.remove('charts')
         metadata_import_order.remove('reportTables')
-
-    program_uid = args.program_uid
-    if not is_valid_uid(program_uid):
-        logger.error('Program UID ' + program_uid + ' is NOT valid')
-        exit(1)
-    package_prefix = args.intervention
-    all_package_prefixes = [package_prefix]
-    if ',' in package_prefix:
-        all_package_prefixes = package_prefix.split(',')
-        package_prefix = all_package_prefixes[0]
 
     metadata = dict()
 
@@ -894,12 +974,6 @@ def main():
                        'vudyDP7jUy5']  # Data element for aggregate data export
     dataDimension_uids = {'dataElement': [], 'indicator': [], 'programIndicator': []}
     dataEntryForms_uids = list()
-    programNotificationTemplates_uids = list()
-    programRuleActions_uids = list()
-    trackedEntityAttributes_uids = dict()
-    trackedEntityAttributes_uids['PR'] = list()
-    trackedEntityAttributes_uids['P'] = list()
-    trackedEntityAttributes_uids['PI'] = list()
     dataElements_uids = dict()
     dataElements_uids['PR'] = list()
     dataElements_uids['PS'] = list()
@@ -915,15 +989,22 @@ def main():
     legendSets_uids = list()
     organisationUnitGroups_uids = list()
     predictorGroups_uids = list()
-    programIndicators_uids = dict()
-    programIndicators_uids['P'] = list()  # Program
-    programIndicators_uids['I'] = list()
-    programIndicators_uids['PRED'] = list()  # Predictor
-    programIndicatorGroups_uids = list()
-    programStageSections_uids = list()
-    trackedEntityTypes_uids = list()  # Normally only one :)
     optionSets_uids = list()
     cat_uids = dict()  # Contains all non DEFAULT uids of categoryOption, categories, CCs and COCs
+    if program_uid is not None:
+        programNotificationTemplates_uids = list()
+        programRuleActions_uids = list()
+        trackedEntityAttributes_uids = dict()
+        trackedEntityAttributes_uids['PR'] = list()
+        trackedEntityAttributes_uids['P'] = list()
+        trackedEntityAttributes_uids['PI'] = list()
+        programIndicators_uids = dict()
+        programIndicators_uids['P'] = list()  # Program
+        programIndicators_uids['I'] = list()
+        programIndicators_uids['PRED'] = list()  # Predictor
+        programIndicatorGroups_uids = list()
+        programStageSections_uids = list()
+        trackedEntityTypes_uids = list()  # Normally only one :)
     # Constants can be found in
     # programRules -> condition -> C{gYj2CUoep4O} == 2
     # programRuleActions -> data ????
@@ -956,34 +1037,34 @@ def main():
         "organisationUnitGroups": "id:in:[" + ','.join(organisationUnitGroups_uids) + "]",
         "predictors": "name:like:" + package_prefix,
         "predictorGroups": "id:in:[" + ','.join(predictorGroups_uids) + "]",
-        "programs": "id:eq:" + program_uid,
-        "programIndicatorGroups": "",
-        "programIndicators": "program.id:eq:" + program_uid,
-        "programNotificationTemplates": "id:in:[" + ','.join(programNotificationTemplates_uids) + "]",
-        "programRuleActions": "id:in:[" + ','.join(programRuleActions_uids) + "]",
-        "programRules": "program.id:eq:" + program_uid,
-        "programRuleVariables": "program.id:eq:" + program_uid,
-        "programStages": "program.id:eq:" + program_uid,
-        "programStageSections": "id:in:[" + ','.join(programStageSections_uids) + "]",
         "reportTables": "id:in:[" + ','.join(dashboard_items['reportTable']) + "]",
-        "trackedEntityAttributes": "id:in:[" + ','.join(trackedEntityAttributes_uids['P']) + "]",
-        "trackedEntityInstanceFilters": "program.id:eq:" + program_uid,
-        "trackedEntityTypes": "id:in:[" + ','.join(trackedEntityTypes_uids) + "]",
         "visualizations": "id:in:[" + ','.join(dashboard_items['visualization']) + "]",
         "userGroups": "name:like:" + package_prefix,
         "users": "id:eq:" + WHOAdmin_uid
     }
 
-    try:
-        program = api_source.get('programs/' + program_uid,
-                                 params={"paging": "false",
-                                         "fields": "id,name,enrollmentDateLabel,programTrackedEntityAttributes,programStages,programRuleVariables,organisationUnits,trackedEntityType,version,categoryCombo"}).json()
-    except RequestException as e:
-        if e.code == 404:
-            logger.error('Program ' + program_uid + ' specified does not exist')
-            sys.exit()
+    if program_uid is not None:
+        metadata_filters.update({
+            "programs": "id:eq:" + program_uid,
+            "programIndicatorGroups": "",
+            "programIndicators": "program.id:eq:" + program_uid,
+            "programNotificationTemplates": "id:in:[" + ','.join(programNotificationTemplates_uids) + "]",
+            "programRuleActions": "id:in:[" + ','.join(programRuleActions_uids) + "]",
+            "programRules": "program.id:eq:" + program_uid,
+            "programRuleVariables": "program.id:eq:" + program_uid,
+            "programStages": "program.id:eq:" + program_uid,
+            "programStageSections": "id:in:[" + ','.join(programStageSections_uids) + "]",
+            "trackedEntityAttributes": "id:in:[" + ','.join(trackedEntityAttributes_uids['P']) + "]",
+            "trackedEntityInstanceFilters": "program.id:eq:" + program_uid,
+            "trackedEntityTypes": "id:in:[" + ','.join(trackedEntityTypes_uids) + "]"
+        })
+    # Dataset
+    else:
+        metadata_filters.update({
+            "dataSets": "id:in:[" + ','.join(dataset_uids) + "]"
+        })
 
-    if isinstance(program, dict):
+    if program is not None and isinstance(program, dict):
 
         if args.package_version is not None:
             package_version = args.package_version
