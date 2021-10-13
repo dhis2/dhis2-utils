@@ -162,6 +162,34 @@ def main():
             tea_name = myutils.get_name_by_type_and_uid(package, 'trackedEntityAttribute', tea_uid)
             logging.error(f"PR-ST-5 Program Rule '{pr_name}' ({pr_uid}) in the PR Action uses a TEA '{tea_name}' ({tea_uid}) that does not belong to the associated program.")
 
+
+    # code
+    PATTERN_OPTION_CODE = re.compile("^([0-9A-Z_\|\-\.]+)+$")
+    PATTERN_CODE = re.compile("^([0-9A-Z_]+)+$")
+    resources_with_code = ['dashboards', 'dataSets', 'programs', 'indicatorGroups', 'dataElementGroups', 'predictorGroups', 'validationRuleGroups', 'userGroups', 'options']
+    for resource_type in resources_with_code:
+        if resource_type not in package:
+            continue
+
+        for resource in package[resource_type]:
+            if "code" not in resource:
+                message = f"ALL-MQ-17- Missed code field in {resource_type} (name='{resource['name']}' uid={resource['id']})"
+                logger.warning(message)
+            else:
+                # ALL-MQ-18: Codes MUST be upper case ASCII (alphabetic A-Z), and the symbols '_' (underscore),'-' (hyphen),'.' (dot),'|' (Bar o Pipe)
+                if "\t" in resource["code"]:
+                    message = f"ALL-MQ-18- Tab character in code='{resource['code']}' (resource type='{resource_type}' name='{resource['name']}' uid={resource['id']})"
+                    logger.error(message)
+                    resource["code"] = resource["code"].replace("\t", "")
+                if resource_type == "options":
+                    if not PATTERN_OPTION_CODE.search(resource["code"]):
+                        message = f"ALL-MQ-18- Invalid code='{resource['code']}' (resource type='{resource_type}' name='{resource['name']}' uid={resource['id']})"
+                        logger.error(message)
+                else:
+                    if not PATTERN_CODE.search(resource["code"]):
+                        message = f"ALL-MQ-18- Invalid code='{resource['code']}' (resource type='{resource_type}' name='{resource['name']}' uid={resource['id']})"
+                        logger.error(message)
+
     logger.info('-------------------------------------Finished validation-------------------------------------')
 
     # if there was any error, exit with code -1
