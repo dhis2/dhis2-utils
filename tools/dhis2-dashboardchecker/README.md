@@ -19,7 +19,6 @@ Create/modify auth.json file containing the credentials of the default server to
 ```json
 {
   "dhis": {
-    "baseurl": "https://who-dev.dhis2.org/dev",
     "username": "admin",
     "password": "district"
   }
