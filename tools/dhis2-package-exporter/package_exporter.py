@@ -44,7 +44,7 @@ def get_metadata_element(metadata_type, filter=""):
                                                                 ','.join(chunk_ids) + "]")
                     return metadata_result
         else:
-            sys.exit()
+            sys.exit(1)
 
     return []
 
