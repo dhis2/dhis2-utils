@@ -14,37 +14,30 @@ def get_metadata_element(metadata_type, filter=""):
     if filter != "":
         params["filter"] = filter
     try:
-        metadata_result = api_source.get(metadata_type, params=params).json()[metadata_type]
-        if metadata_type == 'dataElements':
-            params["fields"] = "id"
-            dataElementsIDs = api_source.get(metadata_type, params=params).json()[metadata_type]
-            with open('dataElements.json', 'w', encoding='utf8') as file:
-                file.write(json.dumps(dataElementsIDs, indent=4, sort_keys=True, ensure_ascii=False))
-            file.close()
-        return metadata_result
+        # if the filter is too long, i.e. too many ids, we chunk it to avoid causing a 414 or 400 error
+        if len(filter) > 1000:
+            filter_list = filter.split(':')
+            if len(filter_list) == 3:  # Eg id:in:[id1,id2] should have 3 elements
+                id_list = filter_list[2].replace('[', '').replace(']', '').split(',')
+                metadata_result = list()
+                number_elems = len(id_list)
+                # The goal is is to extract the uids in the filter into a list again and then
+                # chunk that list in pieces of 100 which can be used in the API call to make sure it works now
+                # Jenkins seems to have problems when it is set to 100
+                chunk_max_size = 75
+                for x in range(0, number_elems, chunk_max_size):
+                    chunk_ids = id_list[x:(
+                        (x + chunk_max_size) if number_elems > (x + chunk_max_size) else number_elems)]
+                    metadata_result += get_metadata_element(metadata_type,
+                                                            filter_list[0] + ":" + filter_list[1] + ":[" +
+                                                            ','.join(chunk_ids) + "]")
+                return metadata_result
+        else:
+            return api_source.get(metadata_type, params=params).json()[metadata_type]
     except RequestException as e:
         logger.error('Server return ' + str(e.code) + ' when getting ' + metadata_type)
-        # This error means that the filter contains too many uids
-        if e.code == 414:
-            # Just double checking that it is indeed too long
-            if len(filter) > 3500:
-                filter_list = filter.split(':')
-                if len(filter_list) == 3:  # Eg id:in:[id1,id2] should have 3 elements
-                    id_list = filter_list[2].replace('[', '').replace(']', '').split(',')
-                    metadata_result = list()
-                    number_elems = len(id_list)
-                    # The goal is is to extract the uids in the filter into a list again and then
-                    # chunk that list in pieces of 100 which can be used in the API call to make sure it works now
-                    chunk_max_size = 100
-                    for x in range(0, number_elems, chunk_max_size):
-                        chunk_ids = id_list[x:(
-                            (x + chunk_max_size) if number_elems > (x + chunk_max_size) else number_elems)]
-                        metadata_result += get_metadata_element(metadata_type,
-                                                                filter_list[0] + ":" + filter_list[1] + ":[" +
-                                                                ','.join(chunk_ids) + "]")
-                    return metadata_result
-        else:
-            sys.exit(1)
+        #if e.code == 414 or e.code == 400:
+        sys.exit(1)
 
     return []
 
@@ -792,8 +785,6 @@ def get_category_elements(cat_combo_uid, cat_uid_dict = None):
 
 
 def add_category_option_combo(cat_opt_combo_uid, cat_uid_dict=None):
-    if cat_opt_combo_uid == 'RToq1dTHgaM':
-        a = 1
     cat_combo_uid = api_source.get('categoryOptionCombos/' + cat_opt_combo_uid,
                               params={"fields": "id,categoryCombo"}).json()['categoryOptionCombos'][0]['id']
     get_category_elements(cat_combo_uid, cat_uid_dict)
@@ -837,6 +828,7 @@ def main():
     setup_logger(log_file)
     pd.set_option("display.max_rows", None, "display.max_columns", None, "max_colwidth", 1000)
     df_report_lastUpdated = pd.DataFrame({}, columns=['metadata_type', 'uid', 'name', 'last_updated', 'updated_by'])
+    total_errors = 0
 
     # We need to connect to instance to be able to validate the parameters
 
@@ -1131,11 +1123,6 @@ def main():
             separator = ""
 
         for metadata_type in reversed(metadata_import_order):
-            #if metadata_type in ["sections", "dataSets", "dataElements", "indicatorGroups", "validationRuleGroups"]:
-            if metadata_type in ["dataElements"]:
-                a = 1
-            # if metadata_type in ["sections", "dataSets"]:  # Aggregate only
-            #     continue
             if metadata_type == "constants":
                 metadata_type = "constants"
 
@@ -1184,6 +1171,7 @@ def main():
                         item = api_source.get(metadata_type + '/' + uid, params={"fields": "*"}).json()
                     except RequestException:
                         logger.error(metadata_type[:-1] + ' ' + uid + ' cannot be retrieved via API')
+                        exit(1)
                     else:
                         metaobject.append(item)
             elif 'code:$like' in metadata_filters[metadata_type]:
@@ -1375,17 +1363,20 @@ def main():
                     if len(diff) > 0:
                         logger.error("Program rules use trackedEntityAttributes not assigned to the program: "
                                      + str(diff))
+                        total_errors += 1
                         check_issues_with_program_rules(metadata, diff, "TEA")
                     # Check TEAs used in Program Indicators
                     diff = list(set(trackedEntityAttributes_uids['PI']).difference(trackedEntityAttributes_uids['P']))
                     if len(diff) > 0:
                         logger.error("Program indicators use trackedEntityAttributes not included in the program: "
                                      + str(diff))
+                        total_errors += 1
                     # Check TEAs used in Indicators
                     diff = list(set(trackedEntityAttributes_uids['I']).difference(trackedEntityAttributes_uids['P']))
                     if len(diff) > 0:
                         logger.error("Indicators use trackedEntityAttributes not included in the program: "
                                      + str(diff))
+                        total_errors += 1
 
                 elif metadata_type == "programIndicators":
                     # Get UIDs to analyze PIs included in the Program (P) VS the ones used in num/den of indicators
@@ -1397,6 +1388,7 @@ def main():
                     if len(diff) > 0:
                         logger.error("Indicators use programIndicators not included in the program: "
                                      + str(diff))
+                        total_errors += 1
                         for uid in diff:
                             ind_num = api_source.get('indicators',
                                                      params={"fields": "id,name",
@@ -1414,13 +1406,15 @@ def main():
                     if len(diff) > 0:
                         logger.error("Predictors use programIndicators not included in the program: "
                                      + str(diff))
+                        total_errors += 1
 
                     # Check PIs used in Analytics
                     diff_data_dimension = list(
                         set(dataDimension_uids['programIndicator']).difference(programIndicators_uids['P']))
                     if len(diff_data_dimension) > 0:
-                        logger.error("Data dimension in analytics use programIndicators not included in the package: "
+                        logger.warning("Data dimension in analytics use programIndicators not included in the package: "
                                      + str(diff_data_dimension) + "... Adding them")
+                        total_errors += 1
                         programIndicators_in_data_dimension = get_metadata_element(metadata_type, "id:in:[" + ','.join(
                             diff_data_dimension) + "]")
                         programIndicators_in_data_dimension = check_sharing(programIndicators_in_data_dimension)
@@ -1498,11 +1492,13 @@ def main():
                     if len(diff) > 0:
                         logger.error("Program rules use dataElements not included in the program: "
                                      + str(diff))
+                        total_errors += 1
                         check_issues_with_program_rules(metadata, diff, "DE")
                     # Check DE assigned to the Program Stages VS Program Stage Sections
                     if len(dataElements_uids['PS']) < len(dataElements_uids['PSS']):
                         logger.error("Program stage sections use dataElements not assigned to any programStage: "
                                      + str(list(set(dataElements_uids['PSS']).difference(dataElements_uids['PS']))))
+                        total_errors += 1
                     elif len(dataElements_uids['PS']) > len(dataElements_uids['PSS']):
                         logger.warning("Program stage use dataElements not assigned to any programStageSection: "
                                        + str(list(set(dataElements_uids['PS']).difference(dataElements_uids['PSS']))))
@@ -1511,6 +1507,7 @@ def main():
                     if len(diff) > 0:
                         logger.error("Program indicators use dataElements not included in the package: "
                                      + str(diff))
+                        total_errors += 1
                         for uid in diff:
                             PIs = api_source.get('programIndicators',
                                                  params={"fields": "id,name",
@@ -1534,13 +1531,14 @@ def main():
                 if len(diff) > 0:
                     logger.error("Validation rules use dataElements not included in the program: "
                                  + str(diff))
+                    total_errors += 1
                 # Check DEs used in Indicators
                 diff_ind = list(set(dataElements_uids['I']).difference(dataElements_in_package))
                 if len(diff_ind) > 0:
                     # This should maybe be moved to Pre-processing
                     # In pre-processing we add ot the package those DEs with package prefix
                     # here we add the package those used in indicators
-                    logger.error("Indicators use dataElements not included in the package: "
+                    logger.warning("Indicators use dataElements not included in the package: "
                                  + str(diff_ind) + "... Adding them")
                 # Check DEs used in Predictors
                 diff_pred = list(set(dataElements_uids['PRED']).difference(dataElements_in_package))
@@ -1548,7 +1546,7 @@ def main():
                     # This should maybe be moved to Pre-processing
                     # In pre-processing we add ot the package those DEs with package prefix
                     # here we add the package those used in indicators
-                    logger.error("Predictors use dataElements not included in the package: "
+                    logger.warning("Predictors use dataElements not included in the package: "
                                  + str(diff_pred) + "... Adding them")
 
                 # In this case, we add the DEs... Why? Program Indicators have a direct reference to the program
@@ -1568,7 +1566,7 @@ def main():
                 # Check DEs used in Analytics
                 diff_data_dimension = list(set(dataDimension_uids['dataElement']).difference(dataElements_in_package))
                 if len(diff_data_dimension) > 0:
-                    logger.error("Data dimension in analytics use dataElements not included in the package: "
+                    logger.warning("Data dimension in analytics use dataElements not included in the package: "
                                  + str(diff_data_dimension) + "... Adding them")
                     dataElements_in_data_dimension = get_metadata_element(metadata_type, "id:in:[" + ','.join(
                         diff_data_dimension) + "]")
@@ -1590,7 +1588,7 @@ def main():
                     indicator_uids.append(indicator['id'])
                 diff_data_dimension = list(set(dataDimension_uids['indicator']).difference(indicator_uids))
                 if len(diff_data_dimension) > 0:
-                    logger.error("Data dimension in analytics use indicators not included in the package: "
+                    logger.warning("Data dimension in analytics use indicators not included in the package: "
                                  + str(diff_data_dimension) + "... Adding them")
                     indicators_in_data_dimension = get_metadata_element(metadata_type,
                                                                         "id:in:[" + ','.join(diff_data_dimension) + "]")
@@ -1874,6 +1872,9 @@ def main():
                 for coc in hardcoded_cocs:
                     if coc not in cat_uids['categoryOptionCombos']:
                         add_category_option_combo(coc, cat_uids)
+
+        if total_errors != 0:
+            exit(1)
 
         # Write metadata_object
         # last updated for the program will be the most recent date when any of the metadata was changed
