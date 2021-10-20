@@ -33,6 +33,10 @@ h1 {
 	padding: 1em 0;
 }
 
+.spacer {
+	padding: 0 0.7em;
+}
+
 .main-btn {
 	font-size: 1.2em;
 }
@@ -84,6 +88,11 @@ app.getUnFormattedQuery = function(query) {
 	return unFormattedQuery;
 };
 
+app.urlDecodeQuery = function () {
+	const query = document.getElementById('query').value;
+	document.getElementById('query').value = decodeURIComponent(query);	
+};
+
 app.getQueryResponse = function() {
 	const query = document.getElementById('query').value;
 	const unFormattedQuery = app.getUnFormattedQuery(query);
@@ -103,7 +112,10 @@ app.clearQuery = function() {
 	<div id="btn-area">
 		<input type="button" class="main-btn" onclick="app.formatQuery()" value="Format">
 		<input type="button" class="main-btn" onclick="app.unFormatQuery()" value="Un-format">
+		<input type="button" class="main-btn" onclick="app.urlDecodeQuery()" value="URL decode">
+		<span class="spacer"/>
 		<input type="button" class="main-btn" onclick="app.getQueryResponse()" value="Get response">
+		<span class="spacer"/>
 		<input type="button" class="main-btn" onclick="app.clearQuery()" value="Clear">
 	</div>
 </div>
