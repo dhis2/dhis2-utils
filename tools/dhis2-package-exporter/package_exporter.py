@@ -1154,7 +1154,7 @@ def main():
                     "code": package_code,
                     "description": package_description,
                     "type": package_type,
-                    "version": package_version[1:],
+                    "version": package_version,
                     "lastUpdated": "",
                     "DHIS2Version": api_source.version,
                     "DHIS2Build": api_source.revision,
