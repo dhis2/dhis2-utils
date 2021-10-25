@@ -877,9 +877,9 @@ def main():
                                      params={"paging": "false",
                                              "fields": "id,name,enrollmentDateLabel,programTrackedEntityAttributes,programStages,programRuleVariables,organisationUnits,trackedEntityType,version,categoryCombo"}).json()
         except RequestException as e:
-            if e.code == 404:
-                logger.warning('Program ' + program_or_ds_uid + ' does not exist')
-                # sys.exit()
+            # if e.code == 404:
+            #     logger.warning('Program ' + program_or_ds_uid + ' does not exist')
+            #     sys.exit()
             pass
         else:
             program_uid = program_or_ds_uid
@@ -889,9 +889,9 @@ def main():
                                      params={"paging": "false",
                                              "fields": "*"}).json() ]
         except RequestException as e:
-            if e.code == 404:
-                logger.warning('dataSet ' + program_or_ds_uid + ' does not exist')
-                # sys.exit()
+            # if e.code == 404:
+            #     logger.warning('dataSet ' + program_or_ds_uid + ' does not exist')
+            #     sys.exit()
             pass
         else:
             dataset_uids = [program_or_ds_uid]
