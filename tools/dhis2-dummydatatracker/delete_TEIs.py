@@ -1,13 +1,35 @@
 
 from dhis2 import Api, RequestException, setup_logger, logger, is_valid_uid #make sure you have dhis2.py installed, otherwise run "pip3 install dhis2.py"
+import json
+
+credentials_file = './auth.json'
+instance = None
+instance = 'https://who-demos.dhis2.org/covid-19'
 
 try:
-    f = open("./auth.json")
+    f = open(credentials_file)
 except IOError:
     print("Please provide file auth.json with credentials for DHIS2 server")
     exit(1)
 else:
-    api = Api.from_auth_file('./auth.json')
+    with open(credentials_file, 'r') as json_file:
+        credentials = json.load(json_file)
+    if instance is not None:
+        api = Api(instance, credentials['dhis']['username'], credentials['dhis']['password'])
+    else:
+        api = Api.from_auth_file(credentials_file)
+
+
+for tei_uid in ['mtOF630AvuW','murTrn4YinD','SShni7GDoRE','f06rwiTeJwc','ZTue9sD5ONy','lrg63P8mOV2','k1eOcQe8CnQ','N8kyBO5164B','raXg7iD6jYT']:
+    try:
+        response = api.delete('trackedEntityInstances/' + tei_uid)
+    except RequestException as e:
+        logger.error(e)
+        pass
+    else:
+        logger.info("TEI " + tei_uid + " removed")
+
+exit(0)
 
 setup_logger()
 
