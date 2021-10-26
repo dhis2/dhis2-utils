@@ -31,7 +31,7 @@ Create auth.json file containing the credentials of the default server to use. T
 
 Positional arguments:
 ```
-program_uid / dataset_uid / AGG		The UID of the progra or dataset to use. If AGG is specified, rather than matching on UID, the script packages all dataSets whose code starts with the package prefix 
+program_uid / dataset_uid / AGG		The UID of the program or dataset to use. If AGG is specified, rather than matching on UID, the script packages all dataSets whose code starts with the package prefix 
 Health_area   				The health_area of the package, e.g. HIV, TB, EPI, COVID19
 Intervention      			The intervention e.g. CS, EIR, etc..
 + 
@@ -41,7 +41,7 @@ optional arguments:
   -v PACKAGE_VERSION, --version PACKAGE_VERSION
                         the package version to use
   -i INSTANCE,        --instance INSTANCE
-                        instance to extract the package from (robot account is required!) - tracker_dev byu default
+                        instance to extract the package from (robot account is required!) - tracker_dev by default
   -desc DESCRIPTION,  --description DESCRIPTION
                         Description of the package or any comments you want to add
 ```
