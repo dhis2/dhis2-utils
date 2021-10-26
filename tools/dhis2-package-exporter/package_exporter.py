@@ -1894,6 +1894,9 @@ def main():
             .groupby(['metadata_type']).size().reset_index(name='counts') \
             .to_csv(package_prefix + '_metadata_stats.csv', index=None, header=True)
 
+        # for debug - and potential use in pipeline
+        print(name_label + '.json')
+
     return name_label + '.json'
 
 if __name__ == "__main__":
