@@ -1140,14 +1140,9 @@ def main():
                 else:
                     package_type = 'AGG'
 
-                if args.package_prefix is not None:
-                    name_label = package_prefix + '_' + package_type + '_' + \
-                                 package_version + '_DHIS' + api_source.version + '-' + locale
-                    package_code = package_prefix
-                else:
-                    name_label = health_area + separator + intervention + '_' + package_type + '_' + \
-                                 package_version + '_DHIS' + api_source.version + '-' + locale
-                    package_code = health_area + "_" + intervention
+                name_label = health_area + separator + intervention + '_' + package_type + '_' + \
+                             package_version + '_DHIS' + api_source.version + '-' + locale
+                package_code = health_area + "_" + intervention
 
                 metadata["package"] = {
                     "name": name_label,
