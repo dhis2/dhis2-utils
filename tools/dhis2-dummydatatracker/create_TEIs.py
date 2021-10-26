@@ -823,6 +823,9 @@ def run_rules_in_df(df, rule):
     if pd.isnull(rule):
         return df
 
+    # We get a mask to restore later the values that were NaN before, since applying rules seem
+    # to add values where the whole event did not exist
+    mask = df.notnull()
     expr_elements = list()
     value_type = 'string'
     # If is kept there just to make it look nice, but it has only use for numeric types
@@ -876,6 +879,8 @@ def run_rules_in_df(df, rule):
         exec(expression)
         df = df.reset_index()
 
+    # Restore the NaNs using the mask
+    df = df.where(mask, other=np.NaN)
     return df
 
 
@@ -1213,7 +1218,7 @@ def main():
                 else:
                     df_ratio = None
                 replicas = from_df_to_TEI_json(create_replicas_from_df(df, tei_id, start_date, end_date, row['NUMBER'], df_distrib, df_rules), tei_template, event_template, df_ratio)
-                post_chunked_data(api_source, replicas, 'trackedEntityInstances', chunk_size)
+                #post_chunked_data(api_source, replicas, 'trackedEntityInstances', chunk_size)
                 #post_to_server(api_source, {'trackedEntityInstances': replicas}, 'trackedEntityInstances')
                 list_of_TEIs = list_of_TEIs + replicas
                 logger.info("--- Elapsed time = %s seconds ---" % (time.time() - start_time))
