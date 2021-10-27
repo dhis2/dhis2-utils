@@ -8,7 +8,7 @@ import re
 
 
 def main():
-    any_error = False  # This variable is used for checking if any error has been detected by the validator
+    num_error = 0  # This variable is used for counting the number of errors (no warnings) detected by the validator
     my_parser = argparse.ArgumentParser(description='Metadata package validator')
     my_parser.add_argument('-f', '--file', action="store", dest="input_filename", type=str, help='input filename')
     args = my_parser.parse_args()
@@ -65,7 +65,7 @@ def main():
             optionSet_name = myutils.get_name_by_type_and_uid(package=package, resource_type="optionSets", uid=optionSet_uid)
             message = "O-MQ-2 - The optionSet '" + optionSet_name + "' (" + optionSet_uid + ") has errors in the sortOrder. Current sortOrder: "+", ".join([str(i) for i in sortOrders])
             logging.error(message)
-            any_error = True
+            num_error += 1
 
     # -------------------------------------
 
@@ -105,7 +105,7 @@ def main():
         # PR-ST-3: Program Rule without action
         if len(pr["programRuleActions"]) == 0:
             logger.error(f"PR-ST-3 Program Rule '{pr['name']}' ({pr['id']}) without Program Rule Action")
-            any_error = True
+            num_error += 1
 
     # PRV-MQ-1 More than one PRV with the same name
     if "programRuleVariables" not in package:
@@ -197,10 +197,11 @@ def main():
 
     logger.info('-------------------------------------Finished validation-------------------------------------')
 
-    # if there was any error, exit with code -1
-    if any_error:
-        sys.exit(-1)
+    return num_error
 
 
 if __name__ == '__main__':
-    main()
+    num_error = main()
+    # if the number of errors > 0, exit with code -1
+    if num_error:
+        sys.exit(-1)
