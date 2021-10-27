@@ -1886,9 +1886,6 @@ def main():
             file.write(json.dumps(metadata, indent=4, sort_keys=True, ensure_ascii=False))
         file.close()
 
-        logger.info('\n\nLast 10 elements modified')
-        logger.info(df_report_lastUpdated.head(10))
-
         # Order and group by metadata type getting counts
         df_report_lastUpdated.sort_values(by=['metadata_type']) \
             .groupby(['metadata_type']).size().reset_index(name='counts') \
