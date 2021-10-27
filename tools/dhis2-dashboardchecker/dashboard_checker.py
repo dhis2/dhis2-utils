@@ -279,7 +279,7 @@ def build_analytics_payload(json_object):
 
 def main():
 
-    my_parser = argparse.ArgumentParser(description='dashboard_instance_report')
+    my_parser = argparse.ArgumentParser(description='dashboard_checker')
     my_parser.add_argument('-i', '--instance', action="store", dest="instance", type=str,
                            help='URL of the instance to process')
     my_parser.add_argument('-df', '--dashboard_filter', action="store", dest="dashboard_filter", type=str,
@@ -423,9 +423,11 @@ def main():
 
     export_csv = df.to_csv(instance['name'] + '.csv', index=None, header=True)
 
-    if errors_found != 0:
-        exit(1)
+    return errors_found
 
 
 if __name__ == '__main__':
-    main()
+    num_error = main()
+    # if the number of errors > 0, exit with code -1
+    if num_error:
+        sys.exit(1)
