@@ -971,7 +971,7 @@ def create_replicas_from_df(df, column, start_date, end_date, number_of_replicas
                         new_date = datetime.strptime(row[column], "%Y-%m-%d") + timedelta(days=days_to_shift)
                         # before it was new_date < datetime.today(), but if we check against end_date, it allows
                         # creating events in the future
-                        if new_date.date() < end_date:
+                        if new_date.date() < date.today():
                             new_column.append(new_date.strftime("%Y-%m-%d"))
                         else:
                             new_column.append('')
@@ -1218,7 +1218,7 @@ def main():
                 else:
                     df_ratio = None
                 replicas = from_df_to_TEI_json(create_replicas_from_df(df, tei_id, start_date, end_date, row['NUMBER'], df_distrib, df_rules), tei_template, event_template, df_ratio)
-                #post_chunked_data(api_source, replicas, 'trackedEntityInstances', chunk_size)
+                post_chunked_data(api_source, replicas, 'trackedEntityInstances', chunk_size)
                 #post_to_server(api_source, {'trackedEntityInstances': replicas}, 'trackedEntityInstances')
                 list_of_TEIs = list_of_TEIs + replicas
                 logger.info("--- Elapsed time = %s seconds ---" % (time.time() - start_time))
