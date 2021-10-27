@@ -4,7 +4,8 @@ import pandas as pd
 from tools.json import json_extract
 import argparse
 
-setup_logger()
+log_file = "./dashboard_checker.log"
+setup_logger(log_file)
 
 
 def build_analytics_payload(json_object, verbose=False):
