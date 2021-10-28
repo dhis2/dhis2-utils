@@ -431,4 +431,4 @@ if __name__ == '__main__':
     num_error = main()
     # if the number of errors > 0, exit with code -1
     if num_error > 0:
-        sys.exit(1)
+        exit(1)
