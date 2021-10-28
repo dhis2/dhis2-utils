@@ -1868,6 +1868,12 @@ def main():
                     if coc not in cat_uids['categoryOptionCombos']:
                         add_category_option_combo(coc, cat_uids)
 
+        # Release log handlers
+        handlers = logger.handlers[:]
+        for handler in handlers:
+            handler.close()
+            logger.removeHandler(handler)
+
         if total_errors != 0:
             return None
 
