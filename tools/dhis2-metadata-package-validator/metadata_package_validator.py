@@ -14,7 +14,7 @@ def main():
     args = my_parser.parse_args()
 
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     # create file handler which logs even debug messages
     fh = logging.FileHandler('package_metadata_validator.log', encoding="utf-8")
