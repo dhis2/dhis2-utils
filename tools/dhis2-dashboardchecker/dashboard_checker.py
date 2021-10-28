@@ -418,6 +418,12 @@ def main():
 
     export_csv = df.to_csv(instance['name'] + '.csv', index=None, header=True)
 
+    # Release log handlers
+    handlers = logger.handlers[:]
+    for handler in handlers:
+        handler.close()
+        logger.removeHandler(handler)
+
     return errors_found
 
 
