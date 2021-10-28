@@ -1869,7 +1869,7 @@ def main():
                         add_category_option_combo(coc, cat_uids)
 
         if total_errors != 0:
-            exit(1)
+            return None
 
         # Write metadata_object
         # last updated for the program will be the most recent date when any of the metadata was changed
@@ -1896,5 +1896,10 @@ def main():
 
     return name_label + '.json'
 
+
 if __name__ == "__main__":
-    main()
+    package_file = main()
+    # if the number of errors > 0, exit with code -1
+    if package_file is None:
+        sys.exit(1)
+
