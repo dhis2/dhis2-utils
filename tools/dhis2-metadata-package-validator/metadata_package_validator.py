@@ -197,6 +197,12 @@ def main():
 
     logger.info('-------------------------------------Finished validation-------------------------------------')
 
+    #  See https://stackoverflow.com/questions/15435652/python-does-not-release-filehandles-to-logfile
+    handlers = logger.handlers[:]
+    for handler in handlers:
+        handler.close()
+        logger.removeHandler(handler)
+
     return num_error
 
 
