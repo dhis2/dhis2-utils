@@ -14,7 +14,7 @@ def main():
     args = my_parser.parse_args()
 
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     # create file handler which logs even debug messages
     fh = logging.FileHandler('package_metadata_validator.log', encoding="utf-8")
@@ -196,6 +196,12 @@ def main():
                         logger.error(message)
 
     logger.info('-------------------------------------Finished validation-------------------------------------')
+
+    #  See https://stackoverflow.com/questions/15435652/python-does-not-release-filehandles-to-logfile
+    handlers = logger.handlers[:]
+    for handler in handlers:
+        handler.close()
+        logger.removeHandler(handler)
 
     return num_error
 
