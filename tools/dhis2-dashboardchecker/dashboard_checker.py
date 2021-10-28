@@ -4,9 +4,6 @@ import pandas as pd
 from tools.json import json_extract
 import argparse
 
-log_file = "./dashboard_checker.log"
-setup_logger(log_file)
-
 
 def build_analytics_payload(json_object, verbose=False):
 
@@ -303,6 +300,9 @@ def main():
             {'name': 'covid-19', 'url': 'https://demos.dhis2.org/covid-19', 'SQL_view_TRK': 'xfemQFHUTUV',
              'SQL_view_AGG': 'lg8lFbDMw2Z'}
         ]
+
+    log_file = "./dashboard_checker.log"
+    setup_logger(log_file)
 
     credentials_file = './auth.json'
 
