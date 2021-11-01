@@ -1,10 +1,17 @@
 #!/bin/bash
 
+# Git command which will:
+#
+# * Add all files
+# * Commit with the given message
+# * Push to remote
+
 git_commit_push () {
-  echo "* Add all files and commit.."
+  echo "* Adding files.."
   git add -A
+  echo "* Committing.."
   git commit -m "${1}"
-  echo "* Push to remote.."
+  echo "* Pushing to remote.."
   git push
 }
 
