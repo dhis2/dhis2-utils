@@ -8,4 +8,10 @@ git_commit_push () {
   git push
 }
 
+if [ $# -lt 1 ]; then
+  echo -e "Usage:   $0 <commit-message>"
+  echo -e "Example: $0 \"Add power boost\""
+  exit 1
+fi
+
 git_commit_push $1
