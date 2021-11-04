@@ -19,11 +19,18 @@ select datname, temp_files, temp_bytes as temp_files_size_bytes, pg_size_pretty(
 from pg_stat_database db
 where datname = 'dhis2';
 
--- Approximate count of rows in datavalue
+-- Approximate count of rows in datavalue table
 
 select reltuples::bigint as approximate_row_count 
 from pg_class 
 where relname = 'datavalue';
+
+-- Approximate count of rows in tracker data tables
+
+select relname, reltuples::bigint as approximate_row_count 
+from pg_class 
+where relname in ('trackedentityinstance', 'trackedentityattributevalue', 'programinstance', 'programstageinstance')
+order by relname;
 
 -- ANALYTICS
 
