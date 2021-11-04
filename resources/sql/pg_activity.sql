@@ -7,6 +7,10 @@
 -- log_statement = none
 -- log_min_duration_statement = 200
 --
+-- Increase size of captured query:
+--
+-- track_activity_query_size = 4096
+--
 
 -- Current queries
 
