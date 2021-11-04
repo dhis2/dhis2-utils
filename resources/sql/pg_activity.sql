@@ -9,7 +9,7 @@
 --
 -- Increase size of captured query:
 --
--- track_activity_query_size = 4096
+-- track_activity_query_size = 8192
 --
 
 -- Current queries
