@@ -118,7 +118,15 @@ where not blocked_locks.granted;
 
 -- Show performance related settings
 
-show max_connections; show shared_buffers; show work_mem; show maintenance_work_mem; show effective_cache_size; show checkpoint_completion_target; show synchronous_commit; show wal_writer_delay;
+show max_connections; 
+show shared_buffers; 
+show work_mem; 
+show maintenance_work_mem; 
+show effective_cache_size; 
+show checkpoint_completion_target; 
+show synchronous_commit; 
+show wal_writer_delay;
+show random_page_cost;
 
 -- Enable full logging
 
