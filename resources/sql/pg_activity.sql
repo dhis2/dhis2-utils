@@ -118,6 +118,7 @@ where not blocked_locks.granted;
 
 -- Show performance related settings
 
+select version();
 show max_connections; 
 show shared_buffers; 
 show work_mem; 
