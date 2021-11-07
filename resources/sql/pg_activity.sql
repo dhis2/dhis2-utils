@@ -73,10 +73,10 @@ and query not ilike '%pg_stat_activity%';
 -- Count of queries by time interval
 
 with cte_activity as (
-	select *
-	from pg_catalog.pg_stat_activity 
-	where state != 'idle' 
-	and query not ilike '%pg_stat_activity%'
+  select *
+  from pg_catalog.pg_stat_activity 
+  where state != 'idle' 
+  and query not ilike '%pg_stat_activity%'
 )
 select 'query_last_1s' as "time_interval", count(*) from cte_activity
 where (now() - cte_activity.query_start) > interval '1 seconds'
