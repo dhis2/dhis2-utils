@@ -46,6 +46,14 @@ where (now() - pg_stat_activity.query_start) > interval '5 seconds'
 and state != 'idle' 
 and query not ilike '%pg_stat_activity%';
 
+-- Count of queries running for more than 5 seconds
+
+select count(*) 
+from pg_catalog.pg_stat_activity 
+where (now() - pg_stat_activity.query_start) > interval '5 second' 
+and state != 'idle' 
+and query not ilike '%pg_stat_activity%';
+
 -- Queries running for more than 1 minute
 
 select pid, datname, usename, query_start, now() - pg_stat_activity.query_start as duration, state, query 
