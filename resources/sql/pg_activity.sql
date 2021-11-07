@@ -70,6 +70,35 @@ where (now() - pg_stat_activity.query_start) > interval '1 minutes'
 and state != 'idle' 
 and query not ilike '%pg_stat_activity%';
 
+-- Count of queries by time interval
+
+with cte_activity as (
+	select *
+	from pg_catalog.pg_stat_activity 
+	where state != 'idle' 
+	and query not ilike '%pg_stat_activity%'
+)
+select 'query_last_1s' as "time_interval", count(*) from cte_activity
+where (now() - cte_activity.query_start) > interval '1 seconds'
+union all
+select 'query_last_2s' as "time_interval", count(*) from cte_activity
+where (now() - cte_activity.query_start) > interval '2 seconds'
+union all
+select 'query_last_5s' as "time_interval", count(*) from cte_activity
+where (now() - cte_activity.query_start) > interval '5 seconds'
+union all
+select 'query_last_10s' as "time_interval", count(*) from cte_activity
+where (now() - cte_activity.query_start) > interval '10 seconds'
+union all
+select 'query_last_20s' as "time_interval", count(*) from cte_activity
+where (now() - cte_activity.query_start) > interval '20 seconds'
+union all
+select 'query_last_40s' as "time_interval", count(*) from cte_activity
+where (now() - cte_activity.query_start) > interval '40 seconds'
+union all
+select 'query_last_90s' as "time_interval", count(*) from cte_activity
+where (now() - cte_activity.query_start) > interval '90 seconds';
+
 -- Current locks
 
 select pl.pid, pl.locktype, pl.mode, pl.granted, pa.datname, pa.client_addr, pa.query_start, pa.state, substring(pa.query for 1000)
