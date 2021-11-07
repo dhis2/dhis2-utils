@@ -45,7 +45,7 @@ order by approximate_row_count desc;
 
 select relname as table_name, reltuples::bigint as approximate_row_count
 from pg_class
-where relname in ('datavalue', 'trackedentityinstance', 'programstageinstance', 'trackedentitydatavalue')
+where relname in ('datavalue', 'trackedentityinstance', 'trackedentityattributevalue', 'programstageinstance', 'trackedentitydatavalue')
 order by approximate_row_count desc;
 
 -- Approximate comparison between counts of raw data and analytics data
