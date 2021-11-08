@@ -467,24 +467,6 @@ alter table datavalue add constraint fk_datavalue_dataelementid foreign key (dat
 alter table datavalue add constraint fk_datavalue_organisationunitid foreign key (sourceid) references organisationunit(organisationunitid);
 alter table datavalue add constraint fk_datavalue_periodid foreign key (periodid) references period(periodid);
 
-
-
-
--- COMPLETE DATA SET REGISTRATIONS
-
--- Complete data set registration exploded view
-
-select ds.name, ds.uid, pe.startdate as pestart, pe.enddate as peend, pt.name as ptname, 
-ou.name as ouname, ou.uid as ouuid, aoc.name as aocname, aoc.uid as aocuid, aoc.categoryoptioncomboid as aocid
-from completedatasetregistration cdr
-inner join dataset ds on cdr.datasetid=ds.datasetid
-inner join period pe on cdr.periodid=pe.periodid
-inner join periodtype pt on pe.periodtypeid=pt.periodtypeid
-inner join organisationunit ou on cdr.sourceid=ou.organisationunitid
-inner join categoryoptioncombo aoc on cdr.attributeoptioncomboid=aoc.categoryoptioncomboid
-limit 10000;
-
-
 -- EVENTS
 
 -- Display events out of reasonable time range
@@ -586,22 +568,6 @@ where psi.programinstanceid in (
   from programinstance pi
   inner join program pr on pi.programid=pr.programid
   where pr.uid = 'bMcwwoVnbSR');
-
-
--- VARIOUS
-
--- Identify missing sort_order entries in link tables
--- Replace 101 with the number of entries in the link table for one owner
--- Replace 102 with the identifier of the owner entity row
--- Replace categories_categoryoptions with the name of the link table
-
-select generate_series 
-from generate_series(1,101)
-where not generate_series in (
-  select sort_order
-  from categories_categoryoptions
-  where categoryid=102
-);
 
 -- Install PostGIS in separate schema
 
