@@ -523,11 +523,20 @@ order by yr;
 
 -- Get count of data elements per program
 
-select pr.name,count(psd.uid)
+select pr.name, count(psd.uid)
 from program pr
 inner join programstage ps on pr.programid=ps.programid
 inner join programstagedataelement psd on ps.programstageid=psd.programstageid
 group by pr.name;
+
+-- Get count of events per program
+
+select p.uid as program_uid, p.name as program_name, count(*) as event_count
+from programstageinstance psi
+inner join programinstance pin on psi.programinstanceid = pin.programinstanceid 
+inner join program p on pin.programid = p.programid
+group by p.uid, p.name
+order by p.name;
 
 -- Find invalid event values of value type date, replace "foo" with error hint
 
