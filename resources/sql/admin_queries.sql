@@ -513,12 +513,13 @@ inner join programstage ps on pr.programid=ps.programid
 inner join programstagedataelement psd on ps.programstageid=psd.programstageid
 group by pr.name;
 
--- Get count of events per program
+-- Get count of events per program (deleted false)
 
 select p.uid as program_uid, p.name as program_name, count(*) as event_count
 from programstageinstance psi
 inner join programinstance pin on psi.programinstanceid = pin.programinstanceid 
 inner join program p on pin.programid = p.programid
+where psi.deleted = false
 group by p.uid, p.name
 order by p.name;
 
