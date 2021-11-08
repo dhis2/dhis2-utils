@@ -136,12 +136,13 @@ group by c.name
 having count(c.uid) > 1
 order by row_count desc;
 
+
 -- DATA SETS
 
 select ds.uid as ds_uid, ds.name as ds_name, (
-	select count(*)
-	from datasetelement dse
-	where ds.datasetid = dse.datasetid) as de_count
+  select count(*)
+  from datasetelement dse
+  where ds.datasetid = dse.datasetid) as de_count
 from dataset ds
 order by de_count desc;
 
@@ -467,6 +468,7 @@ alter table datavalue add constraint fk_datavalue_dataelementid foreign key (dat
 alter table datavalue add constraint fk_datavalue_organisationunitid foreign key (sourceid) references organisationunit(organisationunitid);
 alter table datavalue add constraint fk_datavalue_periodid foreign key (periodid) references period(periodid);
 
+
 -- EVENTS
 
 -- Display events out of reasonable time range
@@ -568,9 +570,3 @@ where psi.programinstanceid in (
   from programinstance pi
   inner join program pr on pi.programid=pr.programid
   where pr.uid = 'bMcwwoVnbSR');
-
--- Install PostGIS in separate schema
-
-create schema postgis;
-create extension postgis with schema postgis;
-alter database dev set search_path to public, postgis;
