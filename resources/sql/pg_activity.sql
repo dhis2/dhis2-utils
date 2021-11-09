@@ -78,25 +78,27 @@ with cte_activity as (
   where state != 'idle' 
   and query not ilike '%pg_stat_activity%'
 )
-select 'query_gt_1s' as "time_interval", count(*) from cte_activity
+select 'query_gt_1ms' as "time_interval", count(*) from cte_activity 
+where (now() - cte_activity.query_start) > interval '1 milliseconds'
+union all select 'query_gt_100ms' as "time_interval", count(*) from cte_activity
+where (now() - cte_activity.query_start) > interval '100 milliseconds'
+union all select 'query_gt_200ms' as "time_interval", count(*) from cte_activity
+where (now() - cte_activity.query_start) > interval '200 milliseconds'
+union all select 'query_gt_500ms' as "time_interval", count(*) from cte_activity
+where (now() - cte_activity.query_start) > interval '500 milliseconds'
+union all select 'query_gt_1s' as "time_interval", count(*) from cte_activity
 where (now() - cte_activity.query_start) > interval '1 seconds'
-union all
-select 'query_gt_2s' as "time_interval", count(*) from cte_activity
+union all select 'query_gt_2s' as "time_interval", count(*) from cte_activity
 where (now() - cte_activity.query_start) > interval '2 seconds'
-union all
-select 'query_gt_5s' as "time_interval", count(*) from cte_activity
+union all select 'query_gt_5s' as "time_interval", count(*) from cte_activity
 where (now() - cte_activity.query_start) > interval '5 seconds'
-union all
-select 'query_gt_10s' as "time_interval", count(*) from cte_activity
+union all select 'query_gt_10s' as "time_interval", count(*) from cte_activity
 where (now() - cte_activity.query_start) > interval '10 seconds'
-union all
-select 'query_gt_20s' as "time_interval", count(*) from cte_activity
+union all select 'query_gt_20s' as "time_interval", count(*) from cte_activity
 where (now() - cte_activity.query_start) > interval '20 seconds'
-union all
-select 'query_gt_40s' as "time_interval", count(*) from cte_activity
+union all select 'query_gt_40s' as "time_interval", count(*) from cte_activity
 where (now() - cte_activity.query_start) > interval '40 seconds'
-union all
-select 'query_gt_90s' as "time_interval", count(*) from cte_activity
+union all select 'query_gt_90s' as "time_interval", count(*) from cte_activity
 where (now() - cte_activity.query_start) > interval '90 seconds';
 
 -- Current locks
