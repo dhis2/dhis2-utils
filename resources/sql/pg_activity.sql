@@ -131,6 +131,13 @@ from pg_catalog.pg_locks;
 select sum(numbackends) 
 from pg_stat_database;
 
+-- Tables with dead tuples (use vacuum)
+
+select relname, n_dead_tup 
+from pg_stat_user_tables
+where n_dead_tup > 10
+order by n_dead_tup desc;
+
 -- Cancel query
 
 select pg_cancel_backend(_pid_);
