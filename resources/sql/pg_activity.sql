@@ -99,7 +99,9 @@ where (now() - cte_activity.query_start) > interval '20 seconds'
 union all select 'gt_40s', count(*) from cte_activity
 where (now() - cte_activity.query_start) > interval '40 seconds'
 union all select 'gt_90s', count(*) from cte_activity
-where (now() - cte_activity.query_start) > interval '90 seconds';
+where (now() - cte_activity.query_start) > interval '90 seconds'
+union all select 'gt_5m', count(*) from cte_activity
+where (now() - cte_activity.query_start) > interval '5 minutes';
 
 -- Current locks
 
