@@ -22,5 +22,5 @@ using bloom AS
 
  -- Create bloom filter index
 
-create index ax_co_monthly_2020_bloom on analytics_2020 using bloom (dx, co, monthly);
+create index ax_co_monthly_2020_bloom on analytics_2020 using bloom (dx, co, monthly, uidlevel2, value);
 
