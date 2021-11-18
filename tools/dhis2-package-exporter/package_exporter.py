@@ -509,6 +509,16 @@ def check_sharing(json_object, omit=[], verbose=False):
                     if verbose:
                         logger.error('Element ' + item["id"] + ' is shared with a User Group(s) outside the package: ' +
                                      ', '.join(outsider_user_groups) + '... Deleted')
+            # Starting in 2.36 a new sharing object was introduced
+            if 'sharing' in item and 'sharing' not in omit:
+                if 'owner' in item['sharing']:
+                    item['sharing']['owner'] = WHOAdmin_uid
+                # Clean users, we share always with userGroups
+                item['sharing']['users'] = {}
+                # Process userGroups in sharing
+                for userGroupId in item['sharing']['userGroups']:
+                    if userGroupId not in userGroups_uids:
+                        item['sharing']['userGroups'].pop(userGroupId, None)
 
     return json_object
 
@@ -1387,8 +1397,9 @@ def main():
                     # Check PIs used in Indicators
                     diff = list(set(programIndicators_uids['I']).difference(programIndicators_uids['P']))
                     if len(diff) > 0:
-                        logger.warning("Indicators use programIndicators not included in the program: "
+                        logger.error("Indicators use programIndicators not included in the program: "
                                      + str(diff))
+                        total_errors += 1
                         for uid in diff:
                             ind_num = api_source.get('indicators',
                                                      params={"fields": "id,name",
