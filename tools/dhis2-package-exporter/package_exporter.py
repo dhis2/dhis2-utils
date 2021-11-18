@@ -786,7 +786,7 @@ def get_category_elements(cat_combo_uid, cat_uid_dict = None):
 
 def add_category_option_combo(cat_opt_combo_uid, cat_uid_dict=None):
     cat_combo_uid = api_source.get('categoryOptionCombos/' + cat_opt_combo_uid,
-                              params={"fields": "id,categoryCombo"}).json()['categoryOptionCombos'][0]['id']
+                              params={"fields": "id,categoryCombo"}).json()['categoryCombo']['id']
     get_category_elements(cat_combo_uid, cat_uid_dict)
 
 
@@ -934,6 +934,7 @@ def main():
         # Iteration over this list happens in reversed order
         # Altering the order can cause the script to stop working
         metadata_import_order = [
+            'categoryOptionGroupSets', 'categoryOptionGroups',
             'categoryOptions', 'categories', 'categoryCombos', 'categoryOptionCombos',
             'legendSets',  # used in indicators, optionGroups, programIndicators and trackedEntityAttributes
             'optionGroups', 'options', 'optionSets',
@@ -955,6 +956,7 @@ def main():
     else:
         # This list is looped backwards
         metadata_import_order = [
+            'categoryOptionGroupSets', 'categoryOptionGroups',
             'categoryOptions', 'categories', 'categoryCombos', 'categoryOptionCombos',
             'legendSets',  # used in indicators, optionGroups, programIndicators and trackedEntityAttributes
             'optionGroups', 'options', 'optionSets',
@@ -1016,6 +1018,8 @@ def main():
     cat_uids['categories'] = list()
     cat_uids['categoryCombos'] = list()
     cat_uids['categoryOptionCombos'] = list()
+    cat_uids['categoryOptionGroups'] = list()
+    cat_uids['categoryOptionGroupSets'] = list()
     if program_uid is not None:
         programNotificationTemplates_uids = list()
         programRuleActions_uids = list()
@@ -1045,6 +1049,8 @@ def main():
         "categoryCombos": "code:in:[default,DEFAULT]",
         "categoryOptionCombos": "code:in:[default,DEFAULT]",
         "categoryOptions": "code:in:[default,DEFAULT]",
+        "categoryOptionGroups": "id:in:[" + ','.join(cat_uids['categoryOptionGroups']) + "]",
+        "categoryOptionGroupSets": "id:in:[" + ','.join(cat_uids['categoryOptionGroupSets']) + "]",
         "charts": "id:in:[" + ','.join(dashboard_items['chart']) + "]",
         "constants": "id:in:[" + ','.join(constants_uids) + "]",
         "dashboards": "code:$like:" + package_prefix,
@@ -1867,6 +1873,21 @@ def main():
                 for coc in hardcoded_cocs:
                     if coc not in cat_uids['categoryOptionCombos']:
                         add_category_option_combo(coc, cat_uids)
+            elif metadata_type == "categoryOptions":
+                cat_uids['categoryOptionGroups'] = json_extract_nested_ids(metaobject, 'categoryOptionGroups')
+            elif metadata_type == "categoryOptionGroups":
+                # We need to remove from the group the categoryOptions which dont belong to the package
+                for catOptGroup in metaobject:
+                    for catOpt in catOptGroup['categoryOptions']:
+                        if catOpt['id'] not in cat_uids['categoryOptions']:
+                            catOptGroup['categoryOptions'].remove(catOpt)
+                cat_uids['categoryOptionGroupSets'] = json_extract_nested_ids(metaobject, 'groupSets')
+            elif metadata_type == "categoryOptionGroupSets":
+                # We need to remove from the set the Groups which dont belong to the package
+                for catOptGroupSet in metaobject:
+                    for catOptGroup in catOptGroupSet['categoryOptionGroups']:
+                        if catOptGroup['id'] not in cat_uids['categoryOptionGroups']:
+                            catOptGroupSet['categoryOptionGroups'].remove(catOptGroup)
 
         # Release log handlers
         handlers = logger.handlers[:]
