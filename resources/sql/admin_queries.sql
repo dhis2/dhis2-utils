@@ -136,12 +136,13 @@ group by c.name
 having count(c.uid) > 1
 order by row_count desc;
 
+
 -- DATA SETS
 
 select ds.uid as ds_uid, ds.name as ds_name, (
-	select count(*)
-	from datasetelement dse
-	where ds.datasetid = dse.datasetid) as de_count
+  select count(*)
+  from datasetelement dse
+  where ds.datasetid = dse.datasetid) as de_count
 from dataset ds
 order by de_count desc;
 
@@ -468,23 +469,6 @@ alter table datavalue add constraint fk_datavalue_organisationunitid foreign key
 alter table datavalue add constraint fk_datavalue_periodid foreign key (periodid) references period(periodid);
 
 
-
-
--- COMPLETE DATA SET REGISTRATIONS
-
--- Complete data set registration exploded view
-
-select ds.name, ds.uid, pe.startdate as pestart, pe.enddate as peend, pt.name as ptname, 
-ou.name as ouname, ou.uid as ouuid, aoc.name as aocname, aoc.uid as aocuid, aoc.categoryoptioncomboid as aocid
-from completedatasetregistration cdr
-inner join dataset ds on cdr.datasetid=ds.datasetid
-inner join period pe on cdr.periodid=pe.periodid
-inner join periodtype pt on pe.periodtypeid=pt.periodtypeid
-inner join organisationunit ou on cdr.sourceid=ou.organisationunitid
-inner join categoryoptioncombo aoc on cdr.attributeoptioncomboid=aoc.categoryoptioncomboid
-limit 10000;
-
-
 -- EVENTS
 
 -- Display events out of reasonable time range
@@ -523,11 +507,21 @@ order by yr;
 
 -- Get count of data elements per program
 
-select pr.name,count(psd.uid)
+select pr.name, count(psd.uid)
 from program pr
 inner join programstage ps on pr.programid=ps.programid
 inner join programstagedataelement psd on ps.programstageid=psd.programstageid
 group by pr.name;
+
+-- Get count of events per program (deleted false)
+
+select p.uid as program_uid, p.name as program_name, count(*) as event_count
+from programstageinstance psi
+inner join programinstance pin on psi.programinstanceid = pin.programinstanceid 
+inner join program p on pin.programid = p.programid
+where psi.deleted = false
+group by p.uid, p.name
+order by p.name;
 
 -- Find invalid event values of value type date, replace "foo" with error hint
 
@@ -577,25 +571,3 @@ where psi.programinstanceid in (
   from programinstance pi
   inner join program pr on pi.programid=pr.programid
   where pr.uid = 'bMcwwoVnbSR');
-
-
--- VARIOUS
-
--- Identify missing sort_order entries in link tables
--- Replace 101 with the number of entries in the link table for one owner
--- Replace 102 with the identifier of the owner entity row
--- Replace categories_categoryoptions with the name of the link table
-
-select generate_series 
-from generate_series(1,101)
-where not generate_series in (
-  select sort_order
-  from categories_categoryoptions
-  where categoryid=102
-);
-
--- Install PostGIS in separate schema
-
-create schema postgis;
-create extension postgis with schema postgis;
-alter database dev set search_path to public, postgis;

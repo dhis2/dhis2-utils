@@ -7,6 +7,10 @@
 -- log_statement = none
 -- log_min_duration_statement = 200
 --
+-- Increase size of captured query:
+--
+-- track_activity_query_size = 8192
+--
 
 -- Current queries
 
@@ -42,6 +46,14 @@ where (now() - pg_stat_activity.query_start) > interval '5 seconds'
 and state != 'idle' 
 and query not ilike '%pg_stat_activity%';
 
+-- Count of queries running for more than 5 seconds
+
+select count(*) 
+from pg_catalog.pg_stat_activity 
+where (now() - pg_stat_activity.query_start) > interval '5 second' 
+and state != 'idle' 
+and query not ilike '%pg_stat_activity%';
+
 -- Queries running for more than 1 minute
 
 select pid, datname, usename, query_start, now() - pg_stat_activity.query_start as duration, state, query 
@@ -57,6 +69,39 @@ from pg_catalog.pg_stat_activity
 where (now() - pg_stat_activity.query_start) > interval '1 minutes' 
 and state != 'idle' 
 and query not ilike '%pg_stat_activity%';
+
+-- Count of queries by time interval
+
+with cte_activity as (
+  select *
+  from pg_catalog.pg_stat_activity 
+  where state != 'idle' 
+  and query not ilike '%pg_stat_activity%'
+)
+select 'gt_1ms' as "query_time_interval", count(*) from cte_activity 
+where (now() - cte_activity.query_start) > interval '1 milliseconds'
+union all select 'gt_100ms', count(*) from cte_activity
+where (now() - cte_activity.query_start) > interval '100 milliseconds'
+union all select 'gt_200ms', count(*) from cte_activity
+where (now() - cte_activity.query_start) > interval '200 milliseconds'
+union all select 'gt_500ms', count(*) from cte_activity
+where (now() - cte_activity.query_start) > interval '500 milliseconds'
+union all select 'gt_1s', count(*) from cte_activity
+where (now() - cte_activity.query_start) > interval '1 seconds'
+union all select 'gt_2s', count(*) from cte_activity
+where (now() - cte_activity.query_start) > interval '2 seconds'
+union all select 'gt_5s', count(*) from cte_activity
+where (now() - cte_activity.query_start) > interval '5 seconds'
+union all select 'gt_10s', count(*) from cte_activity
+where (now() - cte_activity.query_start) > interval '10 seconds'
+union all select 'gt_20s', count(*) from cte_activity
+where (now() - cte_activity.query_start) > interval '20 seconds'
+union all select 'gt_40s', count(*) from cte_activity
+where (now() - cte_activity.query_start) > interval '40 seconds'
+union all select 'gt_90s', count(*) from cte_activity
+where (now() - cte_activity.query_start) > interval '90 seconds'
+union all select 'gt_5m', count(*) from cte_activity
+where (now() - cte_activity.query_start) > interval '5 minutes';
 
 -- Current locks
 
@@ -88,6 +133,13 @@ from pg_catalog.pg_locks;
 select sum(numbackends) 
 from pg_stat_database;
 
+-- Tables with dead tuples (use vacuum)
+
+select relname, n_dead_tup 
+from pg_stat_user_tables
+where n_dead_tup > 10
+order by n_dead_tup desc;
+
 -- Cancel query
 
 select pg_cancel_backend(_pid_);
@@ -118,7 +170,16 @@ where not blocked_locks.granted;
 
 -- Show performance related settings
 
-show max_connections; show shared_buffers; show work_mem; show maintenance_work_mem; show effective_cache_size; show checkpoint_completion_target; show synchronous_commit; show wal_writer_delay;
+select version();
+show max_connections; 
+show shared_buffers; 
+show work_mem; 
+show maintenance_work_mem; 
+show effective_cache_size; 
+show checkpoint_completion_target; 
+show synchronous_commit; 
+show wal_writer_delay;
+show random_page_cost;
 
 -- Enable full logging
 

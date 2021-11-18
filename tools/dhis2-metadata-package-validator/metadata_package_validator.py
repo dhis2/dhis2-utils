@@ -186,14 +186,17 @@ def main():
                     message = f"ALL-MQ-18- Tab character in code='{resource['code']}' (resource type='{resource_type}' name='{resource['name']}' uid={resource['id']})"
                     logger.error(message)
                     resource["code"] = resource["code"].replace("\t", "")
+                    num_error += 1
                 if resource_type == "options":
                     if not PATTERN_OPTION_CODE.search(resource["code"]):
                         message = f"ALL-MQ-18- Invalid code='{resource['code']}' (resource type='{resource_type}' name='{resource['name']}' uid={resource['id']})"
                         logger.error(message)
+                        num_error += 1
                 else:
                     if not PATTERN_CODE.search(resource["code"]):
                         message = f"ALL-MQ-18- Invalid code='{resource['code']}' (resource type='{resource_type}' name='{resource['name']}' uid={resource['id']})"
                         logger.error(message)
+                        num_error += 1
 
     logger.info('-------------------------------------Finished validation-------------------------------------')
 
