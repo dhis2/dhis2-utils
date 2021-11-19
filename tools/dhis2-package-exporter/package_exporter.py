@@ -1398,9 +1398,10 @@ def main():
                     # Check PIs used in Indicators
                     diff = list(set(programIndicators_uids['I']).difference(programIndicators_uids['P']))
                     if len(diff) > 0:
-                        logger.error("Indicators use programIndicators not included in the program: "
+                        # Turning this error into a warning due to an issue with MAL FOCI and MAL CS
+                        logger.warning("Indicators use programIndicators not included in the program: "
                                      + str(diff))
-                        total_errors += 1
+                        # total_errors += 1
                         for uid in diff:
                             ind_num = api_source.get('indicators',
                                                      params={"fields": "id,name",
