@@ -774,6 +774,8 @@ def get_category_elements(cat_combo_uid, cat_uid_dict = None):
         cat['categories'] = list()
         cat['categoryCombos'] = list()
         cat['categoryOptionCombos'] = list()
+        cat['categoryOptionGroups'] = list()
+        cat['categoryOptionGroupSets'] = list()
     else:
         cat = cat_uid_dict
 
@@ -1328,6 +1330,48 @@ def main():
                     metaobject += get_metadata_element(metadata_type,
                                                        'id:in:[' + ','.join(cat_uids[metadata_type]) + ']')
 
+                if metadata_type == "categoryOptionGroups":
+                    new_metaobject = list()
+                    cat_opt_group_ids_to_keep = list()
+                    #metaobject = remove_undesired_children(metaobject, options_uids, 'options')
+                    for catOptGroup in metaobject:
+                        if catOptGroup['id'] == 'f5VxIY91Jz3':
+                            valid_cat_opt_group = True
+                        valid_cat_opt_group = True
+                        for catOpt in catOptGroup['categoryOptions']:
+                            if catOpt['id'] not in cat_uids['categoryOptions']:
+                                valid_cat_opt_group = False
+                                logger.info("categoryOptionGroup " + catOptGroup[
+                                    'id'] + " contains categoryOptions which don't belong in the package.... Excluding")
+                                break
+                        if valid_cat_opt_group:
+                            new_metaobject.append(catOptGroup)
+                            cat_opt_group_ids_to_keep.append(catOptGroup['id'])
+
+                    metadata['categoryOptions'] = remove_undesired_children(metadata['categoryOptions'],
+                                                                            cat_opt_group_ids_to_keep,
+                                                                            'categoryOptionGroups')
+                    metaobject = new_metaobject
+                elif metadata_type == "categoryOptionGroupSets":
+                    # We need to remove the categoryOptionGroupSets which contain categoryOptionGroups not belonging to the package
+                    new_metaobject = list()
+                    cat_opt_group_set_ids_to_keep = list()
+                    for catOptGroupSet in metaobject:
+                        valid_cat_opt_group_set = True
+                        for catOptGroup in catOptGroupSet['categoryOptionGroups']:
+                            if catOptGroup['id'] not in cat_uids['categoryOptionGroups']:
+                                valid_cat_opt_group_set = False
+                                break
+                        if valid_cat_opt_group_set:
+                            new_metaobject.append(catOptGroupSet)
+                            cat_opt_group_set_ids_to_keep.append(catOptGroupSet['id'])
+                    metadata['categoryOptionGroups'] = remove_undesired_children(metadata['categoryOptionGroups'],
+                                                                            cat_opt_group_set_ids_to_keep,
+                                                                            'groupSets')
+                    metaobject = new_metaobject
+
+
+
             # Update dataframe reports
             update_last_updated(metaobject, metadata_type)
 
@@ -1639,6 +1683,9 @@ def main():
             elif metadata_type in ['charts', 'reportTables', 'visualizations', 'maps']:
                 # Add legendSets
                 legendSets_uids += json_extract_nested_ids(metaobject, 'legendSets')
+                # See if there is a reference to a categoryOption Group and/or Set
+                cat_uids['categoryOptionGroups'] += json_extract_nested_ids(metaobject, 'categoryOptionGroups')
+                cat_uids['categoryOptionGroupSets'] += json_extract_nested_ids(metaobject, 'categoryOptionGroupSet')
             elif metadata_type == "programRules":
                 programRuleActions_uids = json_extract_nested_ids(metaobject, 'programRuleActions')
                 # Update the filters
@@ -1699,7 +1746,7 @@ def main():
                     programNotificationTemplates_uids) + "]"
                 # EVENT programs may have a categoryCombo field
                 if 'categoryCombo' in program and is_valid_uid(program['categoryCombo']['id']):
-                    cat_uids = get_category_elements(program['categoryCombo']['id'])
+                    cat_uids = get_category_elements(program['categoryCombo']['id'], cat_uids)
             elif metadata_type == "dataSets":
                 ## Remove interpretations
                 interpretations = json_extract_nested_ids(metaobject, 'organisationUnits')
@@ -1886,20 +1933,9 @@ def main():
                     if coc not in cat_uids['categoryOptionCombos']:
                         add_category_option_combo(coc, cat_uids)
             elif metadata_type == "categoryOptions":
-                cat_uids['categoryOptionGroups'] = json_extract_nested_ids(metaobject, 'categoryOptionGroups')
+                cat_uids['categoryOptionGroups'] += json_extract_nested_ids(metaobject, 'categoryOptionGroups')
             elif metadata_type == "categoryOptionGroups":
-                # We need to remove from the group the categoryOptions which dont belong to the package
-                for catOptGroup in metaobject:
-                    for catOpt in catOptGroup['categoryOptions']:
-                        if catOpt['id'] not in cat_uids['categoryOptions']:
-                            catOptGroup['categoryOptions'].remove(catOpt)
-                cat_uids['categoryOptionGroupSets'] = json_extract_nested_ids(metaobject, 'groupSets')
-            elif metadata_type == "categoryOptionGroupSets":
-                # We need to remove from the set the Groups which dont belong to the package
-                for catOptGroupSet in metaobject:
-                    for catOptGroup in catOptGroupSet['categoryOptionGroups']:
-                        if catOptGroup['id'] not in cat_uids['categoryOptionGroups']:
-                            catOptGroupSet['categoryOptionGroups'].remove(catOptGroup)
+                cat_uids['categoryOptionGroupSets'] += json_extract_nested_ids(metaobject, 'groupSets')
 
         # Release log handlers
         handlers = logger.handlers[:]
