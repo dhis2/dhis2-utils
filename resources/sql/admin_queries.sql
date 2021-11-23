@@ -480,13 +480,6 @@ or psi.executiondate > '2020-01-01';
 
 -- Delete events out of reasonable time range
 
-delete from trackedentitydatavalue tdv
-where tdv.programstageinstanceid in (
-  select psi.programstageinstanceid
-  from programstageinstance psi
-  where psi.executiondate < '1960-01-01'
-  or psi.executiondate > '2020-01-01');
-
 delete from programstageinstance psi
 where psi.executiondate < '1960-01-01'
 or psi.executiondate > '2020-01-01';
@@ -523,18 +516,6 @@ where psi.deleted = false
 group by p.uid, p.name
 order by p.name;
 
--- Find invalid event values of value type date, replace "foo" with error hint
-
-select count(to_date(dv.value, 'YYYY-MM-DD')) 
-from trackedentitydatavalue dv 
-inner join dataelement de on dv.dataelementid=de.dataelementid 
-where de.valuetype='DATE';
-
-select * from trackedentitydatavalue dv 
-inner join dataelement de on dv.dataelementid=de.dataelementid 
-where de.valuetype='DATE' 
-and value like '%foo%';
-
 -- (Write) Generate random coordinates based on org unit location for events
 
 update programstageinstance psi
@@ -550,14 +531,6 @@ latitude = (
 -- (Write) Delete data values and events for a program
 
 delete from trackedentitydatavalueaudit dv
-where dv.programstageinstanceid in (
-  select psi.programstageinstanceid
-  from programstageinstance psi
-  inner join programinstance pi on psi.programinstanceid=psi.programinstanceid
-  inner join program pr on pi.programid=pr.programid
-  where pr.uid = 'bMcwwoVnbSR');
-
-delete from trackedentitydatavalue dv
 where dv.programstageinstanceid in (
   select psi.programstageinstanceid
   from programstageinstance psi
