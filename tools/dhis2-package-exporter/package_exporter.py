@@ -425,7 +425,7 @@ def clean_metadata(metaobj):
     if len(metaobj) > 0:
         for subtag in ['dashboardItems', 'analyticsPeriodBoundaries', 'mapViews', 'user', 'userGroupAccesses',
                        'programStageDataElements', 'programTrackedEntityAttributes',
-                       'trackedEntityTypeAttributes', 'userCredentials', 'legends']:
+                       'trackedEntityTypeAttributes', 'userCredentials', 'legends', 'greyedFields']:
             if subtag in metaobj[0]:
                 for i in range(0, len(metaobj)):
                     metaobj[i][subtag] = remove_subset_from_set(metaobj[i][subtag], 'lastUpdated')
@@ -954,6 +954,7 @@ def main():
             'constants', 'documents', 'attributes',
             'dataEntryForms', 'sections', 'dataSets', # Some programs, like HIV, have dataSets
             'dataElements', 'dataElementGroups',
+            'jobConfigurations',
             'predictors', 'predictorGroups',
             'trackedEntityAttributes', 'trackedEntityTypes', 'trackedEntityInstanceFilters',
             'programNotificationTemplates',
@@ -961,7 +962,7 @@ def main():
             'programStageSections', 'programStages',
             'programIndicatorGroups', 'programIndicators',
             'organisationUnitGroups',  # Assuming this will only be found in indicators
-            'indicatorTypes', 'indicators', 'indicatorGroups',
+            'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
             'programRuleVariables', 'programRuleActions', 'programRules',
             'visualizations', 'charts', 'maps', 'reportTables', 'eventReports', 'eventCharts', 'dashboards',
             'package', 'users', 'userGroups']
@@ -977,9 +978,10 @@ def main():
             'dataEntryForms',
             'dataElements', 'dataElementGroups', # group first
             'validationRules', 'validationRuleGroups', # group first
+            'jobConfigurations',
             'predictors', 'predictorGroups', # group first
             'organisationUnitGroups',  # Assuming this will only be found in indicators
-            'indicatorTypes', 'indicators', 'indicatorGroups', # groups first, to get indicator uids
+            'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups', # groups first, to get indicator uids
             'sections', 'dataSets',
             'visualizations', 'charts', 'maps', 'reportTables', 'eventReports', 'eventCharts', 'dashboards',
             'package', 'users', 'userGroups']
@@ -1021,6 +1023,7 @@ def main():
     indicator_uids = list()
     predictor_uids = list()
     indicatorGroups_uids = list()
+    indicatorGroupSets_uids = list()
     indicatorTypes_uids = list()
     legendSets_uids = list()
     organisationUnitGroups_uids = list()
@@ -1072,9 +1075,11 @@ def main():
         "dataEntryForms": "id:in:[" + ','.join(dataEntryForms_uids) + "]",
         "documents": "code:$like:" + package_prefix,  # Might not be enough
         "eventCharts": "id:in:[" + ','.join(dashboard_items['eventChart']) + "]",
+        "indicatorGroupSets": "id:in:[" + ','.join(indicatorGroupSets_uids) + "]",
         "indicatorGroups": "code:$like:" + package_prefix,
         "indicators": "id:in:[" + ','.join(indicator_uids) + "]",
         "indicatorTypes": "id:in:[" + ','.join(indicatorTypes_uids) + "]",
+        "jobConfigurations": "jobType:eq:PREDICTOR",
         "legendSets": "id:in:[" + ','.join(legendSets_uids) + "]",
         "maps": "id:in:[" + ','.join(dashboard_items['map']) + "]",
         "optionGroups": "optionSet.id:in:[" + ','.join(optionSets_uids) + "]",
@@ -1142,9 +1147,6 @@ def main():
             separator = ""
 
         for metadata_type in reversed(metadata_import_order):
-            if metadata_type == "constants":
-                metadata_type = "constants"
-
             logger.info("------------ " + metadata_type + " ------------")
             if metadata_type == "package":
                 # Package prefix corresponds to intervention but historically it used to
@@ -1238,6 +1240,8 @@ def main():
                 dataDimension_uids = get_elements_in_data_dimension(metaobject, dataDimension_uids)
             elif metadata_type == "programIndicatorGroups":
                 metaobject = remove_undesired_children(metaobject, programIndicators_uids['P'], 'programIndicators')
+            elif metadata_type == "indicatorGroupSets":
+                metaobject = remove_undesired_children(metaobject, indicatorGroups_uids, 'indicatorGroups')
             # elif metadata_type == 'dataElementGroups':
             #     # Some DEG like CBS stubbornly make it to other packages
             #     # make sure it is not there
@@ -1370,7 +1374,23 @@ def main():
                                                                             'groupSets')
                     metaobject = new_metaobject
 
-
+            elif metadata_type == "jobConfigurations":
+                job_configs_to_include = list()
+                for jobConfig in metaobject:
+                    job_config_in_the_package = True
+                    if 'predictors' in jobConfig['jobParameters']:
+                        for predictor_uid in jobConfig['jobParameters']['predictors']:
+                            if predictor_uid not in predictor_uids:
+                                job_config_in_the_package = False
+                                break
+                    if job_config_in_the_package and 'predictorGroups' in jobConfig['jobParameters']:
+                        for predictorGroup_uid in jobConfig['jobParameters']['predictorGroups']:
+                            if predictorGroup_uid not in predictorGroups_uids:
+                                job_config_in_the_package = False
+                                break
+                    if job_config_in_the_package:
+                        job_configs_to_include.append(jobConfig)
+                metaobject = job_configs_to_include
 
             # Update dataframe reports
             update_last_updated(metaobject, metadata_type)
@@ -1876,8 +1896,14 @@ def main():
                 # If we have find one or more indicator groups based on prefix, use those to get
                 # the indicators
                 # Get indicator uids
+                indicatorGroups_uids = json_extract(metaobject, 'id')
                 indicator_uids = json_extract_nested_ids(metaobject, 'indicators')
                 metadata_filters["indicators"] = "id:in:[" + ','.join(indicator_uids) + "]"
+                # Check if there is an indicatorGroupSet
+                for indGroup in metaobject:
+                    if 'indicatorGroupSet' in indGroup:
+                        indicatorGroupSets_uids.append(indGroup['indicatorGroupSet']['id'])
+                metadata_filters["indicatorGroupSets"] = "id:in:[" + ','.join(indicatorGroupSets_uids) + "]"
             elif metadata_type == 'dataElementGroups':
                 dataElements_in_package = json_extract_nested_ids(metaobject, 'dataElements')
                 metadata_filters["dataElements"] = "id:in:[" + ','.join(dataElements_in_package) + "]"
