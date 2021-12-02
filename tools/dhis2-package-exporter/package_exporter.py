@@ -1334,7 +1334,11 @@ def main():
                     metaobject += get_metadata_element(metadata_type,
                                                        'id:in:[' + ','.join(cat_uids[metadata_type]) + ']')
 
-                if metadata_type == "categoryOptionGroups":
+                if metadata_type == "categories":
+                    # Remove undesired categoryCombos from categories
+                    metaobject = remove_undesired_children(metaobject, cat_uids['categoryCombos'], 'categoryCombos')
+
+                elif metadata_type == "categoryOptionGroups":
                     new_metaobject = list()
                     cat_opt_group_ids_to_keep = list()
                     #metaobject = remove_undesired_children(metaobject, options_uids, 'options')
