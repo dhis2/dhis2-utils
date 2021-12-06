@@ -1052,6 +1052,7 @@ def main():
         trackedEntityTypes_uids = list()  # Normally only one :)
     else:
         validationRules_uids = list()
+        validationRuleGroups_uids = list()
     # Constants can be found in
     # programRules -> condition -> C{gYj2CUoep4O} == 2
     # programRuleActions -> data ????
@@ -1321,6 +1322,12 @@ def main():
             elif metadata_type == "predictors":
                 # Replace hardcoded UIDs for organisation Unit Levels with a placeholder
                 metaobject = replace_organisation_level_with_placeholder(metaobject)
+                # Remove predictorGroups in predictors which do not belong to the package
+                metaobject = remove_undesired_children(metaobject, predictorGroups_uids, 'predictorGroups')
+
+            elif metadata_type == "validationRules":
+                # Remove validationRuleGroups in validationRules which do not belong to the package
+                metaobject = remove_undesired_children(metaobject, validationRuleGroups_uids, 'validationRuleGroups')
 
             elif metadata_type == "trackedEntityAttributes":
                 # Make sure the TEAs are publicly readable
@@ -1660,6 +1667,8 @@ def main():
                 if len(metadata['dataElementGroups']) > 0:
                     metadata['dataElementGroups'] = remove_undesired_children(metadata['dataElementGroups'], dataElements_in_package,
                                                                               'dataElements')
+                # Remove dataElementGroups in dataElements which do not belong to the package
+                metaobject = remove_undesired_children(metaobject, dataElementsGroups_uids, 'dataElementGroups')
 
             elif metadata_type == 'indicators':
                 # Check Indicators used in Analytics
@@ -1911,6 +1920,7 @@ def main():
             elif metadata_type == 'dataElementGroups':
                 dataElements_in_package = json_extract_nested_ids(metaobject, 'dataElements')
                 metadata_filters["dataElements"] = "id:in:[" + ','.join(dataElements_in_package) + "]"
+                dataElementsGroups_uids = json_extract(metaobject, 'id')
             elif metadata_type == 'options':
                 # Get the option UIDs to validate option Groups and remove undesired options
                 options_uids = json_extract(metaobject, 'id')
@@ -1920,8 +1930,6 @@ def main():
                 # filter too
                 metadata_filters["legendSets"] = "id:in:[" + ','.join(legendSets_uids) + "]"
             elif metadata_type == "predictors":
-                predictorGroups_uids = json_extract_nested_ids(metaobject, 'predictorGroups')
-                metadata_filters["predictorGroups"] = "id:in:[" + ','.join(predictorGroups_uids) + "]"
                 # For predictors we have
                 # the expression: similar to indicators, may contain PG I{}, TEA A{}, constant C{}, DE + COC #{.}
                 # contrary to other cases, the DEs used in Pred are going to be added to the final group of DEs
@@ -1943,15 +1951,17 @@ def main():
                     if coc not in cat_uids['categoryOptionCombos']:
                         add_category_option_combo(coc, cat_uids)
             elif metadata_type == "predictorGroups":
-                # Get indicator uids
+                # Get predictor uids
                 predictor_uids = json_extract_nested_ids(metaobject, 'predictors')
                 metadata_filters["predictors"] = "id:in:[" + ','.join(predictor_uids) + "]"
+                predictorGroups_uids = json_extract(metaobject, 'id')
 
             elif metadata_type == 'validationRuleGroups':
                 # Find validation rule groups based on prefix
                 # And then use those to find the validation rules
                 validationRules_uids = json_extract_nested_ids(metaobject, 'validationRules')
                 metadata_filters["validationRules"] = "id:in:[" + ','.join(validationRules_uids) + "]"
+                validationRuleGroups_uids = json_extract(metaobject, 'id')
             elif metadata_type == 'validationRules':
                 # Analyze hardcoded expressions
                 dataElements_uids['VR'] = get_hardcoded_values_in_fields(metaobject, 'dataElements_ind',
