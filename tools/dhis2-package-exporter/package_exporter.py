@@ -1510,6 +1510,9 @@ def main():
                         metaobject += programIndicators_in_data_dimension
                         programIndicators_uids['P'] += diff_data_dimension
 
+                    # Remove programIndicatorGroups in PI which do not belong to the package
+                    metaobject = remove_undesired_children(metaobject, programIndicatorGroups_uids, 'programIndicatorGroups')
+
                 elif metadata_type == "programNotificationTemplates":
                     # Check that the number of pnt with the program prefix is not greater
                     pnt_with_program_prefix = list()
@@ -1686,6 +1689,9 @@ def main():
                     indicators_in_data_dimension = clean_metadata(indicators_in_data_dimension)
                     metaobject += indicators_in_data_dimension
                     indicator_uids += diff_data_dimension
+
+                # Remove indicatorGroups in indicators which do not belong to the package
+                metaobject = remove_undesired_children(metaobject, indicatorGroups_uids, 'indicatorGroups')
 
             # --- Add to metadata --------------------------------------------------------
             metadata[metadata_type] = metaobject
