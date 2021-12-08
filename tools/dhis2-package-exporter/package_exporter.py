@@ -876,61 +876,111 @@ def main():
     else:
         package_prefix = args.package_prefix
 
-    program_uid = None
-    program = None
+    program_uids = list()
+    programs = None
     dataset_uids = list()
     dataSets = None
-    if program_or_ds_uid != 'AGG':
-        if not is_valid_uid(program_or_ds_uid):
-            logger.error('The UID ' + program_or_ds_uid + ' is NOT valid')
-            exit(1)
-        # Check if it is a program
+    if program_or_ds_uid not in ['AGG', 'TKR', 'EVT']:
+        uids = program_or_ds_uid.split(',')
+        for uid in uids:
+            if not is_valid_uid(uid):
+                logger.error('The UID ' + uid + ' is NOT valid')
+                exit(1)
+        # Check if they are uids of programs
         try:
-            program = api_source.get('programs/' + program_or_ds_uid,
+            programs = api_source.get('programs',
                                      params={"paging": "false",
-                                             "fields": "id,name,enrollmentDateLabel,programTrackedEntityAttributes,programStages,programRuleVariables,organisationUnits,trackedEntityType,version,categoryCombo"}).json()
+                                             "fields": "id,name,enrollmentDateLabel,programTrackedEntityAttributes,programStages,programRuleVariables,organisationUnits,trackedEntityType,version,categoryCombo",
+                                             "filter": "id:in:["+program_or_ds_uid+"]"}).json()['programs']
         except RequestException as e:
             # if e.code == 404:
             #     logger.warning('Program ' + program_or_ds_uid + ' does not exist')
             #     sys.exit()
             pass
         else:
-            program_uid = program_or_ds_uid
-        # Check if it is a dataSet
-        try:
-            dataSets = [ api_source.get('dataSets/' + program_or_ds_uid,
-                                     params={"paging": "false",
-                                             "fields": "*"}).json() ]
-        except RequestException as e:
-            # if e.code == 404:
-            #     logger.warning('dataSet ' + program_or_ds_uid + ' does not exist')
-            #     sys.exit()
-            pass
-        else:
-            dataset_uids = [program_or_ds_uid]
-    else:
-        # In order not to complicate things, we are going to leave the intervention as mandatory
-        # So if you want to grab all references for a package using a prefix, the script can be called
-        # with health area = intervention, same values for both parameters
-        # In other words, to get all dataSets we are going to consider the broader case of health area
-        try:
-            dataSets = api_source.get('dataSets',
-                                     params={"paging": "false",
-                                             "filter": "code:$like:"+package_prefix,
-                                             "fields": "*"}).json()['dataSets']
-            dataSets = check_naming_convention(dataSets, args.health_area, package_prefix)
-        except RequestException as e:
-            # if e.code == 404:
-            #     logger.error('Program ' + program_uid + ' specified does not exist')
-            #     sys.exit()
-            pass
-        else:
-            for ds in dataSets:
-                dataset_uids.append(ds['id'])
+            for program in programs:
+                program_uids.append(program['id'])
+            if len(programs) == len(uids):
+                is_tracker = False
+                is_event = False
+                for program in programs:
+                    if 'trackedEntityType' in program:
+                        is_tracker = True
+                    else:
+                        is_event = True
+                if is_tracker and is_event:
+                    logger.error("NOT supported: The UIDs provided mix tracker and event programs")
+                    exit(1)
+                elif is_tracker:
+                    program_or_ds_uid = 'TKR'
+                elif is_event:
+                    program_or_ds_uid = 'EVT'
+            elif len(programs) > 0:
+                for program in programs:
+                    program_uids.append(program['id'])
+                logger.error("Some program UIDs could not be found: " + str(set(uids).difference(program_uids)))
+                exit(1)
 
-    if program_uid and program is not None:
-        logger.info('Exporting TKR/EVT program ' + program_uid)
-    elif dataset_uids and dataSets is not None and len(dataSets) > 0 and len(dataset_uids) > 0:
+        # If we could not find the uids as programs, let's try dataSets
+        if program_or_ds_uid not in ['TKR', 'EVT']:
+        # Check if it is a dataSet
+            try:
+                dataSets = api_source.get('dataSets',
+                                         params={"paging": "false",
+                                                 "fields": "*",
+                                                 "filter": "id:in:["+program_or_ds_uid+"]"}).json()['dataSets']
+            except RequestException as e:
+                # if e.code == 404:
+                #     logger.warning('dataSet ' + program_or_ds_uid + ' does not exist')
+                #     sys.exit()
+                pass
+            else:
+                for dataSet in dataSets:
+                    dataset_uids.append(dataSet['id'])
+                if len(dataSets) == len(uids):
+                        program_or_ds_uid = 'AGG'
+                elif len(dataSets) > 0:
+                    logger.error("Some dataSet UIDs could not be found: " + str(set(uids).difference(dataset_uids)))
+                    exit(1)
+    else:
+        # Let's get all the elements by code in this case
+        # Aggregate package - dataSets
+        if program_or_ds_uid == 'AGG':
+            try:
+                dataSets = api_source.get('dataSets',
+                                         params={"paging": "false",
+                                                 "filter": "code:$like:"+package_prefix,
+                                                 "fields": "*"}).json()['dataSets']
+                dataSets = check_naming_convention(dataSets, args.health_area, package_prefix)
+            except RequestException as e:
+                pass
+            else:
+                for ds in dataSets:
+                    dataset_uids.append(ds['id'])
+        # Tracker or event - program
+        elif program_or_ds_uid in ['TKR', 'EVT']:
+            try:
+                tmp_programs = api_source.get('programs',
+                                         params={"paging": "false",
+                                                 "filter": "code:$like:"+package_prefix,
+                                                 "fields": "*"}).json()['programs']
+                tmp_programs = check_naming_convention(tmp_programs, args.health_area, package_prefix)
+                programs = list()
+                for program in tmp_programs:
+                    # A tracker program has a 'trackedEntityType'
+                    if program_or_ds_uid == 'TKR' and 'trackedEntityType' in program:
+                        programs.append(program)
+                    elif program_or_ds_uid == 'EVT' and 'trackedEntityType' not in program:
+                        programs.append(program)
+            except RequestException as e:
+                pass
+            else:
+                for program in programs:
+                    program_uids.append(program['id'])
+
+    if programs is not None and len(programs) > 0 and len(program_uids) > 0:
+        logger.info('Exporting ' + program_or_ds_uid + ' program(s) ' + ','.join(program_uids))
+    elif dataSets is not None and len(dataSets) > 0 and len(dataset_uids) > 0:
         logger.info('Exporting AGG dataSet(s) ' + ','.join(dataset_uids))
     else:
         logger.error('The parameters (' + args.program_or_ds_uid + ', ' + args.health_area + ', ' +
@@ -943,7 +993,7 @@ def main():
     #     all_package_prefixes = package_prefix.split(',')
     #     package_prefix = all_package_prefixes[0]
 
-    if program_uid is not None:
+    if program_or_ds_uid in ['TKR', 'EVT']:
         # Iteration over this list happens in reversed order
         # Altering the order can cause the script to stop working
         metadata_import_order = [
@@ -966,6 +1016,10 @@ def main():
             'programRuleVariables', 'programRuleActions', 'programRules',
             'visualizations', 'charts', 'maps', 'reportTables', 'eventReports', 'eventCharts', 'dashboards',
             'package', 'users', 'userGroups']
+        if program_or_ds_uid == 'EVT':
+            metadata_import_order.remove('trackedEntityAttributes')
+            metadata_import_order.remove('trackedEntityTypes')
+            metadata_import_order.remove('trackedEntityInstanceFilters')
     # Dataset
     else:
         # This list is looped backwards
@@ -1036,20 +1090,21 @@ def main():
     cat_uids['categoryOptionCombos'] = list()
     cat_uids['categoryOptionGroups'] = list()
     cat_uids['categoryOptionGroupSets'] = list()
-    if program_uid is not None:
+    if program_or_ds_uid in ['TKR', 'EVT']:
         programNotificationTemplates_uids = list()
         programRuleActions_uids = list()
-        trackedEntityAttributes_uids = dict()
-        trackedEntityAttributes_uids['PR'] = list()
-        trackedEntityAttributes_uids['P'] = list()
-        trackedEntityAttributes_uids['PI'] = list()
+        if program_or_ds_uid == 'TKR':
+            trackedEntityAttributes_uids = dict()
+            trackedEntityAttributes_uids['PR'] = list()
+            trackedEntityAttributes_uids['P'] = list()
+            trackedEntityAttributes_uids['PI'] = list()
+            trackedEntityTypes_uids = list()  # Normally only one :)
         programIndicators_uids = dict()
         programIndicators_uids['P'] = list()  # Program
         programIndicators_uids['I'] = list()
         programIndicators_uids['PRED'] = list()  # Predictor
         programIndicatorGroups_uids = list()
         programStageSections_uids = list()
-        trackedEntityTypes_uids = list()  # Normally only one :)
     else:
         validationRules_uids = list()
         validationRuleGroups_uids = list()
@@ -1095,7 +1150,7 @@ def main():
         "users": "id:eq:" + WHOAdmin_uid
     }
 
-    if program_uid is not None:
+    if program_or_ds_uid in ['TKR', 'EVT']:
         metadata_filters.update({
             "programs": "id:eq:" + program_uid,
             "programIndicatorGroups": "",
@@ -1153,14 +1208,14 @@ def main():
                 # Package prefix corresponds to intervention but historically it used to
                 # contain both Health Area and Intervention
                 locale = "en"
-
-                if program_uid is not None:
-                    if 'programTrackedEntityAttributes' in program or 'trackedEntityType' in program:
-                        package_type = 'TRK'
-                    else:
-                        package_type = 'EVT'
-                else:
-                    package_type = 'AGG'
+                package_type = program_or_ds_uid
+                # if program_uid is not None:
+                #     if 'programTrackedEntityAttributes' in program or 'trackedEntityType' in program:
+                #         package_type = 'TRK'
+                #     else:
+                #         package_type = 'EVT'
+                # else:
+                #     package_type = 'AGG'
 
                 name_label = health_area + separator + intervention + '_' + package_type + '_' + \
                              package_version + '_DHIS' + api_source.version + '-' + locale
