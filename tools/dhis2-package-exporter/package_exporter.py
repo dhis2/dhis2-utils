@@ -1336,6 +1336,10 @@ def main():
                     metaobject[index]["publicAccess"] = "r-------"
 
             elif metadata_type[:3] == 'cat':
+                # Add the default uid if it does not exist yet in cat_uids list
+                for cat in metaobject:
+                    if cat['name'].lower() == 'default' and cat['id'] not in cat_uids[metadata_type]:
+                        cat_uids[metadata_type].append(cat['id'])
                 if metadata_type in cat_uids and len(cat_uids[metadata_type]) > 0:
                     logger.info('Getting extra uids for ' + metadata_type)
                     metaobject += get_metadata_element(metadata_type,
