@@ -1817,6 +1817,7 @@ def main():
             elif metadata_type in ['charts', 'reportTables', 'visualizations', 'maps']:
                 # Add legendSets
                 legendSets_uids += json_extract_nested_ids(metaobject, 'legendSets')
+                legendSets_uids += json_extract_nested_ids(metaobject, 'legendSet')
                 # See if there is a reference to a categoryOption Group and/or Set
                 cat_uids['categoryOptionGroups'] += json_extract_nested_ids(metaobject, 'categoryOptionGroups')
                 cat_uids['categoryOptionGroupSets'] += json_extract_nested_ids(metaobject, 'categoryOptionGroupSet')
