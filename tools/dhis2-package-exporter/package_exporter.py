@@ -1448,8 +1448,6 @@ def main():
                     cat_opt_group_ids_to_keep = list()
                     #metaobject = remove_undesired_children(metaobject, options_uids, 'options')
                     for catOptGroup in metaobject:
-                        if catOptGroup['id'] == 'f5VxIY91Jz3':
-                            valid_cat_opt_group = True
                         valid_cat_opt_group = True
                         for catOpt in catOptGroup['categoryOptions']:
                             if catOpt['id'] not in cat_uids['categoryOptions']:
@@ -1465,6 +1463,12 @@ def main():
                                                                             cat_opt_group_ids_to_keep,
                                                                             'categoryOptionGroups')
                     metaobject = new_metaobject
+
+                    # categoryOptionGroups and categoryOptionGroupSets reference each other, so also do this clean up
+                    metaobject = remove_undesired_children(metaobject,
+                                                                            cat_opt_group_ids_to_keep,
+                                                                            'categoryOptionGroups')
+
                 elif metadata_type == "categoryOptionGroupSets":
                     # We need to remove the categoryOptionGroupSets which contain categoryOptionGroups not belonging to the package
                     new_metaobject = list()
