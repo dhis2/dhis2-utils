@@ -1464,11 +1464,6 @@ def main():
                                                                             'categoryOptionGroups')
                     metaobject = new_metaobject
 
-                    # categoryOptionGroups and categoryOptionGroupSets reference each other, so also do this clean up
-                    metaobject = remove_undesired_children(metaobject,
-                                                                            cat_opt_group_ids_to_keep,
-                                                                            'categoryOptionGroups')
-
                 elif metadata_type == "categoryOptionGroupSets":
                     # We need to remove the categoryOptionGroupSets which contain categoryOptionGroups not belonging to the package
                     new_metaobject = list()
@@ -1486,6 +1481,11 @@ def main():
                                                                             cat_opt_group_set_ids_to_keep,
                                                                             'groupSets')
                     metaobject = new_metaobject
+
+                    # categoryOptionGroups and categoryOptionGroupSets reference each other, so also do this clean up
+                    metaobject = remove_undesired_children(metaobject,
+                                                                            cat_opt_group_ids_to_keep,
+                                                                            'categoryOptionGroups')
 
             elif metadata_type == "jobConfigurations":
                 job_configs_to_include = list()
