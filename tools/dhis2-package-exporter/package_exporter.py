@@ -914,6 +914,9 @@ def main():
     else:
         package_prefix = args.package_prefix
 
+    # Process now the prefix. We accept multiple prefixes
+    all_package_prefixes = package_prefix.split(',')
+
     program_uids = list()
     programs = None
     dataset_uids = list()
@@ -984,11 +987,13 @@ def main():
         # Let's get all the elements by code in this case
         # Aggregate package - dataSets
         if program_or_ds_uid == 'AGG':
+            dataSets = list()
             try:
-                dataSets = api_source.get('dataSets',
-                                         params={"paging": "false",
-                                                 "filter": "code:$like:"+package_prefix,
-                                                 "fields": "*"}).json()['dataSets']
+                for prefix in all_package_prefixes:
+                    dataSets += api_source.get('dataSets',
+                                             params={"paging": "false",
+                                                     "filter": "code:$like:"+prefix,
+                                                     "fields": "*"}).json()['dataSets']
                 dataSets = check_naming_convention(dataSets, args.health_area, package_prefix)
             except RequestException as e:
                 pass
@@ -997,11 +1002,13 @@ def main():
                     dataset_uids.append(ds['id'])
         # Tracker or event - program
         elif program_or_ds_uid in ['TKR', 'EVT']:
+            tmp_programs = list()
             try:
-                tmp_programs = api_source.get('programs',
-                                         params={"paging": "false",
-                                                 "filter": "code:$like:"+package_prefix,
-                                                 "fields": "*"}).json()['programs']
+                for prefix in all_package_prefixes:
+                    tmp_programs += api_source.get('programs',
+                                             params={"paging": "false",
+                                                     "filter": "code:$like:"+prefix,
+                                                     "fields": "*"}).json()['programs']
                 tmp_programs = check_naming_convention(tmp_programs, args.health_area, package_prefix)
                 programs = list()
                 for program in tmp_programs:
@@ -1024,12 +1031,6 @@ def main():
         logger.error('The parameters (' + args.program_or_ds_uid + ', ' + args.health_area + ', ' +
                      args.intervention + ', ' + str(args.package_prefix) + ') returned no result for programs or dataSets')
         exit(1)
-
-    # Process now the prefix. We accept multiple prefixes
-    all_package_prefixes = [package_prefix]
-    # if ',' in package_prefix:
-    #     all_package_prefixes = package_prefix.split(',')
-    #     package_prefix = all_package_prefixes[0]
 
     if program_or_ds_uid in ['TKR', 'EVT']:
         # Iteration over this list happens in reversed order
@@ -1303,12 +1304,12 @@ def main():
                 # These two packages share the same userGroups, prefixed COVID-19
                 if len(metaobject) == 0 and metadata_type in ['userGroups']:
                     metaobject += get_metadata_element(metadata_type, 'code:$like:' + health_area)
-                else:
-                    # The goal calling check_naming_convention is to clean the list of objects we fetched
-                    filtered_metaobject = list()
-                    for prefix in all_package_prefixes:
-                        filtered_metaobject += check_naming_convention(metaobject, health_area, prefix)
-                    metaobject = filtered_metaobject
+                # else:
+                #     # The goal calling check_naming_convention is to clean the list of objects we fetched
+                #     filtered_metaobject = list()
+                #     for prefix in all_package_prefixes:
+                #         filtered_metaobject += check_naming_convention(metaobject, health_area, prefix)
+                #     metaobject = filtered_metaobject
             # # Bug DHIS2-10622
             if metadata_type == 'programStages':
                 for PS in metaobject:
@@ -2117,7 +2118,7 @@ def main():
             .groupby(['metadata_type']).size().reset_index(name='counts') \
             .to_csv(package_prefix + '_metadata_stats.csv', index=None, header=True)
 
-        df_report_lastUpdated[df_report_lastUpdated.metadata_type == 'dataElements'].sort_values(by=['name']).to_csv(package_prefix + '_dataElements_stats.csv', index=None, header=True)
+        df_report_lastUpdated[df_report_lastUpdated.metadata_type == 'dashboards'].sort_values(by=['name']).to_csv(package_prefix + '_dashboards_stats.csv', index=None, header=True)
 
         # for debug - and potential use in pipeline
         print(name_label + '.json')
