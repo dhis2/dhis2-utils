@@ -246,7 +246,7 @@ def get_elements_in_data_dimension(analytics_items, analytics_uids):
     return analytics_uids
 
 
-def remove_undesired_children(parent_group_list, children_uid_list, children_label):
+def remove_undesired_children(parent_group_list, children_uid_list, children_label, verbose = False):
     """
     Remove elements in a group
 
@@ -266,9 +266,10 @@ def remove_undesired_children(parent_group_list, children_uid_list, children_lab
         # Get elements in current group which are not part of the children to use
         diff = list(set(current_children_uids).difference(children_uid_list))
         if len(diff) > 0:  # There are elements which should not be there
-            logger.warning(parent_group['name'] + ' (' + parent_group['id'] +
-                           ') contains elements which do NOT belong to the package :' + str(diff))
-            logger.warning('Elements will be removed from the group')
+            if verbose == True:
+                logger.warning(parent_group['name'] + ' (' + parent_group['id'] +
+                               ') contains elements which do NOT belong to the package :' + str(diff))
+                logger.warning('Elements will be removed from the group')
             # Get the required elements
             children_to_keep = list(set(current_children_uids).difference(diff))
             new_parent[children_label] = list()
@@ -864,6 +865,8 @@ def main():
                            help='Description of the package or any comments you want to add')
     my_parser.add_argument('-pf', '--package_prefix', action="store", dest="package_prefix", type=str,
                            help='The actual package prefix used. By default this will be HEALTH-AREA_INTERVENTION')
+    my_parser.add_argument('-vb', '--verbose', dest='verbose', action='store_true')
+    my_parser.set_defaults(verbose=False)
 
     args = my_parser.parse_args()
 
