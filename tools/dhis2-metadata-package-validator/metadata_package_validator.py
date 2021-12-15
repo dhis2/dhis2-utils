@@ -173,6 +173,7 @@ def main():
                     tea_name = myutils.get_name_by_type_and_uid(package, 'trackedEntityAttributes', tea_uid)
                     logging.error(f"PR-ST-5 Program Rule '{pr_name}' ({pr_uid}) in the PR Action uses a TEA '{tea_name}' ({tea_uid}) that does not belong to the associated program.")
 
+    # -------------------------------------
 
     # code
     PATTERN_OPTION_CODE = re.compile("^([0-9A-Z_\|\-\.]+)+$")
@@ -203,6 +204,30 @@ def main():
                         message = f"ALL-MQ-18- Invalid code='{resource['code']}' (resource type='{resource_type}' name='{resource['name']}' uid={resource['id']})"
                         logger.error(message)
                         num_error += 1
+    # -------------------------------------
+
+    # Indicators Indicators
+    if "indicators" not in package:
+        package["indicators"] = []
+    for indicator in package["indicators"]:
+        keys_to_validate_pi_mq_2 = ["name", "shortName"]
+        for n in keys_to_validate_pi_mq_2:
+            # I-MQ-3. Indicators should not contain "proportion" or "percentage" in the name, shortName
+            if n in indicator and any(t in indicator[n].upper() for t in ["PROPORTION", "PERCENTAGE"]):
+                logger.warning(
+                    "I-MQ-3 - Indicator contains the word 'proportion' or 'percentage'. Resource Indicator with UID " + indicator['id'] + ". " + n + "='" + indicator[n] + "'")
+
+    # Program Indicators
+    if "programIndicators" not in package:
+        package["programIndicators"] = []
+    for pi in package["programIndicators"]:
+        keys_to_validate_pi_mq_2 = ["name", "shortName"]
+        for n in keys_to_validate_pi_mq_2:
+            # PI-MQ-3. Program Indicators should not contain "proportion" or "percentage" in the name, shortName
+            if n in pi and any(t in pi[n].upper() for t in ["PROPORTION", "PERCENTAGE"]):
+                logger.warning(
+                    "PI-MQ-3 - Program Indicator contains the word 'proportion' or 'percentage'. Resource Program Indicator with UID " + pi['id'] + ". " + n + "='" + pi[n] + "'")
+
 
     logger.info('-------------------------------------Finished validation-------------------------------------')
 
