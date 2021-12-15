@@ -204,6 +204,18 @@ def main():
                         message = f"ALL-MQ-18- Invalid code='{resource['code']}' (resource type='{resource_type}' name='{resource['name']}' uid={resource['id']})"
                         logger.error(message)
                         num_error += 1
+
+    # -------------------------------------
+
+    # DE-MQ-2: The name/shortName SHOULD not contains "Number of" or "number of"
+    if "dataElements" not in package:
+        package["dataElements"] = []
+    for de in package["dataElements"]:
+        keys_to_validate_de_mq_1 = ["name", "shortName"]
+        for n in keys_to_validate_de_mq_1:
+            if n in de and "NUMBER OF" in de[n].upper():
+                logger.warning(f"DE-MQ-2 - DataElement contains the words 'number of' ({de['id']}) {n}='{de[n]}'")
+
     # -------------------------------------
 
     # Indicators Indicators
