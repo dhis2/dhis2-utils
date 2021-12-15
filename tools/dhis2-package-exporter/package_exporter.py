@@ -867,6 +867,8 @@ def main():
                            help='The actual package prefix used. By default this will be HEALTH-AREA_INTERVENTION')
     my_parser.add_argument('-vb', '--verbose', dest='verbose', action='store_true')
     my_parser.set_defaults(verbose=False)
+    my_parser.add_argument('-od', '--only_dashboards', dest='only_dashboards', action='store_true')
+    my_parser.set_defaults(only_dashboards=False)
 
     args = my_parser.parse_args()
 
@@ -1026,10 +1028,15 @@ def main():
                 for program in programs:
                     program_uids.append(program['id'])
 
+    if args.only_dashboards:
+        message_only_dashboard = "DASHBOARD for "
+    else:
+        message_only_dashboard = ""
+
     if programs is not None and len(programs) > 0 and len(program_uids) > 0:
-        logger.info('Exporting ' + program_or_ds_uid + ' program(s) ' + ','.join(program_uids))
+        logger.info('Exporting ' + message_only_dashboard + program_or_ds_uid + ' program(s) ' + ','.join(program_uids))
     elif dataSets is not None and len(dataSets) > 0 and len(dataset_uids) > 0:
-        logger.info('Exporting AGG dataSet(s) ' + ','.join(dataset_uids))
+        logger.info('Exporting ' + message_only_dashboard + 'AGG dataSet(s) ' + ','.join(dataset_uids))
     else:
         logger.error('The parameters (' + args.program_or_ds_uid + ', ' + args.health_area + ', ' +
                      args.intervention + ', ' + str(args.package_prefix) + ') returned no result for programs or dataSets')
@@ -1063,7 +1070,7 @@ def main():
             metadata_import_order.remove('trackedEntityTypes')
             metadata_import_order.remove('trackedEntityInstanceFilters')
     # Dataset
-    else:
+    elif program_or_ds_uid == 'AGG':
         # This list is looped backwards
         metadata_import_order = [
             'categoryOptionGroupSets', 'categoryOptionGroups',
@@ -1079,6 +1086,14 @@ def main():
             'organisationUnitGroups',  # Assuming this will only be found in indicators
             'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups', # groups first, to get indicator uids
             'sections', 'dataSets',
+            'visualizations', 'charts', 'maps', 'reportTables', 'eventReports', 'eventCharts', 'dashboards',
+            'package', 'users', 'userGroups']
+
+    elif program_or_ds_uid == 'DSH' or args.only_dashboards:
+        metadata_import_order = [
+            'categoryOptionGroupSets', 'categoryOptionGroups',
+            'legendSets',
+            'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
             'visualizations', 'charts', 'maps', 'reportTables', 'eventReports', 'eventCharts', 'dashboards',
             'package', 'users', 'userGroups']
 
@@ -1252,7 +1267,10 @@ def main():
                 # Package prefix corresponds to intervention but historically it used to
                 # contain both Health Area and Intervention
                 locale = "en"
-                package_type = program_or_ds_uid
+                if args.only_dashboards:
+                    package_type = "DSH"
+                else:
+                    package_type = program_or_ds_uid
                 # if program_uid is not None:
                 #     if 'programTrackedEntityAttributes' in program or 'trackedEntityType' in program:
                 #         package_type = 'TRK'
@@ -1467,6 +1485,10 @@ def main():
                                                                             cat_opt_group_ids_to_keep,
                                                                             'categoryOptionGroups')
                     metaobject = new_metaobject
+
+                    # Remove categoryOption if it is a dashboard package
+                    if program_or_ds_uid == 'DSH' or args.only_dashboards:
+                        metaobject = remove_subset_from_set(metaobject, 'categoryOptions')
 
                 elif metadata_type == "categoryOptionGroupSets":
                     # We need to remove the categoryOptionGroupSets which contain categoryOptionGroups not belonging to the package
@@ -2019,6 +2041,15 @@ def main():
 
                 # if len(indicator_uids) > 0:
                 #     metaobject = remove_undesired_children(metaobject, indicator_uids, 'indicators')
+
+                if args.only_dashboards:
+                    # Add [CONFIG] to the name and replace numerator and denominator expressions with -1
+                    for indicator in metaobject:
+                        if 'name' in indicator:
+                            indicator['name'] = "[CONFIG] " + indicator['name']
+                        if 'numerator' and 'denominator' in indicator:
+                            indicator['numerator'] = -1
+                            indicator['denominator'] = -1
 
             elif metadata_type == 'indicatorGroups':
                 # If we have find one or more indicator groups based on prefix, use those to get
