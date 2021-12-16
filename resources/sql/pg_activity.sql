@@ -2,7 +2,7 @@
 --
 -- PostgreSQL queries for monitoring performance, slow queries and locks.
 --
--- Enable sloq query logging in postgresql.conf:
+-- Enable slow query logging in postgresql.conf:
 --
 -- log_statement = none
 -- log_min_duration_statement = 200
