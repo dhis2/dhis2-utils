@@ -180,6 +180,7 @@ show checkpoint_completion_target;
 show synchronous_commit; 
 show wal_writer_delay;
 show random_page_cost;
+show track_activity_query_size;
 
 -- Enable full logging
 
