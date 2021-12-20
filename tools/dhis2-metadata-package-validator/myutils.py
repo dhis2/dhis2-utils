@@ -3,6 +3,10 @@ def get_name_by_type_and_uid(package, resource_type, uid):
     return next((x for x in package[resource_type] if x["id"] == uid), None)["name"]
 
 
+def get_program_referenced_by_type_and_uid(package, resource_type, uid):
+    return next((x for x in package[resource_type] if x["id"] == uid), None)["program"]["id"]
+
+
 def json_extract_nested_ids(obj, key):
     """
     Recursively fetch ids for a given key in a nested JSON
