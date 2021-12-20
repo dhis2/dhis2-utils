@@ -926,7 +926,9 @@ def main():
     programs = None
     dataset_uids = list()
     dataSets = None
-    if program_or_ds_uid not in ['AGG', 'TKR', 'EVT']:
+    dashboard_uids = list()
+    dashboards = None
+    if program_or_ds_uid not in ['AGG', 'TKR', 'EVT', 'DSH']:
         uids = program_or_ds_uid.split(',')
         for uid in uids:
             if not is_valid_uid(uid):
@@ -1028,6 +1030,21 @@ def main():
                 for program in programs:
                     program_uids.append(program['id'])
 
+        # Get the dashboards by code
+        elif program_or_ds_uid == 'DSH':
+            dashboards = list()
+            try:
+                for prefix in all_package_prefixes:
+                    dashboards += api_source.get('dashboards',
+                                             params={"paging": "false",
+                                                     "filter": "code:$like:"+prefix,
+                                                     "fields": "*"}).json()['dashboards']
+            except RequestException as e:
+                pass
+            else:
+                for dsh in dashboards:
+                    dashboard_uids.append(dsh['id'])
+
     if args.only_dashboards:
         message_only_dashboard = "DASHBOARD for "
     else:
@@ -1037,9 +1054,11 @@ def main():
         logger.info('Exporting ' + message_only_dashboard + program_or_ds_uid + ' program(s) ' + ','.join(program_uids))
     elif dataSets is not None and len(dataSets) > 0 and len(dataset_uids) > 0:
         logger.info('Exporting ' + message_only_dashboard + 'AGG dataSet(s) ' + ','.join(dataset_uids))
+    elif dashboards is not None and len(dashboards) > 0 and len(dashboard_uids) > 0:
+        logger.info('Exporting ' + message_only_dashboard + 'DSH dashboard(s) ' + ','.join(dashboard_uids))
     else:
         logger.error('The parameters (' + args.program_or_ds_uid + ', ' + args.health_area + ', ' +
-                     args.intervention + ', ' + str(args.package_prefix) + ') returned no result for programs or dataSets')
+                     args.intervention + ', ' + str(args.package_prefix) + ') returned no result for programs / dataSets / dashboards')
         exit(1)
 
     if program_or_ds_uid in ['TKR', 'EVT']:
@@ -1069,6 +1088,15 @@ def main():
             metadata_import_order.remove('trackedEntityAttributes')
             metadata_import_order.remove('trackedEntityTypes')
             metadata_import_order.remove('trackedEntityInstanceFilters')
+
+    elif program_or_ds_uid == 'DSH' or args.only_dashboards:
+        metadata_import_order = [
+            'categoryOptionGroupSets', 'categoryOptionGroups',
+            'legendSets',
+            'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
+            'visualizations', 'charts', 'maps', 'reportTables', 'eventReports', 'eventCharts', 'dashboards',
+            'package', 'users', 'userGroups']
+
     # Dataset
     elif program_or_ds_uid == 'AGG':
         # This list is looped backwards
@@ -1086,14 +1114,6 @@ def main():
             'organisationUnitGroups',  # Assuming this will only be found in indicators
             'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups', # groups first, to get indicator uids
             'sections', 'dataSets',
-            'visualizations', 'charts', 'maps', 'reportTables', 'eventReports', 'eventCharts', 'dashboards',
-            'package', 'users', 'userGroups']
-
-    elif program_or_ds_uid == 'DSH' or args.only_dashboards:
-        metadata_import_order = [
-            'categoryOptionGroupSets', 'categoryOptionGroups',
-            'legendSets',
-            'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
             'visualizations', 'charts', 'maps', 'reportTables', 'eventReports', 'eventCharts', 'dashboards',
             'package', 'users', 'userGroups']
 
@@ -1162,7 +1182,7 @@ def main():
         programIndicators_uids['PRED'] = list()  # Predictor
         programIndicatorGroups_uids = list()
         programStageSections_uids = list()
-    else:
+    elif program_or_ds_uid == 'AGG':
         validationRules_uids = list()
         validationRuleGroups_uids = list()
     # Constants can be found in
@@ -1229,15 +1249,19 @@ def main():
                 "trackedEntityTypes": "id:in:[" + ','.join(trackedEntityTypes_uids) + "]"
             })
     # Dataset
-    else:
+    elif program_or_ds_uid == 'AGG':
         metadata_filters.update({
             "dataSets": "id:in:[" + ','.join(dataset_uids) + "]",
             "sections": "dataSet.id:[" + ','.join(dataset_uids) + "]",
             "validationRules": "id:in:[" + ','.join(validationRules_uids) + "]",
             "validationRuleGroups": "code:$like:" + package_prefix,
         })
+    elif program_or_ds_uid == 'DSH':
+        metadata_filters.update({
+            "dashboards": "id:in:[" + ','.join(dashboard_uids) + "]"
+        })
 
-    if len(program_uids) > 0 or len(dataset_uids) > 0:
+    if len(program_uids) > 0 or len(dataset_uids) > 0 or len(dashboard_uids):
 
         if args.package_version is not None:
             package_version = args.package_version
@@ -1481,14 +1505,15 @@ def main():
                             new_metaobject.append(catOptGroup)
                             cat_opt_group_ids_to_keep.append(catOptGroup['id'])
 
-                    metadata['categoryOptions'] = remove_undesired_children(metadata['categoryOptions'],
-                                                                            cat_opt_group_ids_to_keep,
-                                                                            'categoryOptionGroups')
                     metaobject = new_metaobject
 
                     # Remove categoryOption if it is a dashboard package
                     if program_or_ds_uid == 'DSH' or args.only_dashboards:
                         metaobject = remove_subset_from_set(metaobject, 'categoryOptions')
+                    else:
+                        metadata['categoryOptions'] = remove_undesired_children(metadata['categoryOptions'],
+                                                                                cat_opt_group_ids_to_keep,
+                                                                                'categoryOptionGroups')
 
                 elif metadata_type == "categoryOptionGroupSets":
                     # We need to remove the categoryOptionGroupSets which contain categoryOptionGroups not belonging to the package
@@ -2042,7 +2067,7 @@ def main():
                 # if len(indicator_uids) > 0:
                 #     metaobject = remove_undesired_children(metaobject, indicator_uids, 'indicators')
 
-                if args.only_dashboards:
+                if program_or_ds_uid == 'DSH' or args.only_dashboards:
                     # Add [CONFIG] to the name and replace numerator and denominator expressions with -1
                     for indicator in metaobject:
                         if 'name' in indicator:
@@ -2150,7 +2175,7 @@ def main():
         # Order and group by metadata type getting counts
         df_report_lastUpdated.sort_values(by=['metadata_type']) \
             .groupby(['metadata_type']).size().reset_index(name='counts') \
-            .to_csv(package_prefix + '_metadata_stats.csv', index=None, header=True)
+            .to_csv(package_type + '_' + package_prefix + '_metadata_stats.csv', index=None, header=True)
 
         df_report_lastUpdated[df_report_lastUpdated.metadata_type == 'dashboards'].sort_values(by=['name']).to_csv(package_prefix + '_dashboards_stats.csv', index=None, header=True)
 
