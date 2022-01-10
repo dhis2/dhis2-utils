@@ -899,7 +899,6 @@ def main():
         with open(credentials_file, 'r') as json_file:
             credentials = json.load(json_file)
         if args.instance is not None:
-            # api_source = Api('https://play.dhis2.org/2.35.7', 'admin', 'district')
             api_source = Api(args.instance, credentials['dhis']['username'], credentials['dhis']['password'])
         else:
             api_source = Api.from_auth_file(credentials_file)
