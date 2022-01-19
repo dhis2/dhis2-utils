@@ -42,6 +42,33 @@ def get_metadata_element(metadata_type, filter=""):
     return []
 
 
+def get_metadata_element_with_fields(metadata_type, filter=""):
+    # This function should be removed at some point. The whole purpose is to
+    # to provide a workaround for when the API call using * does not work
+    params = {"paging": "false",
+              "fields": "*"}
+    if filter != "":
+        params["filter"] = filter
+    try:
+        # First let's get a small sample with paging = true
+        params["paging"] = "true"
+        sample = api_source.get(metadata_type, params=params).json()[metadata_type]
+        if len(sample) > 0:
+            # Get all keys and use them as fields
+            params["fields"] = ','.join(sample[0].keys())
+            params["paging"] = "false"
+            return api_source.get(metadata_type, params=params).json()[metadata_type]
+        else:
+            return []
+
+    except RequestException as e:
+        logger.error('Server return ' + str(e.code) + ' when getting ' + metadata_type)
+        #if e.code == 414 or e.code == 400:
+        sys.exit(1)
+
+    return []
+
+
 def remove_subset_from_set(metaobject, subset_key):
     """
     Remove all metadata nested under subset_key from meta object
@@ -246,7 +273,7 @@ def get_elements_in_data_dimension(analytics_items, analytics_uids):
     return analytics_uids
 
 
-def remove_undesired_children(parent_group_list, children_uid_list, children_label):
+def remove_undesired_children(parent_group_list, children_uid_list, children_label, verbose = False):
     """
     Remove elements in a group
 
@@ -266,9 +293,10 @@ def remove_undesired_children(parent_group_list, children_uid_list, children_lab
         # Get elements in current group which are not part of the children to use
         diff = list(set(current_children_uids).difference(children_uid_list))
         if len(diff) > 0:  # There are elements which should not be there
-            logger.warning(parent_group['name'] + ' (' + parent_group['id'] +
-                           ') contains elements which do NOT belong to the package :' + str(diff))
-            logger.warning('Elements will be removed from the group')
+            if verbose == True:
+                logger.warning(parent_group['name'] + ' (' + parent_group['id'] +
+                               ') contains elements which do NOT belong to the package :' + str(diff))
+                logger.warning('Elements will be removed from the group')
             # Get the required elements
             children_to_keep = list(set(current_children_uids).difference(diff))
             new_parent[children_label] = list()
@@ -426,8 +454,8 @@ def clean_metadata(metaobj):
         for subtag in ['dashboardItems', 'analyticsPeriodBoundaries', 'mapViews', 'user', 'userGroupAccesses',
                        'programStageDataElements', 'programTrackedEntityAttributes',
                        'trackedEntityTypeAttributes', 'userCredentials', 'legends', 'greyedFields']:
-            if subtag in metaobj[0]:
-                for i in range(0, len(metaobj)):
+            for i in range(0, len(metaobj)):
+                if subtag in metaobj[i]:
                     metaobj[i][subtag] = remove_subset_from_set(metaobj[i][subtag], 'lastUpdated')
                     metaobj[i][subtag] = remove_subset_from_set(metaobj[i][subtag], 'lastUpdatedBy')
                     metaobj[i][subtag] = remove_subset_from_set(metaobj[i][subtag], 'created')
@@ -864,6 +892,10 @@ def main():
                            help='Description of the package or any comments you want to add')
     my_parser.add_argument('-pf', '--package_prefix', action="store", dest="package_prefix", type=str,
                            help='The actual package prefix used. By default this will be HEALTH-AREA_INTERVENTION')
+    my_parser.add_argument('-vb', '--verbose', dest='verbose', action='store_true')
+    my_parser.set_defaults(verbose=False)
+    my_parser.add_argument('-od', '--only_dashboards', dest='only_dashboards', action='store_true')
+    my_parser.set_defaults(only_dashboards=False)
 
     args = my_parser.parse_args()
 
@@ -894,7 +926,6 @@ def main():
         with open(credentials_file, 'r') as json_file:
             credentials = json.load(json_file)
         if args.instance is not None:
-            # api_source = Api('https://play.dhis2.org/2.35.7', 'admin', 'district')
             api_source = Api(args.instance, credentials['dhis']['username'], credentials['dhis']['password'])
         else:
             api_source = Api.from_auth_file(credentials_file)
@@ -914,11 +945,16 @@ def main():
     else:
         package_prefix = args.package_prefix
 
+    # Process now the prefix. We accept multiple prefixes
+    all_package_prefixes = package_prefix.split(',')
+
     program_uids = list()
     programs = None
     dataset_uids = list()
     dataSets = None
-    if program_or_ds_uid not in ['AGG', 'TKR', 'EVT']:
+    dashboard_uids = list()
+    dashboards = None
+    if program_or_ds_uid not in ['AGG', 'TKR', 'EVT', 'DSH']:
         uids = program_or_ds_uid.split(',')
         for uid in uids:
             if not is_valid_uid(uid):
@@ -984,11 +1020,13 @@ def main():
         # Let's get all the elements by code in this case
         # Aggregate package - dataSets
         if program_or_ds_uid == 'AGG':
+            dataSets = list()
             try:
-                dataSets = api_source.get('dataSets',
-                                         params={"paging": "false",
-                                                 "filter": "code:$like:"+package_prefix,
-                                                 "fields": "*"}).json()['dataSets']
+                for prefix in all_package_prefixes:
+                    dataSets += api_source.get('dataSets',
+                                             params={"paging": "false",
+                                                     "filter": "code:$like:"+prefix,
+                                                     "fields": "*"}).json()['dataSets']
                 dataSets = check_naming_convention(dataSets, args.health_area, package_prefix)
             except RequestException as e:
                 pass
@@ -997,11 +1035,13 @@ def main():
                     dataset_uids.append(ds['id'])
         # Tracker or event - program
         elif program_or_ds_uid in ['TKR', 'EVT']:
+            tmp_programs = list()
             try:
-                tmp_programs = api_source.get('programs',
-                                         params={"paging": "false",
-                                                 "filter": "code:$like:"+package_prefix,
-                                                 "fields": "*"}).json()['programs']
+                for prefix in all_package_prefixes:
+                    tmp_programs += api_source.get('programs',
+                                             params={"paging": "false",
+                                                     "filter": "code:$like:"+prefix,
+                                                     "fields": "*"}).json()['programs']
                 tmp_programs = check_naming_convention(tmp_programs, args.health_area, package_prefix)
                 programs = list()
                 for program in tmp_programs:
@@ -1016,20 +1056,36 @@ def main():
                 for program in programs:
                     program_uids.append(program['id'])
 
+        # Get the dashboards by code
+        elif program_or_ds_uid == 'DSH':
+            dashboards = list()
+            try:
+                for prefix in all_package_prefixes:
+                    dashboards += api_source.get('dashboards',
+                                             params={"paging": "false",
+                                                     "filter": "code:$like:"+prefix,
+                                                     "fields": "*"}).json()['dashboards']
+            except RequestException as e:
+                pass
+            else:
+                for dsh in dashboards:
+                    dashboard_uids.append(dsh['id'])
+
+    if args.only_dashboards:
+        message_only_dashboard = "DASHBOARD for "
+    else:
+        message_only_dashboard = ""
+
     if programs is not None and len(programs) > 0 and len(program_uids) > 0:
-        logger.info('Exporting ' + program_or_ds_uid + ' program(s) ' + ','.join(program_uids))
+        logger.info('Exporting ' + message_only_dashboard + program_or_ds_uid + ' program(s) ' + ','.join(program_uids))
     elif dataSets is not None and len(dataSets) > 0 and len(dataset_uids) > 0:
-        logger.info('Exporting AGG dataSet(s) ' + ','.join(dataset_uids))
+        logger.info('Exporting ' + message_only_dashboard + 'AGG dataSet(s) ' + ','.join(dataset_uids))
+    elif dashboards is not None and len(dashboards) > 0 and len(dashboard_uids) > 0:
+        logger.info('Exporting ' + message_only_dashboard + 'DSH dashboard(s) ' + ','.join(dashboard_uids))
     else:
         logger.error('The parameters (' + args.program_or_ds_uid + ', ' + args.health_area + ', ' +
-                     args.intervention + ', ' + str(args.package_prefix) + ') returned no result for programs or dataSets')
+                     args.intervention + ', ' + str(args.package_prefix) + ') returned no result for programs / dataSets / dashboards')
         exit(1)
-
-    # Process now the prefix. We accept multiple prefixes
-    all_package_prefixes = [package_prefix]
-    # if ',' in package_prefix:
-    #     all_package_prefixes = package_prefix.split(',')
-    #     package_prefix = all_package_prefixes[0]
 
     if program_or_ds_uid in ['TKR', 'EVT']:
         # Iteration over this list happens in reversed order
@@ -1058,8 +1114,17 @@ def main():
             metadata_import_order.remove('trackedEntityAttributes')
             metadata_import_order.remove('trackedEntityTypes')
             metadata_import_order.remove('trackedEntityInstanceFilters')
+
+    elif program_or_ds_uid == 'DSH' or args.only_dashboards:
+        metadata_import_order = [
+            'categoryOptionGroupSets', 'categoryOptionGroups',
+            'legendSets',
+            'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
+            'visualizations', 'charts', 'maps', 'reportTables', 'eventReports', 'eventCharts', 'dashboards',
+            'package', 'users', 'userGroups']
+
     # Dataset
-    else:
+    elif program_or_ds_uid == 'AGG':
         # This list is looped backwards
         metadata_import_order = [
             'categoryOptionGroupSets', 'categoryOptionGroups',
@@ -1143,7 +1208,7 @@ def main():
         programIndicators_uids['PRED'] = list()  # Predictor
         programIndicatorGroups_uids = list()
         programStageSections_uids = list()
-    else:
+    elif program_or_ds_uid == 'AGG':
         validationRules_uids = list()
         validationRuleGroups_uids = list()
     # Constants can be found in
@@ -1210,15 +1275,19 @@ def main():
                 "trackedEntityTypes": "id:in:[" + ','.join(trackedEntityTypes_uids) + "]"
             })
     # Dataset
-    else:
+    elif program_or_ds_uid == 'AGG':
         metadata_filters.update({
             "dataSets": "id:in:[" + ','.join(dataset_uids) + "]",
             "sections": "dataSet.id:[" + ','.join(dataset_uids) + "]",
             "validationRules": "id:in:[" + ','.join(validationRules_uids) + "]",
             "validationRuleGroups": "code:$like:" + package_prefix,
         })
+    elif program_or_ds_uid == 'DSH':
+        metadata_filters.update({
+            "dashboards": "id:in:[" + ','.join(dashboard_uids) + "]"
+        })
 
-    if len(program_uids) > 0 or len(dataset_uids) > 0:
+    if len(program_uids) > 0 or len(dataset_uids) > 0 or len(dashboard_uids):
 
         if args.package_version is not None:
             package_version = args.package_version
@@ -1248,7 +1317,10 @@ def main():
                 # Package prefix corresponds to intervention but historically it used to
                 # contain both Health Area and Intervention
                 locale = "en"
-                package_type = program_or_ds_uid
+                if args.only_dashboards:
+                    package_type = "DSH"
+                else:
+                    package_type = program_or_ds_uid
                 # if program_uid is not None:
                 #     if 'programTrackedEntityAttributes' in program or 'trackedEntityType' in program:
                 #         package_type = 'TRK'
@@ -1291,6 +1363,9 @@ def main():
                 for prefix in all_package_prefixes:
                     # Consider ilike here for dirty packages
                     metaobject += get_metadata_element(metadata_type, 'code:$like:' + prefix)
+            # Temporary fix for issue with 2.35.11, to be removed in the future
+            elif metadata_type == "programIndicators":
+                metaobject = get_metadata_element_with_fields(metadata_type, metadata_filters[metadata_type])
             else:
                 metaobject = get_metadata_element(metadata_type, metadata_filters[metadata_type])
 
@@ -1303,12 +1378,12 @@ def main():
                 # These two packages share the same userGroups, prefixed COVID-19
                 if len(metaobject) == 0 and metadata_type in ['userGroups']:
                     metaobject += get_metadata_element(metadata_type, 'code:$like:' + health_area)
-                else:
-                    # The goal calling check_naming_convention is to clean the list of objects we fetched
-                    filtered_metaobject = list()
-                    for prefix in all_package_prefixes:
-                        filtered_metaobject += check_naming_convention(metaobject, health_area, prefix)
-                    metaobject = filtered_metaobject
+                # else:
+                #     # The goal calling check_naming_convention is to clean the list of objects we fetched
+                #     filtered_metaobject = list()
+                #     for prefix in all_package_prefixes:
+                #         filtered_metaobject += check_naming_convention(metaobject, health_area, prefix)
+                #     metaobject = filtered_metaobject
             # # Bug DHIS2-10622
             if metadata_type == 'programStages':
                 for PS in metaobject:
@@ -1459,10 +1534,15 @@ def main():
                             new_metaobject.append(catOptGroup)
                             cat_opt_group_ids_to_keep.append(catOptGroup['id'])
 
-                    metadata['categoryOptions'] = remove_undesired_children(metadata['categoryOptions'],
-                                                                            cat_opt_group_ids_to_keep,
-                                                                            'categoryOptionGroups')
                     metaobject = new_metaobject
+
+                    # Remove categoryOption if it is a dashboard package
+                    if program_or_ds_uid == 'DSH' or args.only_dashboards:
+                        metaobject = remove_subset_from_set(metaobject, 'categoryOptions')
+                    else:
+                        metadata['categoryOptions'] = remove_undesired_children(metadata['categoryOptions'],
+                                                                                cat_opt_group_ids_to_keep,
+                                                                                'categoryOptionGroups')
 
                 elif metadata_type == "categoryOptionGroupSets":
                     # We need to remove the categoryOptionGroupSets which contain categoryOptionGroups not belonging to the package
@@ -2016,6 +2096,15 @@ def main():
                 # if len(indicator_uids) > 0:
                 #     metaobject = remove_undesired_children(metaobject, indicator_uids, 'indicators')
 
+                if program_or_ds_uid == 'DSH' or args.only_dashboards:
+                    # Add [CONFIG] to the name and replace numerator and denominator expressions with -1
+                    for indicator in metaobject:
+                        if 'name' in indicator:
+                            indicator['name'] = "[CONFIG] " + indicator['name']
+                        if 'numerator' and 'denominator' in indicator:
+                            indicator['numerator'] = -1
+                            indicator['denominator'] = -1
+
             elif metadata_type == 'indicatorGroups':
                 # If we have find one or more indicator groups based on prefix, use those to get
                 # the indicators
@@ -2115,9 +2204,9 @@ def main():
         # Order and group by metadata type getting counts
         df_report_lastUpdated.sort_values(by=['metadata_type']) \
             .groupby(['metadata_type']).size().reset_index(name='counts') \
-            .to_csv(package_prefix + '_metadata_stats.csv', index=None, header=True)
+            .to_csv(package_type + '_' + package_prefix + '_metadata_stats.csv', index=None, header=True)
 
-        df_report_lastUpdated[df_report_lastUpdated.metadata_type == 'dataElements'].sort_values(by=['name']).to_csv(package_prefix + '_dataElements_stats.csv', index=None, header=True)
+        df_report_lastUpdated[df_report_lastUpdated.metadata_type == 'dashboards'].sort_values(by=['name']).to_csv(package_prefix + '_dashboards_stats.csv', index=None, header=True)
 
         # for debug - and potential use in pipeline
         print(name_label + '.json')
