@@ -1905,6 +1905,10 @@ def main():
                 # See if there is a reference to a categoryOption Group and/or Set
                 cat_uids['categoryOptionGroups'] += json_extract_nested_ids(metaobject, 'categoryOptionGroups')
                 cat_uids['categoryOptionGroupSets'] += json_extract_nested_ids(metaobject, 'categoryOptionGroupSet')
+                organisationUnitGroups_uids += json_extract_nested_ids(metaobject, 'itemOrganisationUnitGroups')
+                if len(organisationUnitGroups_uids) > 0:
+                    metadata_filters["organisationUnitGroups"] = "id:in:[" + ','.join(organisationUnitGroups_uids) + "]"
+
             elif metadata_type == "programRules":
                 programRuleActions_uids = json_extract_nested_ids(metaobject, 'programRuleActions')
                 # Update the filters
@@ -2080,9 +2084,9 @@ def main():
                     if coc not in cat_uids['categoryOptionCombos']:
                         add_category_option_combo(coc, cat_uids)
 
-                organisationUnitGroups_uids = get_hardcoded_values_in_fields(metaobject, 'organisationUnitGroups',
+                organisationUnitGroups_uids += get_hardcoded_values_in_fields(metaobject, 'organisationUnitGroups',
                                                                              ['numerator', 'denominator'])
-                # We don't expect to find OUG references somewhere else, so we can add the filter already
+                # We don't expect to find any more OUG references at this point, so we can add the filter already
                 if len(organisationUnitGroups_uids) > 0:
                     metadata_filters["organisationUnitGroups"] = "id:in:[" + ','.join(organisationUnitGroups_uids) + "]"
 
