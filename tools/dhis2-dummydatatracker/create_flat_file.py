@@ -1,15 +1,27 @@
-from dhis2 import Api, RequestException, is_valid_uid
-import logzero
-from logzero import logger
-import sys
+from dhis2 import Api, RequestException, setup_logger, logger, generate_uid, is_valid_uid
+import json
 import pandas as pd
-from tools.json import reindex, json_extract, json_extract_nested_ids
+from datetime import date, datetime, timedelta
+from dateutil.relativedelta import relativedelta
+import time
+from faker import Faker
+import calendar
+from random import randrange, random, choice, uniform, seed, choices, randint
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
 from gspread_formatting import *
+from gspread.exceptions import APIError
+from scipy.stats import expon
 import re
-
+import uuid
+from tools.dhis2 import post_to_server
+from tools.json import reindex, json_extract, json_extract_nested_ids
+from tools.dd import choices_with_ratio
+from tools.dhis2 import post_chunked_data, find_ou_children_at_level
+import numpy as np
+import logzero
+import sys
 
 try:
     f = open("./auth.json")
@@ -19,641 +31,1215 @@ except IOError:
 else:
     api_source = Api.from_auth_file('./auth.json')
 
-# If no file path is specified, it tries to find a file called dish.json in:
-#
-# the DHIS_HOME environment variable
-# your Home folder
+program_orgunits = list()
+program_teas = list()
+program_des = list()
+optionSetDict = dict()
 
+trackedEntityType_UID = ""
+attributeCategoryOptions_UID = ""
+attributeOptionCombo_UID = ""
 
-# setup the logger
 log_file = "./dummyDataTracker.log"
 logzero.logfile(log_file)
 
 
-def add_repeatable_stages(df, stage_counter):
-    if df['Stage'].isna().sum() > 0:
-        stage_indexes = df.index[df['Stage'].notnull()].tolist()
+scope = ['https://spreadsheets.google.com/feeds',
+         'https://www.googleapis.com/auth/drive']
+google_spreadshseet_credentials = 'dummy-data-297922-97b90db83bdc.json'
+try:
+    f = open(google_spreadshseet_credentials)
+except IOError:
+    print("Please provide file with google spreadsheet credentials")
+    exit(1)
+else:
+    credentials = ServiceAccountCredentials.from_json_keyfile_name(google_spreadshseet_credentials, scope)
+
+import argparse
+my_parser = argparse.ArgumentParser(description='Create dummy data in an instance using a Google Spreadsheet')
+my_parser.add_argument('docid', metavar='document_id', type=str,
+                       help='the id of the spreadsheet to use')
+args = my_parser.parse_args()
+
+mandatory_sheets = ['DUMMY_DATA', 'NUMBER_REPLICAS', 'PARAMETERS']
+try:
+    client = gspread.authorize(credentials)
+except Exception as e:
+    logger.error('Wrong Google Credentials')
+    sys.exit()
+try:
+    sh = client.open_by_key(args.docid)
+except Exception as e:
+    logger.error('Could not access/find spreadsheet ' + args.docid)
+    sys.exit()
+try:
+    batch = batch_updater(sh)
+    all_worksheet = sh.worksheets()
+except APIError as e:
+    logger.error('Spreadsheet ' + args.docid + ' is no longer accessible (may have been deleted)')
+    sys.exit()
+worksheet_list = list()
+for ws in all_worksheet:
+    worksheet_list.append(ws.title)
+try:
+    for sheet in mandatory_sheets:
+        if sheet not in worksheet_list:
+            logger.error('Sheet ' + sheet + ' is missing')
+            exit(1)
+
+    #df = pd.DataFrame(sh.worksheet("DUMMY_DATA").get_all_records())
+    df = get_as_dataframe(sh.worksheet("DUMMY_DATA"), evaluate_formulas=True, dtype=str)
+    df = df.dropna(how='all', axis=1)
+    df['mandatory'] = df['mandatory'].map({'True':True, 'TRUE':True, 'False':False, 'FALSE':False})
+
+    df_params = get_as_dataframe(sh.worksheet("PARAMETERS"), evaluate_formulas=True, dtype=str)
+    df_params = df_params.dropna(how='all', axis=1)
+    df_params.fillna('', inplace=True)
+    if df_params[df_params.PARAMETER == "server_url"].shape[0] == 1:
+        server_url = df_params[df_params.PARAMETER == "server_url"]['VALUE'].tolist()[0]
+        if not pd.isnull(server_url) and server_url != "":
+            # Whether the file exists has been verified at the beginning of the execution
+            with open('./auth.json', 'r') as json_file:
+                credentials = json.load(json_file)
+            api_source = Api(server_url, credentials['dhis']['username'], credentials['dhis']['password'])
+    # server_url = "https://who-dev.dhis2.org/tracker_dev"
+    df_number_replicas = get_as_dataframe(sh.worksheet("NUMBER_REPLICAS"), evaluate_formulas=True,
+                                          converters={'PRIMAL_ID':str,'NUMBER':int})
+    df_number_replicas = df_number_replicas.dropna(how='all', axis=1)
+    df_number_replicas.dropna(subset=["NUMBER"], inplace=True)
+    df_distrib = None
+    if 'DISTRIBUTION' in worksheet_list:
+        df_distrib = get_as_dataframe(sh.worksheet("DISTRIBUTION"), evaluate_formulas=True, dtype=str)
+        df_distrib = df_distrib.dropna(how='all', axis=1)
+        df_distrib.dropna(subset=["VALUE"], inplace=True)
+        df_distrib = df_distrib.fillna('')
+    df_rules = None
+    if 'RULES' in worksheet_list:
+        df_rules = get_as_dataframe(sh.worksheet("RULES"), evaluate_formulas=True, dtype=str)
+        df_rules = df_rules.dropna(how='all')
+        df_rules = df_rules.dropna(how='all', axis=1)
+
+except:
+    logger.error("Something went wrong when processing the spreadsheet")
+    logger.error("Unexpected error:", sys.exc_info()[0])
+    exit(1)
+else:
+    logger.info('Google spreadsheet ' + args.docid + ' processed correctly')
+
+# setup_logger()
+pd.set_option('display.max_columns', None)
+
+
+def get_ous_in_distrib(df_ou_distrib, program_ous, org_unit_level):
+
+    def get_ous_in_program(ou_list, program_ous):
+        ou_list_as_set = set(ou_list)
+        intersection = ou_list_as_set.intersection(set(program_ous))
+        return list(intersection)
+
+    # Get values from dataframe
+    df_result = df_ou_distrib.copy()
+    ou_values = df_ou_distrib['VALUE'].tolist()
+    index = 0
+    for value in ou_values:
+        valid_ou_found = False
+        if is_valid_uid(value):
+            facilities = find_ou_children_at_level(api_source, value, org_unit_level)
+            df_result.at[index, 'VALUE'] = get_ous_in_program(facilities, program_ous)
+            valid_ou_found = True
+        # Assuming it is a name
+        else:
+            #Get UID of OU Name:
+            ou = api_source.get('organisationUnits', params={'fields':'id,name', 'filter':'name:like:'+value}).json()['organisationUnits']
+            if len(ou) == 1:
+                ou = ou[0]
+                # Find the OUs at the required level
+                facilities = find_ou_children_at_level(api_source, ou['id'], org_unit_level)
+                df_result.at[index, 'VALUE'] = get_ous_in_program(facilities, program_ous)
+                valid_ou_found = True
+            else:
+                logger.error('Could not find ou with name ' + value)
+
+        if not valid_ou_found:
+            logger.error('Could not find any valid organisation unit for value ' + value)
+
+        index += 1
+
+    return df_result
+
+
+def get_exp_random_dates_from_date_to_today(start_date, end_date = date.today(), k = 10):
+    # start_date is in the form datetime.strptime('', '%Y-%m-%d')
+    # k = Number of dates to return
+
+    def diff_month(d1, d2):
+        return abs((d1.year - d2.year) * 12 + d1.month - d2.month)
+
+    def get_random_date(start_date, end_date, shift):
+        lower_date = start_date + relativedelta(months=+shift)
+        upper_date = lower_date.replace(day=calendar.monthrange(lower_date.year, lower_date.month)[1])
+        if upper_date > end_date:
+            upper_date = end_date
+        # print(lower_date.strftime('%Y-%m-%d'))
+        # print(upper_date.strftime('%Y-%m-%d'))
+        return lower_date + timedelta(
+            # Get a random amount of seconds between `start` and `end`
+            seconds=randint(0, int((upper_date - lower_date).total_seconds())),
+        )
+
+    # Number of months included from start_date to the current date
+    number_of_months = diff_month(start_date, end_date)
+    # Get a simple list with the numbers for each month (0 = month in start_date, 1 = month start date + 1, etc...
+    month_numbers = list(range(0, (number_of_months + 1)))
+    # Get the exponential weights to be used
+    weights = expon.rvs(scale=0.1, loc=0, size=(number_of_months + 1))
+    weights.sort()
+    # Choose months randomly
+    chosen_months = choices(population=month_numbers, weights=weights, k=k)
+    # The variable to return is a list
+    random_dates = list()
+    # Loop through every month selected (defined by first_date of that month, last_date of that month) and find
+    # a random day
+    for m in chosen_months:
+        random_dates.append((get_random_date(start_date, end_date, m)))
+
+    return random_dates
+
+
+def isTimeFormat(input):
+    try:
+        datetime.strptime(input, '%H:%M')
+        return True
+    except ValueError:
+        return False
+
+
+def isDateFormat(input):
+    try:
+        datetime.strptime(input, '%Y-%m-%d')
+        return True
+    except ValueError:
+        return False
+
+
+def isLongLat(input):
+    result = False
+    z = re.match("\[(-*[0-9]{1,3}[.,][0-9]{1,10}),(-*[0-9]{1,2}[.,][0-9]{1,10})\]", input)
+    if z:
+        longlat = z.groups()
+        if len(longlat) == 2 and \
+                -180.0 < float(longlat[0].replace(",", ".")) < 180.0 and \
+                -90.0 < float(longlat[1].replace(",", ".")) < 90.0:
+            result = True
+    return result
+
+
+def validate_value(value_type, value, optionSet = list()):
+    # FILE_RESOURCE
+    # ORGANISATION_UNIT
+    # IMAGE
+    # The purpose of this is to make sure the value received is in the right format
+    # the spreadsheet values 1 are sometimes converted incorrectly into True, givin a false positive in the validation
+    def convert_trueORfalse_to_number(val):
+        if val.lower() == 'true' or val is True:
+            return '1'
+        elif val.lower() == 'false' or val is False:
+            return '0'
+        else:
+            return val
+
+    global program_orgunits
+
+    correct = False
+
+
+    if len(optionSet) > 0: # It is an option
+        value = convert_trueORfalse_to_number(value)
+        if value in optionSet:
+            correct = True
+
+    elif value_type == 'AGE': # Either an age in years/months/days or a date-of-birth (YYY-MM-DD)
+        #if value.isnumeric() and 0 <= int(value) <= 120:
+        if isDateFormat(value):
+            correct = True
+        # todo: check for years/months/days
+    elif value_type == 'TEXT': # Text (length of text up to 50,000 characters)
+        if len(value) <= 50000:
+            correct = True
+    elif value_type == 'LONG_TEXT': # Always true
+        correct = True
+    elif value_type == 'INTEGER_ZERO_OR_POSITIVE':
+        value = convert_trueORfalse_to_number(value)
+        if value.isnumeric() and 0 <= int(value):
+            correct = True
+            value = str(int(value)) # Cast float
+    elif value_type == 'INTEGER_NEGATIVE':
+        if value.isnumeric() and 0 > int(value):
+            correct = True
+            value = str(int(value))  # Cast float
+    elif value_type == 'INTEGER_POSITIVE':
+        value = convert_trueORfalse_to_number(value)
+        if value.isnumeric() and 0 < int(value):
+            correct = True
+            value = str(int(value))  # Cast float
+    elif value_type == 'INTEGER':
+        value = convert_trueORfalse_to_number(value)
+        if value.isnumeric():
+            correct = True
+            value = str(int(value))  # Cast float
+    elif value_type == 'NUMBER':
+        value = convert_trueORfalse_to_number(value)
+        if value.isnumeric():
+            correct = True
+    elif value_type == 'DATE':
+        if isDateFormat(value):
+            correct = True
+    elif value_type == 'TRUE_ONLY':
+        value = value.lower()
+        if value == 'true':
+            correct = True
+        elif value == 1 or value == '1':
+            correct = True
+            value = 'true'
+    elif value_type == 'BOOLEAN':
+        value = value.lower()
+        if value in ['true', 'false']:
+            correct = True
+        elif value == 1 or value == '1':
+            correct = True
+            value = 'true'
+        elif value == 0 or value == '0':
+            correct = True
+            value = 'false'
+        elif value in ['yes', 'no']:
+            correct = True
+    elif value_type == 'TIME':
+        if isTimeFormat(value):
+            correct = True
+    elif value_type == 'PERCENTAGE': # Any decimal value between 0 and 100
+        if value.isnumeric() and 0 <= int(value) <= 100:
+            correct = True
+    elif value_type == 'UNIT_INTERVAL': # Any decimal value between 0 and 1
+        if value.isnumeric() and 0 <= int(value) <= 1:
+            correct = True
+    elif value_type == 'ORGANISATION_UNIT':
+        correct = False
+        # We could say that people come from a OU which is not assigned to the program
+        # so before just that it is a valid DHIS2 UID
+        if is_valid_uid(value):
+            correct = True
+        # for ou in program_orgunits:
+        #     if value == ou['id']:
+        #         correct = True
+    elif value_type == 'PHONE_NUMBER':
+        chars = set('0123456789+ ')
+        if any((c in chars) for c in value):
+            correct = True
+    elif value_type == 'COORDINATE':
+        # Latitude must be a number between -90 and 90
+        # Longitude must a number between -180 and 180
+        # Value comes in the form: '[164,72197,-67,617041]'
+        correct = isLongLat(value)
+    elif value_type == 'EMAIL':
+        if re.match(r"[^@]+@[^@]+\.[^@]+", value):
+            correct = True
     else:
-        stage_indexes = df.index[(df.Stage != '')].tolist()
-    list_df = list()
+        logger.info('Warning, type ' + value_type + ' not supported')
+
+    return correct, value
+
+
+def create_dummy_value(uid, gender='M'):
+
+    def findWholeWord(w):
+        return re.compile(r'\b({0})\b'.format(w), flags=re.IGNORECASE).search
+
+    global program_teas
+    global program_des
+    if uid == '':
+        elem_type = 'enrollmentDate'
+        element = dict()
+    elif uid in program_teas:
+        elem_type = 'tea'
+        element = program_teas[uid]
+    elif uid in program_des:
+        elem_type = 'de'
+        element = program_des[uid]
+    else:
+        elem_type = 'eventDate'
+        element = dict()
+
+    faker = Faker()
+    Faker.seed()
+    value = None
+    min_value = -50#dummy_data_params['min_value']
+    max_value = 50#dummy_data_params['max_value']
+    # If it is not a DE or TEA, it is a enrollmentDate or eventDate, so we initialize to this value
+    value_type = 'DATE'
+    name = ""
+    if elem_type in ['tea', 'de']:
+        value_type = element['valueType']
+        name = element['name']
+    global optionSetDict
+    global program_orgunits
+
+
+    # Define some min / max values for teas
+    if elem_type == 'tea':
+        if findWholeWord('weight')(name):
+            if findWholeWord('birth')(name):
+                min_value = 500
+                max_value = 5000
+            else: # in kg
+                min_value = 5.0
+                max_value = 150.0
+
+    if 'optionSet' in element:
+        optionSet = element['optionSet']['id']
+        if optionSet not in optionSetDict:
+            options = api_source.get('options', params={"paging": "false",
+                                                        "order": "sortOrder:asc",
+                                                        "fields": "id,code",
+                                                        "filter": "optionSet.id:eq:" + optionSet}).json()[
+                'options']
+            optionSetDict[optionSet] = json_extract(options, 'code')
+        value = choice(optionSetDict[optionSet])
+
+        if elem_type == 'tea' and (findWholeWord('sex')(name) or findWholeWord('gender')(name)):
+            # It is an optionSet for sex/gender
+            # Male, M, MALE
+            # Female, F, FEMALE
+            # Transgender, TG
+            # Other, OTHER
+            # Unknown, UNKNOWN
+            # if len(optionSetDict[optionSet]) > 2: # More genders than male/female
+                #Introduce other with low probability
+                # if randrange(0, 1000) < 50:
+                #     gender = 'O'
+
+            for option in optionSetDict[optionSet]:
+                if gender == 'M' and option.lower() in ['male', 'm']:
+                    value = option
+                elif gender == 'F' and option.lower() in ['female', 'f']:
+                    value = option
+                elif gender == 'O' and option.lower() in ['other']:
+                    value = option
+                elif gender == 'U' and option.lower() in ['unknown']:
+                    value = option
+                elif gender == 'T' and option.lower() in ['transgender', 'tg']:
+                    value = option
+
+    elif value_type == "BOOLEAN":
+        value = choice(['true', 'false'])
+
+    elif value_type == "TRUE_ONLY":
+        # If present, it should be True, although if the user has unchecked it, it will be false
+        value = choice(['true', None])
+
+    elif value_type == "DATE":
+        min_value = date(year=2015, month=1, day=1)
+        max_value = datetime.today()
+        value = faker.date_between(start_date=min_value, end_date=max_value).strftime("%Y-%m-%d")
+
+    elif value_type == "TIME":
+        value = faker.time()[0:5]  # To get HH:MM and remove SS
+
+    elif value_type in ["TEXT", "LONG_TEXT"]:
+        # Default behavior for
+        value = faker.text()[0:100]
+        # teas use TEXT for many standard person attributes
+        if elem_type == 'tea':
+            if 'pattern' in element and element['pattern'] != "":
+                # We don't support yet generating patters
+                # ORG_UNIT_CODE(...) + "/" + SEQUENTIAL(  ###)
+                value = ""
+            else:
+                name_to_check = name.replace(" ", "").lower()
+                if 'name' in name_to_check:
+                    if any(word in name_to_check for word in ['given', 'first']):
+                        if gender == 'M':
+                            value = faker.first_name_male()
+                        elif gender == 'F':
+                            value = faker.first_name_female()
+                        else:
+                            value = faker.first_name()
+                    elif any(word in name_to_check for word in ['family', 'last']):
+                        value = faker.last_name()
+                    else:
+                        value = faker.name()
+                elif findWholeWord('id')(name):
+                    value = 'ID-' + str(uuid.uuid4().fields[-1])[:7]
+                elif findWholeWord('number')(name):
+                    value = 'N-' + str(uuid.uuid4().fields[-1])[:7]
+                elif findWholeWord('code')(name):
+                    value = 'Code' + str(uuid.uuid4().fields[-1])[:4]
+                elif 'address' in name_to_check:
+                    value = faker.address()
+                elif any(word in name_to_check for word in ['job', 'employment', 'occupation']):
+                    value = faker.job()
+                # This will work if sex is type TEXT, which should not be
+                elif any(word in name_to_check for word in ['sex', 'gender']):
+                    value = choice(['MALE', 'FEMALE'])
+        #     else:
+        #         value = faker.text()[0:100]
+        # else: # For data elements
+        #     value = faker.text()[0:100]
+
+    elif value_type == 'AGE':
+        # age_range = choice(['child', 'adolescent', 'adult', 'retired'])
+        age_ranges = choice([[1,5*365], [5*365,15*365], [15*365,65*365], [65*365,100*365]])
+        today = date.today()
+
+        days = randrange(age_ranges[0], age_ranges[1])
+        value = (today - timedelta(days=days)).strftime("%Y-%m-%d")
+
+    elif value_type == "INTEGER_POSITIVE":
+        min_value = 1
+        value = randrange(min_value, max_value)
+
+    elif value_type == "INTEGER_ZERO_OR_POSITIVE":
+        min_value = 0
+        value = randrange(min_value, max_value)
+
+    elif value_type == "INTEGER_NEGATIVE":
+        max_value = -1
+        value = randrange(min_value, max_value)
+
+    elif value_type == "INTEGER":
+        value = randrange(min_value, max_value)
+
+    elif value_type == "NUMBER":
+        value = round(uniform(min_value, max_value), 2)
+
+    elif value_type == 'PERCENTAGE': # Any decimal value between 0 and 100
+        value = round(uniform(0, 100), 2)
+
+    elif value_type == 'UNIT_INTERVAL': # Any decimal value between 0 and 1
+        value = round(uniform(0, 1), 2)
+
+    elif value_type == 'ORGANISATION_UNIT':
+        random_ou = choice(program_orgunits)
+        value = random_ou['parent']['id'] # Assign OU from where the patient is coming to the parent
+
+    elif value_type == 'PHONE_NUMBER':
+        value = faker.phone_number()
+        strs, replacements = value, {"-": " ", "(": "", ")": "", "x": "", "(": "", ".": " "}
+        value = "".join([replacements.get(c, c) for c in strs])
+
+    elif value_type == 'COORDINATE':
+        #form: '[164,72197,-67,617041]'
+        value = '[' + str(round(np.random.uniform(-180, 180),6)) + ',' + str(round(np.random.uniform(-90, 90),6)) + ']'
+    else:
+        logger.info('Warning, type ' + value_type + ' not supported')
+
+    return value
+
+
+def check_mandatory_elements_are_present(df, column):
+    df_only_true_mandatory = df[df['mandatory'] == True]
+    if df_only_true_mandatory[column].count() != df_only_true_mandatory.shape[0]: # If any of the them is missing
+        return False
+    else:
+        return True
+
+
+def check_unique_attributes_do_not_repeat(df):
+    global program_teas
+    correct = True
+    stage_indexes = df.index[df['Stage'].notnull()].tolist()
+    df_enrollment = df[stage_indexes[1]:(stage_indexes[1])]
+    tei_columns = [col for col in df_enrollment if col.startswith('TEI_')]
+    duplicateRowsDF = df_enrollment[df_enrollment.duplicated(tei_columns)]
+    if duplicateRowsDF.shape[0] > 0:
+        for index, row in duplicateRowsDF.iterrows():
+            if row['UID'] in program_teas and program_teas[row['UID']]['unique'] == 'true':
+                logger.error('Unique TEA (' + row['UID'] + '): ' + program_teas[row['UID']]['name'] + ' has duplicate values')
+                correct = False
+    return correct
+
+
+def check_template_TEIs_in_cols(df, ws_dummy_data = None):
+    import xlsxwriter
+    writer = pd.ExcelWriter('Validation results.xlsx', engine='xlsxwriter')
+    # Convert the dataframe to an XlsxWriter Excel object.
+    df.to_excel(writer, sheet_name='Validation results', index=False)
+    workbook = writer.book
+    worksheet = writer.sheets['Validation results']
+    error_format = workbook.add_format({'bold': True, 'fg_color': 'red', 'border': 1})
+
+    if ws_dummy_data is not None:
+        error_cell_fmt = CellFormat(backgroundColor=Color(1, 0, 0))
+
+    # Clear previous errors if applicable from spreadsheet
+    try:
+        df_valitation_results = get_as_dataframe(sh.worksheet("VALIDATION_RESULTS"), dtype=str)
+        for index, row in df_valitation_results.iterrows():
+            if 'CELL' in row:
+                cell = row['CELL']
+                if not pd.isnull(cell[1:]):
+                    row_number = int(cell[1:])
+                    if row_number % 2 == 0: # Even rows in white
+                        batch.format_cell_range(ws_dummy_data, cell + ':' + cell,
+                                                CellFormat(backgroundColor=Color(1, 1, 1)))
+                    else: # Odd rows in light blue
+                        batch.format_cell_range(ws_dummy_data, cell + ':' + cell,
+                                                CellFormat(backgroundColor=Color(0.90, 0.95, 1)))
+        batch.execute()
+    except gspread.WorksheetNotFound:
+        pass
+
+
+    # Write the column headers with the defined format.
+    # for col_num, value in enumerate(df.columns.values):
+    #     worksheet.write(0, col_num + 1, value, header_format)
+
+    tei_columns = [col for col in df if col.startswith('TEI_')]
+    stage_indexes = df.index[df['Stage'].notnull()].tolist()
+    errors = 0
+    stage_counter = dict()
+    df_validation_results = pd.DataFrame({'CELL': [], 'ERROR': []})
     for i in range(0, len(stage_indexes)):
         if (i + 1) != len(stage_indexes):
             df_event = df[stage_indexes[i]:(stage_indexes[i + 1])]
         else:
             df_event = df[stage_indexes[i]:]
-        # It is a stage
-        if i != 0:
-            stage_uid = df_event.iloc[0]['UID']
-            if stage_uid not in stage_counter:
-                stage_counter[stage_uid] = 1  # At least once
-                logger.warning("Not repeating stage uid " + stage_uid)
-            if stage_counter[stage_uid] > 1:
-                for j in range(0, stage_counter[stage_uid]):
-                    new_df_slice = df_event.copy()
-                    # new_df_slice.at[new_df_slice.index[0], 'UID'] = stage_uid + '_' + str(j)
-                    list_df.append(new_df_slice)
-            else:
-                list_df.append(df_event.copy())
+
+        stage_name = df_event.iloc[0]['Stage']
+        occurrence = ''
+        if stage_name not in stage_counter:
+            stage_counter[stage_name] = 1
         else:
-            list_df.append(df_event.copy())
+            stage_counter[stage_name] += 1
+            occurrence = '_' + str(stage_counter[stage_name])
 
-    return pd.concat(list_df).reset_index(drop=True)
+        for tei_column in tei_columns:
 
+            if df_event[tei_column].count() > 0:
 
-def add_json_tei_to_metadata_df(json_tei, df):
-    def set_value(df, uid, value, min_pos=0):
-        positions = df.index[(df.UID == uid) & (df.value == '')].tolist()
-        # The idea with min_pos is to avoid filling data elements in the wrong stage
-        # if a DE has a value in the next repeatable stage but it wasn't filled in the current one,
-        # when we start filling the next stage we risk filling it in the previous one (because
-        # it satisfies (df.UID == uid) & (df.value == '')). With min_pos we tell the script
-        # start considering indexes starting from a certain value (the position of eventDate, the first DE which
-        # is always present for the stage
+                if i == 0:  # Enrollment
+                    if df_event[tei_column].count() == 0:
+                        # If no data for enrollment, raise error
+                        logger.error(tei_column + ': is missing enrollment data')
+                        errors = errors + 1
 
-        # Note: Packages like DRS use the same DE in different Program Stages. We need to verify that this works with
-        # that use case
-        if min_pos > 0:
-            positions = [x for x in positions if x >= min_pos]
-        if len(positions) == 0:
-            # logger.error("Dataframe has not sufficient stages to fill datalement " + uid)
-            return -1
-        else:
-            df.at[positions[0], 'value'] = value
-            return positions[0]
+                # Check mandatory elements are present
+                # correct = check_mandatory_elements_are_present(df_event, tei_column)
+                # if not correct:
+                #     logger.error(tei_column + ', Stage=' + stage_name + occurrence + ': Missing mandatory data')
+                #     errors = errors + 1
 
-    # program UID is in the first row in Stage Enrollment
-    program_id = df.iloc[0]['UID']
-    list_of_UIDs = df['UID'].tolist()
-    # df_uid = df.set_index('UID')
-    column = 'TEI_' + json_tei['trackedEntityInstance']
-    df['value'] = ""  # np.nan
-    # We are assuming just one enrollment in the program
-    if len(json_tei['enrollments']) == 1 and json_tei['enrollments'][0]['program'] == program_id:
-        json_enrollment = json_tei['enrollments'][0]
-        # json_extract returns a list of values. It should be just one value in the list, so we get element 0
-        # dates are in the format 2020-11-05T00:00:00.000, so we truncate them
-        set_value(df, program_id, json_extract(json_enrollment, 'enrollmentDate')[0][0:10])
-        for attribute in json_tei["attributes"]:
-            if attribute["attribute"] not in list_of_UIDs:
-                logger.error('Attribute = ' + attribute["attribute"] + ' in TEI = ' + json_tei[
-                    'trackedEntityInstance'] + ' not present in df')
-                return False
-            set_value(df, attribute["attribute"], attribute["value"])
-
-        json_events = json_enrollment["events"]
-        pos = dict()
-        for event in json_events:
-            # Considering here that program stages appear in order but it might be better to loop through them in order
-            program_stage_uid = event['programStage']
-            # if the programme allows for the future scheduling of events,
-            # this will mean that even though the event date is mandatory,
-            # scheduled events which have not yet happen, will not yet have an event date
-            if 'eventDate' in event:
-                pos[program_stage_uid] = set_value(df, program_stage_uid, event['eventDate'][0:10])
-            else:
-                pos[program_stage_uid] = set_value(df, program_stage_uid, '')
-            if pos == -1:  # There was a problem
-                return False
-            if 'dataValues' in event:
-                for dataValue in event['dataValues']:
-                    if dataValue["dataElement"] not in list_of_UIDs:
-                        logger.error('Data Element = ' + dataValue["dataElement"] + ' in TEI = ' + json_tei[
-                            'trackedEntityInstance'] + ' not present in df')
-                    else:
-                        result = set_value(df, dataValue["dataElement"], dataValue["value"], pos[program_stage_uid])
-                    if result == -1:
-                        # Check that the DE is assigned to the proram stage
-                        program_stage_info = api_source.get('programStages/' + program_stage_uid,
-                                                            params={
-                                                                "fields": "programStageDataElements[dataElement]"}).json()
-                        data_elements_in_ps = json_extract_nested_ids(program_stage_info, 'dataElement')
-                        if dataValue["dataElement"] not in data_elements_in_ps:
-                            logger.error("TEI " + json_tei['trackedEntityInstance'] +
-                                         " has a dataValue for DE " + dataValue["dataElement"] +
-                                         " in stage " + program_stage_uid +
-                                         " but this DE is NOT assigned to this PS")
+                first_row = True
+                for index, row in df_event.iterrows():
+                    if not pd.isnull(row[tei_column]):
+                        # if first_row:
+                        #     correct, value = validate_value('DATE', row[tei_column])
+                        #     if not correct:
+                        #         worksheet.write(index, df.columns.get_loc(tei_column) + 1, value, error_format)
+                        #         logger.error(tei_column + ', Stage=' + stage_name + occurrence + ': Value for event DATE = ' + str(value) + ' is NOT valid')
+                        #         errors = errors + 1
+                        #     else:
+                        #         df.at[index, tei_column] = value
+                        # else:
+                        # Try to get option codes to use for the DE from the spreadsheet (it would be probably
+                        # a better idea to use the API
+                        optionSet_list = list()
+                        if not pd.isnull(row['optionSet']): optionSet_list = row['optionSet'].split("\n")
+                        optionSet_list = [x.strip() for x in optionSet_list]
+                        correct, value = validate_value(row['valueType'], row[tei_column],
+                                                            optionSet_list)
+                        if not correct:
+                            error_message = tei_column + ', Stage=' + stage_name + occurrence + ': Value (' + row['valueType'] + ') for ' + row['TEA / DE / eventDate'] + ' = ' + str(value) + ' is NOT valid'
+                            logger.error(error_message)
+                            errors = errors + 1
+                            worksheet.write(index+1, df.columns.get_loc(tei_column), value, error_format)
+                            if ws_dummy_data is not None:
+                                ws_col_row = chr(65+df.columns.get_loc(tei_column))+str(index+2)
+                                try:
+                                    batch.format_cell_range(ws_dummy_data, ws_col_row + ':' + ws_col_row, error_cell_fmt)
+                                    # gsf.format_cell_range(ws_dummy_data, ws_col_row + ':' + ws_col_row, error_cell_fmt)
+                                except APIError as e:
+                                    logger.error(e.code + ':' + e.message)
+                                    pass
+                                df_validation_results = df_validation_results.append({"CELL": ws_col_row,
+                                                                                      "ERROR": error_message},
+                                                                                     ignore_index=True)
                         else:
-                            logger.error("Dataframe has not sufficient stages to fill datalement "
-                                         + dataValue["dataElement"])
+                            df.at[index, tei_column] = value
+                    else:
+                        if row['mandatory'] == True:
+                            error_message = tei_column + ', Stage=' + stage_name + occurrence + ': Value (' + row['valueType'] + ') for ' + row['TEA / DE / eventDate'] + ' is missing'
+                            logger.error(error_message)
+                            errors = errors + 1
+                            worksheet.write(index + 1, df_event.columns.get_loc(tei_column), '', error_format)
+                            if ws_dummy_data is not None:
+                                ws_col_row = chr(65+df.columns.get_loc(tei_column))+str(index+2)
+                                try:
+                                    batch.format_cell_range(ws_dummy_data, ws_col_row + ':' + ws_col_row, error_cell_fmt)
+                                    #gsf.format_cell_range(ws_dummy_data, ws_col_row + ':' + ws_col_row, error_cell_fmt)
+                                except APIError as e:
+                                    logger.error(e.code + ':' + e.message)
+                                    pass
+                                df_validation_results = df_validation_results.append({"CELL": ws_col_row,
+                                                                                      "ERROR": error_message},
+                                                                                     ignore_index=True)
+                    first_row = False
 
-    else:
-        if len(json_tei['enrollments']) > 1:
-            logger.error('Multi-enrollments not supported')
-            return False
-        else:
-            logger.error('TEI does not belong to the dataframe program')
-            return False
-
-    # Rename column
-    df.rename(columns={"value": 'TEI_' + json_tei['trackedEntityInstance']}, inplace=True)
-    return True
-
-
-def create_google_spreadsheet(program, df, share_with):
-    params_data = {'PARAMETER': ['program_uid', 'metadata_version', 'server_url', 'orgUnit_uid', 'orgUnit_level',
-                                 'ignore_validation_errors', 'start_date', 'end_date', 'chunk_size'],
-                   'VALUE': [ program['id'], program['version'], '', '', 4, 'FALSE', '', '', 50],
-                   'NOTE': ['', 'Metadata version for this program', 'E.g. https://who-dev.dhis2.org/dev',
-                            'if empty, uses all org units assigned to the program',
-                            'default = 4, facility', 'true/false', 'dates in the form YYYY-MM-DD', 'default = today',
-                            'maximum number of TEIs to include in the payload when POST to server']}
-    df_params = pd.DataFrame(params_data)
-    number_replicas_data = {'PRIMAL_ID': ['TEI_1', 'TEI_2', 'TEI_3', 'TEI_4', 'TEI_5'],
-                            'NUMBER': ['50', '50', '50', '50', '50']}
-    df_number_replicas = pd.DataFrame(number_replicas_data)
-    sh_name = program['name']
-    scope = ['https://spreadsheets.google.com/feeds',
-             'https://www.googleapis.com/auth/drive']
-
-    google_spreadshseet_credentials = 'dummy-data-297922-97b90db83bdc.json'
+    # Delete the worksheet for validation because there were no errors or just to add a new one
     try:
-        f = open(google_spreadshseet_credentials)
-    except IOError:
-        print("Please provide file with google spreadsheet credentials")
-        exit(1)
-    else:
-        credentials = ServiceAccountCredentials.from_json_keyfile_name(google_spreadshseet_credentials, scope)
-
-    try:
-        gc = gspread.authorize(credentials)
-        mode='update'
-        try:
-            sh = gc.open(sh_name)
-        except gspread.SpreadsheetNotFound:
-            mode='create'
-            sh = gc.create(sh_name)
-            pass
-        sh.share('manuel@dhis2.org', perm_type='user', role='writer')
-        #sh.share('yury@dhis2.org', perm_type='user', role='writer')
-        #sh.share('enzo@dhis2.org', perm_type='user', role='writer')
-        if share_with is not None:
-            for email in share_with:
-                sh.share(email[0], perm_type='user', role='writer')
-        if mode == 'create' or not sh.worksheet('DUMMY_DATA'):
-            wks_dd = sh.sheet1
-            wks_dd.update_title('DUMMY_DATA')
-        else:
-            wks_dd = sh.worksheet('DUMMY_DATA')
-        if mode == 'create' or not sh.worksheet('PARAMETERS'):
-            wks_params = sh.add_worksheet(title="PARAMETERS", rows=df_params.shape[0], cols=df_params.shape[1])
-        else:
-            wks_params = sh.worksheet('PARAMETERS')
-        if mode == 'create' or not sh.worksheet('NUMBER_REPLICAS'):
-            wks_number_replicas = sh.add_worksheet(title="NUMBER_REPLICAS", rows=df_number_replicas.shape[0],
-                                                   cols=df_number_replicas.shape[1])
-        else:
-            wks_number_replicas = sh.worksheet('NUMBER_REPLICAS')
-        tmp_df = df.copy()
-        if mode == 'create':
-            for tei_col in range(1, 6):
-                tmp_df['TEI_' + str(tei_col)] = ''
-        set_with_dataframe(wks_dd, tmp_df)
-        # wks_dd.add_protected_range('A1:G'+str(df.shape[0]+2))
-        wks_dd.freeze(cols=7)
-        del tmp_df
-        # wks_params = sh.add_worksheet(title="PARAMETERS", rows=df_params.shape[0], cols=df_params.shape[1])
-        # wks_dd.add_protected_range('B2:B3')
-        if mode == 'create':
-            set_with_dataframe(wks_params, df_params)
-            set_column_widths(wks_params, [('A', 200), ('B:', 100), ('C:', 600)])
-            # wks_number_replicas = sh.add_worksheet(title="NUMBER_REPLICAS", rows=df_number_replicas.shape[0],
-            #                                        cols=df_number_replicas.shape[1])
-            set_with_dataframe(wks_number_replicas, df_number_replicas)
-            set_column_widths(wks_number_replicas, [('A', 100), ('B:', 100)])
-        # Add conditional format. Mandatory column in G position = TRUE should have bold text
-        rule = ConditionalFormatRule(
-            ranges=[GridRange.from_a1_range('G1:G2000', wks_dd)],
-            booleanRule=BooleanRule(
-                condition=BooleanCondition('TEXT_EQ', ['TRUE']),
-                format=CellFormat(textFormat=TextFormat(bold=True))
-            )
-        )
-        rules = get_conditional_format_rules(wks_dd)
-        # rules.clear()
-        rules.append(rule)
-        rules.save()
-
-        batch = batch_updater(sh)
-        # Add header formatting
-        header = chr(65) + str(1) + ':' + chr(65 + df.shape[1] - 1) + str(1)
-        batch.format_cell_range(wks_dd, header, CellFormat(
-            backgroundColor=Color(0.40, 0.65, 1),
-            textFormat=TextFormat(bold=True, foregroundColor=Color(1, 1, 1), fontSize=11),
-            horizontalAlignment='CENTER'
-        ))
-        # Added alternative formatting
-        for i in range(3, df.shape[0], 2):
-            even_row = chr(65) + str(i) + ':' + chr(65 + df.shape[1] - 1) + str(i)
-            batch.format_cell_range(wks_dd, even_row, CellFormat(
-                backgroundColor=Color(0.90, 0.95, 1)
-            ))
-        b = Border("SOLID_THICK", Color(0, 0, 0))
-        # Add border to the stages
-        stage_indexes = df.index[df['Stage'] != ''].tolist()
-        for i in stage_indexes:
-            stage_row = chr(65) + str(i + 2) + ':' + chr(65 + df.shape[1] - 1) + str(i + 2)
-            batch.format_cell_range(wks_dd, stage_row, CellFormat(borders=Borders(top=b)))
-        # Add formatting to spreadsheet
+        sh.del_worksheet(sh.worksheet("VALIDATION_RESULTS"))
+    except gspread.WorksheetNotFound:
+        pass
+    if errors > 0:
+        logger.error('Found ' + str(errors) + ' errors!!!')
         batch.execute()
-
-    except Exception as e:
-        logger.error(str(e))
-        return ""
+        # Delete worksheet for validation. Capture exception does not exist and pass
+        ws_validation = sh.add_worksheet('VALIDATION_RESULTS', df_validation_results.shape[0], df_validation_results.shape[1])
+        set_with_dataframe(ws_validation, df_validation_results)
+        set_column_width(ws_validation, 'B:', 800)
+        # Close the Pandas Excel writer and output the Excel file.
+        writer.save()
+        return False
     else:
-        spreadsheet_url = "https://docs.google.com/spreadsheets/d/%s" % sh.id
-        return spreadsheet_url
+        return True
+
+
+def from_df_to_TEI_json(df_replicas, tei_template, event_template, df_ou_ratio=None):
+
+    global program_uid
+    global program_orgunits
+    global trackedEntityType_UID
+    global attributeCategoryOptions_UID
+    global attributeOptionCombo_UID
+    global df_distrib
+
+    tei_columns = [col for col in df_replicas if col.startswith('TEI_')]
+    logger.info('Found ' + str(len(tei_columns)) + ' TEIs in file')
+    list_of_TEIs = list()
+
+    ou_values = list()
+    if df_ou_ratio is not None:
+        for ou_list in df_ou_ratio['VALUE'].tolist():
+            ou_values.append(choice(ou_list))
+        ou_values = choices_with_ratio(ou_values, df_ou_ratio['RATIO'].tolist(), len(tei_columns))
+
+    # The indexes where every stage starts
+    stage_indexes = df_replicas.index[df_replicas['Stage'].notnull()].tolist()
+    for tei_column in tei_columns:
+        tei = tei_template.copy()
+        # UIDs to generate
+        trackedEntityInstance_UID = generate_uid()
+        logger.info('Creating TEI = ' + trackedEntityInstance_UID)
+        enrollment_UID = generate_uid()
+
+        # Fill out the values known
+        # Random selection of OU for this TEI
+        if len(ou_values) == 0:
+            random_ou = choice(program_orgunits)
+        # Use OU distribution for the TEI
+        else:
+            # Be careful here, this should normally give an int but...
+            random_ou = dict()
+            random_ou['id'] = ou_values[int(tei_column.split("_")[1])-1]
+
+        tei["trackedEntityInstance"] = trackedEntityInstance_UID
+        tei["trackedEntityType"] = trackedEntityType_UID
+        tei["orgUnit"] = random_ou['id']
+
+        # Slice df per enrollment/stage
+        for i in range(0, len(stage_indexes)):
+            if (i + 1) != len(stage_indexes):
+                df_event = df_replicas[stage_indexes[i]:(stage_indexes[i + 1])]
+            else:
+                df_event = df_replicas[stage_indexes[i]:]
+            # df_event = df_event.fillna('')
+
+            if i == 0:  # Enrollment
+                tei["enrollments"] = list()
+                tei["enrollments"].append({"enrollment": enrollment_UID, "trackedEntity": trackedEntityType_UID,
+                                           "orgUnit": random_ou['id'], "program": program_uid,
+                                           "trackedEntityInstance": trackedEntityInstance_UID,
+                                           "coordinate": {"latitude": "", "longitude": ""},
+                                           "events": list()})
+                current_enrollment = tei["enrollments"][len(tei["enrollments"]) - 1]
+
+                # Add attributes and enrollment date
+                first_row = True
+                for index, row in df_event.iterrows():
+                    value = row[tei_column]
+                    if first_row:
+                        logger.info('Enrolling TEI on ' + row[tei_column])
+                        current_enrollment["enrollmentDate"] = value
+                        tei['attributes'] = list()
+                        first_row = False
+                    else:
+                        if not pd.isnull(value) and value != "":
+                            tei['attributes'].append({'attribute': row['UID'], 'value': value})
+
+            else:  # Stage
+                if (df_event[tei_column] == '').sum() != len(df_event[tei_column]) and \
+                        df_event[tei_column].count() > 0:
+                    new_event = event_template.copy()
+                    new_event["program"] = program_uid
+                    new_event["event"] = generate_uid()
+                    new_event["orgUnit"] = random_ou['id']
+                    new_event["trackedEntityInstance"] = trackedEntityType_UID
+                    new_event["enrollment"] = enrollment_UID
+                    # new_event["orgUnitName"] = random_ou['name']
+                    new_event["attributeCategoryOptions"] = attributeCategoryOptions_UID
+                    new_event["attributeOptionCombo"] = attributeOptionCombo_UID
+                    # Add data elements and event date
+                    first_row = True
+                    for index, row in df_event.iterrows():
+                        value = row[tei_column]
+                        if first_row:
+                            logger.info('Creating stage ' + df_event.iloc[0]['Stage'] + ' on ' + row[tei_column])
+                            new_event["eventDate"] = value
+                            new_event["programStage"] = row['UID']
+                            new_event['dataValues'] = list()
+                            first_row = False
+                        else:
+                            if not pd.isnull(value) and value != "":
+                                new_event['dataValues'].append({'dataElement': row['UID'], 'value': value})
+
+                    current_enrollment["events"].append(new_event)
+                # else:
+                #     logger.info("No data for " + df_event.iloc[0]['Stage'])
+
+        logger.info('TEI created')
+        list_of_TEIs.append(tei)
+
+    return list_of_TEIs
+
+
+def run_rules_in_df(df, rule):
+    def num(s):
+        if s == '':
+            return 0
+        try:
+            return int(s)
+        except ValueError:
+            return float(s)
+
+    if pd.isnull(rule):
+        return df
+
+    # We get a mask to restore later the values that were NaN before, since applying rules seem
+    # to add values where the whole event did not exist
+    mask = df.notnull()
+    expr_elements = list()
+    value_type = 'string'
+    # If is kept there just to make it look nice, but it has only use for numeric types
+    # where the way to update the df is totally different
+    string = rule.replace('if', '')
+    z = re.match("(.*)(==|!=|<|>|>=|<=)(.*):(.*)=(.*)", string)
+    if z:
+        string = string.replace('#{', "df.loc['").replace('}', "']")
+        condition = z.groups()
+        if len(condition) == 5:
+            uid_pattern = re.compile("#\{([a-zA-Z0-9]{11})\}")
+            uid_list = uid_pattern.findall(rule)
+            if uid_list is None or len(uid_list) < 2:
+                logger.error("Rule " + rule + " has wrong UIDs")
+                exit(1)
+            # Check uids exist in df
+            for uid in uid_list:
+                if df[df.UID == uid].shape[0] == 0:
+                    logger.error("UID " + uid + " does NOT exist")
+                    exit(1)
+        else:
+            logger.error("Rule " + rule + " is NOT supported")
+    else:
+        logger.error("Rule " + rule + " is NOT supported")
+
+    # If it is a numeric value, we get ValueError exception due to the presence of NaNs or ''
+    # in that case, the only way I can make it work is by processing the TEIs one by one...
+    # Not very performant but... We could apply num function to the entire df, but I am uncertain
+    # about the impact that might have when posting the TEIs
+    if condition[2].strip().isdigit() or condition[2].strip().replace('.', '', 1).isdigit():
+        condition = rule.split(":")[0]
+        assignment = rule.split(":")[1]
+        for col in df.columns.tolist():
+            if 'TEI_' in col:
+                # We are assuming here a single UID in the condition and single UID in expression
+                # we could loop through for uid in uid_list: and call replace multiple times
+                new_condition = condition.replace("#{" + uid_list[0] + "}",
+                                                      "num(df[df.UID == '" + uid_list[0] + "']['"+col+"'].tolist()[0])")
+                new_assignment = assignment.replace("#{" + uid_list[1] + "}",
+                                                            "df.at[df[df.UID == '" + uid_list[1] + "'].index, '"+col+"']")
+
+                exec(new_condition + ":" + new_assignment)
+    else:
+        expr_elements.append(string.split(":")[0])
+        expr_elements.append(string.split(":")[1].split('=')[1])
+        expr_elements.append(string.split(":")[1].split('=')[0])
+        expression = expr_elements[2] + " = " + "np.where(" + ','.join(expr_elements) + ")"
+        expression = expression.strip()
+        df = df.set_index('UID')
+        # Replace NaN in Stage column
+        exec(expression)
+        df = df.reset_index()
+
+    # Restore the NaNs using the mask
+    df = df.where(mask, other=np.NaN)
+    return df
+
+
+def create_replicas_from_df(df, column, start_date, end_date, number_of_replicas, df_distrib, df_rules):
+
+    def post_processing_values(value_type, value_list):
+        if value_type in ['BOOLEAN', 'TRUE_ONLY']:
+            return [str(item).lower() for item in value_list]
+            # return [str(item).lower() if type(item) is bool else item for item in value_list]
+        else:
+            return value_list
+
+    uids_to_distribute = list()
+    distributed_values_per_id = dict()
+    if df_distrib is not None and not df_distrib.empty:
+        uid_positions = df_distrib.index[(df_distrib.UID != '')].tolist()
+        uids_to_distribute = list(filter(None, df_distrib['UID'].tolist()))
+
+    # Generate distributed values
+    tei_id = column
+    for uid in uids_to_distribute:
+        uid_pos = df_distrib.index[(df_distrib.UID == uid)].tolist()
+        if len(uid_pos) == 1 and tei_id in df_distrib.columns:
+            uid_position = uid_pos[0]
+            index = uid_positions.index(uid_position)
+            if uid_position != uid_positions[len(uid_positions)-1]:
+                df_ratio = df_distrib.loc[uid_positions[index]:uid_positions[index + 1] - 1][['VALUE', tei_id]]
+            else:
+                df_ratio = df_distrib.loc[uid_positions[index]:][['VALUE', tei_id]]
+            df_ratio = df_ratio.rename(columns={tei_id: 'RATIO'})
+            df_ratio["RATIO"] = pd.to_numeric(df_ratio["RATIO"])
+            # Skip empty ratios
+            if sum(df_ratio["RATIO"].tolist()) != 0.0:
+                distributed_values_per_id[uid] = choices_with_ratio(df_ratio['VALUE'].tolist(),
+                                                                    df_ratio['RATIO'].tolist(),
+                                                                    number_of_replicas)
+
+    df_replicas = pd.DataFrame()
+
+    # Check if gender and sex are included in the distribution
+    gender_uid = ''
+    age_uid = ''
+    if df_distrib is not None:
+        contains_gender = df_distrib.NAME.str.contains(r"\bsex\b|\bgender\b", case=False).tolist()
+        if True in contains_gender:
+            gender_uid = df_distrib.iloc[contains_gender.index(True)]['UID']
+        contains_age = df_distrib.NAME.str.contains(r"date of birth\b|\bage\b", case=False).tolist()
+        if True in contains_age:
+            age_uid = df_distrib.iloc[contains_age.index(True)]['UID']
+
+    if program_uid in distributed_values_per_id:
+        random_dates = distributed_values_per_id[program_uid]
+    else:
+        random_dates = get_exp_random_dates_from_date_to_today(start_date, end_date, number_of_replicas)
+    # enrollment date can be found at least in two ways: it is the first value in the TEI_X column or it is the
+    # only row with UID = program_uid
+    # Check if enrollment is there
+    enrollmentDate = datetime.strptime(df.iloc[0][column], '%Y-%m-%d').date()
+    stage_indexes = df.index[df['Stage'].notnull()].tolist()
+    for clone in range(1, number_of_replicas+1):
+        start_time = time.time()
+        logger.info("Creating TEI_" + str(clone))
+        new_column = list()
+        # days to shift is going to be equal to the number of days between the random date and the enrollment date
+        # If the value is negative we are moving the date to the past, otherwise to the future
+        days_to_shift = (random_dates[(clone-1)] - enrollmentDate).days
+
+        # We need to decide on the gender beforehand to make sure the attributes make sense
+        # First check if it is not distributed. We are going to try to find the whole word sex/gender
+        # This might not work for some programs
+        if gender_uid != '' and gender_uid in distributed_values_per_id:
+            gender = distributed_values_per_id[gender_uid][(clone - 1)][0:1]
+        else:
+            gender = choice(['M', 'F'])
+        for index, row in df.iterrows():
+            if index in stage_indexes:
+                skipStage = False
+            if pd.isnull(row[column]) or skipStage:
+                new_column.append('')
+            else:
+                if row['valueType'] == 'DATE' or (row['valueType'] == 'AGE' and isDateFormat(row[column])):
+                    if age_uid != "" and age_uid == row['UID']:
+                        # Special case for age, recalculate it
+                        dob = datetime.now() - relativedelta(years=distributed_values_per_id[row['UID']][(clone - 1)])
+                        new_column.append(dob.strftime("%Y-%m-%d"))
+                    else:
+                        # Shift all dates
+                        new_date = datetime.strptime(row[column], "%Y-%m-%d") + timedelta(days=days_to_shift)
+                        # before it was new_date < datetime.today(), but if we check against end_date, it allows
+                        # creating events in the future
+                        if new_date.date() < date.today():
+                            new_column.append(new_date.strftime("%Y-%m-%d"))
+                        else:
+                            new_column.append('')
+                            if index in stage_indexes:
+                                skipStage = True
+                                logger.warning("Skipping stage, date = " + new_date.strftime("%Y-%m-%d"))
+                else:
+                    if row['UID'] in distributed_values_per_id:
+                        distributed_values_per_id[row['UID']] = post_processing_values(row['valueType'], distributed_values_per_id[row['UID']])
+                    if index >= stage_indexes[1]:
+                        # Do not do anything for stage data for now, unless ratios have been defined
+                        if row['UID'] in distributed_values_per_id:
+                            new_column.append(distributed_values_per_id[row['UID']][(clone - 1)])
+                        else:
+                            new_column.append(row[column])
+                    else: # Enrollment
+                        if row['UID'] in distributed_values_per_id:
+                            new_column.append(distributed_values_per_id[row['UID']][(clone - 1)])
+                        else:
+                            new_column.append(create_dummy_value(row['UID'], gender))
+
+        df_replicas["TEI_" + str(clone)] = new_column
+        logger.warning("--- %s seconds ---" % (time.time() - start_time))
+
+    df_replicas['UID'] = df['UID']
+    df_replicas['Stage'] = df['Stage']
+
+    if df_rules is not None:
+        for index, row in df_rules.iterrows():
+            df_replicas = run_rules_in_df(df_replicas, row['EXPRESSION'])
+
+    export_csv = df_replicas.to_csv(r'./replicas' + column + '.csv', index=None, header=True)
+
+    return df_replicas
 
 
 def main():
-    pd.set_option('display.max_columns', None)
-
-    import argparse
-
-    my_parser = argparse.ArgumentParser(prog='create_flat_file',
-                                        description='Create dummy data flat file in Google Spreadsheets',
-                                        epilog="python create_flat_file Lt6P15ps7f6 --with_teis_from=GZ5Ty90HtW --share_with=johndoe@dhis2.org"
-                                               "\npython create_flat_file Lt6P15ps7f6 --repeat_stage Hj38Uhfo012 5 --repeat_stage 77Ujkfoi9kG 3 --share_with=person1@dhis2.org --share_with=person2@dhis2.org",
-                                        formatter_class=argparse.RawDescriptionHelpFormatter)
-    my_parser.add_argument('Program_UID', metavar='program_uid', type=str,
-                           help='the uid of the program to use')
-    my_parser.add_argument('-wtf', '--with_teis_from', action="store", dest="OrgUnit", type=str,
-                           help='Pulls TEIs from specified org unit and adds them to flat file. '
-                                'Eg: --with_teis_from_ou=Q7RbNZcHrQ9')
-    my_parser.add_argument('-rs', '--repeat_stage', action="append", metavar=('stage_uid', 'number_repeats'), nargs=2,
-                           help='provide a stage uid which is REPEATABLE and specify how many times you are planning to enter it. '
-                                'Eg: --repeat_stage QXtjg5dh34A 3')
-    my_parser.add_argument('-sw', '--share_with', action="append", metavar='email', nargs=1,
-                           help='email address to share the generated spreadsheet with as OWNER. '
-                                'Eg: --share_with=peter@dhis2.org')
-    args = my_parser.parse_args()
-
-    program_uid = args.Program_UID
-    if not is_valid_uid(program_uid):
-        print('The program uid specified is not valid')
-        sys.exit()
-    if args.OrgUnit is not None and not is_valid_uid(args.OrgUnit):
-        print('The orgunit uid specified is not valid')
-        sys.exit()
-    if args.repeat_stage is not None and len(args.repeat_stage) > 0:
-        for param in args.repeat_stage:
-            if not is_valid_uid(param[0]):
-                print('The program stage uid specified ' + param[0] + ' is not valid')
-                sys.exit()
-            try:
-                int(param[1])
-            except ValueError:
-                print('The repetition value ' + param[1] + ' is not an integer')
-                sys.exit()
-    if args.share_with is not None and len(args.share_with) > 0:
-        for param in args.share_with:
-            if not (re.search('^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$', param[0])):
-                print("The email address " + param[0] + " is not valid")
-
     # Print DHIS2 Info
     logger.warning("Server source running DHIS2 version {} revision {}"
                    .format(api_source.version, api_source.revision))
 
-    ##############
-    # df = pd.read_csv('program-Case_Based_Surveillance.csv', sep=None, engine='python')
-    # #
-    # # # stages_counter = { 'K5ac7u3V5bB': 1, 'ang4CLldbIu': 5, 'UvYb6qJpQu0': 1 }
-    # #
-    # # #json_tei = api_source.get('trackedEntityInstances/dRdztYSReOZ', params={'fields':'*'}).json()
-    # #
-    # params = {
-    #     'ou': 'RI95HQRHbKc', # GD7TowwI46c
-    #     'ouMode': 'DESCENDANTS',
-    #     'program': program_uid,
-    #     'skipPaging': 'true',
-    #     'lastUpdatedDuration': '4d',
-    #     'fields': '*',
-    #     'includeAllAttributes': 'true'
-    # }
-    #
-    # list_teis = api_source.get('trackedEntityInstances', params=params).json()['trackedEntityInstances']
-    #
-    # logger.info("Found " + str(len(list_teis)) + " TEIs")
-    #
-    # user = 'robot'
-    # stages_counter = dict()
-    # for tei in list_teis:
-    #     counter = dict()
-    #     if "enrollments" in tei and len(tei["enrollments"][0]) > 0: # and tei["enrollments"][0]["storedBy"] == user:
-    #         if len(tei['enrollments']) == 1:
-    #             if tei['enrollments'][0]['program'] == program_uid:
-    #                 if 'events' in tei['enrollments'][0]:
-    #                     events = tei['enrollments'][0]['events']
-    #                     for event in events:
-    #                         if event["programStage"] in counter:
-    #                             counter[event["programStage"]] +=1
-    #                         else:
-    #                             counter[event["programStage"]] = 1
-    #             else:
-    #                 logger.error("TEI enrolled in program " + tei['enrollments'][0]['program'] + " not supported")
-    #         else:
-    #             logger.error('error, multi-enrollment not supported')
-    #     for key in counter:
-    #         if key not in stages_counter or stages_counter[key] < counter[key]:
-    #             stages_counter[key] = counter[key]
-    #             logger.info('Found ' + str(stages_counter[key]) + ' instances of ' + key)
-    #
-    # df = add_repeatable_stages(df, stages_counter)
-    # for tei in list_teis:
-    #     # if tei['trackedEntityInstance'] != 'j17HROzXGEn':
-    #     #     continue
-    #     if len(tei["enrollments"][0]) > 0:  # and tei["enrollments"][0]["storedBy"] == user:
-    #         result = add_json_tei_to_metadata_df(tei, df)
+    global program_uid
+    global program_orgunits
+    global trackedEntityType_UID
+    global attributeCategoryOptions_UID
+    global attributeOptionCombo_UID
+    #global filename
+    global df_params
+    global df
+    global df_distrib
+    global df_rules
+    #global number_replicas_file
 
-    # export_csv = df.to_csv(r'./program-Case_Based_Surveillance-Dummy_data.csv', index=None, header=True)
+    if 'PARAMETER' not in df_params.columns.tolist() or 'VALUE' not in df_params.columns.tolist():
+        logger.error('Cannot find required columns PARAMETER/VALUE in params file')
+        exit(1)
+    parameters = ['program_uid', 'orgUnit_uid', 'descendants', 'orgUnit_level', 'ignore_validation_errors',
+                  'start_date', 'end_date', 'server_url', 'chunk_size', 'metadata_version']
+    mandatory_params = ['program_uid']
+    # Assign defaults
+    orgUnit_level = 4
+    # Deprecated
+    custom_orgunits = list()
+    orgUnit_descendants = False
+    program_metadata_version = 0
+    start_date = (date.today() - timedelta(weeks=75))
+    end_date = date.today()
+    ignore_validation_errors = False
+    chunk_size = 60
+    for index, row in df_params.iterrows():
+        param = row['PARAMETER']
+        if param == "":
+            continue
+        if param not in parameters:
+            logger.warning('Unknown parameter: ' + str(param))
+            continue
+        if param in mandatory_params:
+            mandatory_params.remove(param)
+        if param == "program_uid":
+            if row['VALUE'] != "" and is_valid_uid(row['VALUE']):
+                program_uid = row['VALUE']
+            else:
+                logger.error('No value provided for program_uid parameter or not a DHIS2 UID')
+                exit(1)
+        if param == "metadata_version":
+            if row['VALUE'] != "" and isinstance(row['VALUE'], str) and row['VALUE'].isnumeric():
+                program_metadata_version = int(row['VALUE'])
+        if param == "chunk_size":
+            if row['VALUE'] != "" and isinstance(row['VALUE'], str) and row['VALUE'].isnumeric():
+                chunk_size = int(row['VALUE'])
+        elif param == 'orgUnit_uid':
+            if row['VALUE'] != "" and is_valid_uid(row['VALUE']):
+                custom_orgunits = row['VALUE'].split(',')
+        elif param == 'orgUnit_level' and row['VALUE'].isnumeric():
+            orgUnit_level = int(row['VALUE'])
+        elif param == 'descendants':
+            if isinstance(row['VALUE'], bool):
+                orgUnit_descendants = row['VALUE']
+            elif isinstance(row['VALUE'], str) and row['VALUE'].lower() in ['true', 'false']:
+                orgUnit_descendants = bool(row['VALUE'])
+        elif param == 'ignore_validation_errors':
+            if isinstance(row['VALUE'], bool):
+                ignore_validation_errors = row['VALUE']
+            elif isinstance(row['VALUE'], str) and row['VALUE'].lower() in ['true', 'false']:
+                if row['VALUE'].lower() == 'true': ignore_validation_errors = True
+        elif param == 'start_date':
+            if isinstance(row['VALUE'], str):
+                if isDateFormat(row['VALUE']):
+                    start_date = datetime.strptime(row['VALUE'], '%Y-%m-%d').date()
+            else:
+                start_date = row['VALUE'].date()
+        elif param == 'end_date':
+            if isinstance(row['VALUE'], str):
+                if isDateFormat(row['VALUE']):
+                    end_date = datetime.strptime(row['VALUE'], '%Y-%m-%d').date()
+            else:
+                end_date = row['VALUE'].date()
 
-    ###########
-    df = pd.DataFrame({}, columns=["Stage", "Section", "TEA / DE / eventDate", "UID", "valueType", "optionSet",
-                                   "mandatory"])
+    if start_date > end_date:
+        logger.error('Start and End dates are wrong')
+        exit(1)
+    if len(mandatory_params) > 0:
+        logger.error('Missing mandatory parameters: ' + ','.join(mandatory_params))
+        exit(1)
 
-    try:
-        program = api_source.get('programs/' + program_uid,
-                                 params={"paging": "false",
-                                         "fields": "id,name,enrollmentDateLabel,programTrackedEntityAttributes,programStages,programRuleVariables,organisationUnits,trackedEntityType,version"}).json()
-    except RequestException as e:
-        if e.code == 404:
-            logger.error('Program ' + program_uid + ' specified does not exist')
-            sys.exit()
+    program = api_source.get('programs/'+program_uid,
+                             params={"paging": "false",
+                                     "fields": "id,name,enrollmentDateLabel,version,programTrackedEntityAttributes,programStages,programRuleVariables,organisationUnits,trackedEntityType"}).json()
 
     if isinstance(program, dict):
-        # If the program has many org units assigned, this can take a long time to run!!!
-        # orgunits_uid = json_extract_nested_ids(program, 'organisationUnits')
-        # if args.OrgUnit is not None and args.OrgUnit not in orgunits_uid:
-        #     logger.error('The organisation unit ' + args.OrgUnit + ' is not assigned to program ' + program_uid)
-        # print('Number of OrgUnits:' + str(len(orgunits_uid)))
+        # Check metadata version
+        if program_metadata_version != 0 and program_metadata_version != program['version']:
+            logger.warning("The flat file was created with program version = " + str(program_metadata_version) +
+                         ' but the current version for this program is ' + str(program['version']))
+            #exit(1)
 
-        programStages_uid = json_extract_nested_ids(program, 'programStages')
-        if args.repeat_stage is not None:
-            for param in args.repeat_stage:
-                found = False
-                for uid in programStages_uid:
-                    if param[0] == uid:
-                        found = True
-                        break
-                if not found:
-                    logger.error(uid + ' specified is not a valid stage for program ' + program_uid)
-                    sys.exit()
+        trackedEntityType_UID = program['trackedEntityType']['id']
 
+        # Get orgUnits of program
+        orgunits_uid = json_extract(program['organisationUnits'], 'id')
+        all_orgunits_at_level = api_source.get('organisationUnits',
+                                  params={"paging": "false",
+                                          "filter": "level:eq:"+str(orgUnit_level),
+                                          "fields":"id,name,level,parent"}).json()['organisationUnits']
+        program_orgunits = list()
+        for ou in all_orgunits_at_level:
+            if ou['id'] in orgunits_uid:
+                program_orgunits.append(ou)
+
+        df_ou_distrib = None
+        if df_distrib is not None and df_distrib[df_distrib.NAME == 'Organisation Unit'].shape[0] > 0:
+            ou_pos = df_distrib.index[(df_distrib.NAME == 'Organisation Unit')].tolist()
+            if len(ou_pos) == 1:
+                ou_pos = ou_pos[0]
+                all_positions = df_distrib.index[(df_distrib.NAME != '')].tolist()
+                index = all_positions.index(ou_pos)
+                if ou_pos != all_positions[len(all_positions) - 1]:
+                    df_ou_distrib = df_distrib.loc[all_positions[index]:all_positions[index + 1] - 1]
+                else:
+                    df_ou_distrib = df_distrib.loc[all_positions[index]:]
+                df_ou_distrib = get_ous_in_distrib(df_ou_distrib.reset_index(drop=True), orgunits_uid, orgUnit_level)
+
+
+        # We are assuming here that there is going to be always a default value for CO and COC
+        attributeCategoryOptions_UID = api_source.get('categoryOptions',
+                                                      params={"filter":"name:in:[default,DEFAULT]"}).json()['categoryOptions'][0]['id']
+        # We are assuming here that there is going to be always a default value for CO and COC
+        attributeOptionCombo_UID = api_source.get('categoryOptionCombos',
+                                                      params={"filter":"name:in:[default,DEFAULT]"}).json()['categoryOptionCombos'][0]['id']
+
+        # Get Program Attributes
         teas_uid = json_extract_nested_ids(program, 'trackedEntityAttribute')
-        programRuleVariables_uid = json_extract_nested_ids(program, 'programRuleVariables')
-
-        print('Program:' + program['name'])
-
-        print('Number of TEAs:' + str(len(teas_uid)))
-        TEAs = api_source.get('trackedEntityAttributes',
-                              params={"paging": "false", "fields": "id,name,aggregationType,valueType,optionSet",
-                                      "filter": "id:in:[" + ','.join(teas_uid) + "]"}).json()[
-            'trackedEntityAttributes']
-        TEAs = reindex(TEAs, 'id')
-
-        # Add the first row with eventDate and Enrollment label
-        enrollmentDateLabel = "Enrollment date"
-        if 'enrollmentDateLabel' in program:
-            enrollmentDateLabel = program['enrollmentDateLabel']
-        # Add the program UID as UID for enrollmentDate
-        df = df.append({"Stage": "Enrollment", "Section": "", "TEA / DE / eventDate": enrollmentDateLabel,
-                        "UID": program_uid, "valueType": "DATE", "optionSet": "", "mandatory": 'True'},
-                       ignore_index=True)
-        optionSetDict = dict()
-        for TEA in program['programTrackedEntityAttributes']:
-            tea_uid = TEA['trackedEntityAttribute']['id']
-            optionSet_def = ""
-            if 'optionSet' in TEAs[tea_uid]:
-                optionSet = TEAs[tea_uid]['optionSet']['id']
-                if optionSet not in optionSetDict:
-                    options = api_source.get('options', params={"paging": "false",
-                                                                "order": "sortOrder:asc",
-                                                                "fields": "id,code",
-                                                                "filter": "optionSet.id:eq:" + optionSet}).json()[
-                        'options']
-                    optionsList = json_extract(options, 'code')
-                    optionSetDict[optionSet] = optionsList
-                optionSet_def = '\n'.join(optionSetDict[optionSet])
-            df = df.append({"Stage": "", "Section": "", "TEA / DE / eventDate": TEA['name'],
-                            "UID": tea_uid,
-                            "valueType": TEA['valueType'], "optionSet": optionSet_def,
-                            "mandatory": TEA['mandatory']}, ignore_index=True)
-
-            # print("TEA: " + TEA['name'] + " (" + TEA['valueType'] + ")")
-
-        print('Number of Program Rule Variables:' + str(len(programRuleVariables_uid)))
-        programRuleVariables = api_source.get('programRuleVariables',
-                                              params={"paging": "false",
-                                                      "filter": "id:in:[" + ','.join(programRuleVariables_uid) + "]",
-                                                      "fields": "id,name,programRuleVariableSourceType,dataElement,trackedEntityAttribute"
-                                                      }).json()['programRuleVariables']
-        programRules = api_source.get('programRules',
+        global program_teas
+        program_teas = api_source.get('trackedEntityAttributes',
                                       params={"paging": "false",
-                                              "filter": "program.id:eq:" + program_uid,
-                                              "fields": "id,name,condition"}).json()['programRules']
+                                              "fields": "id,name,aggregationType,valueType,unique,optionSet,mandatory,pattern",
+                                              "filter": "id:in:[" + ','.join(teas_uid) + "]"}).json()[
+            'trackedEntityAttributes']
+        program_teas = reindex(program_teas, 'id')
 
-        programRules_uid = json_extract(programRules, 'id')
-        programRules = reindex(programRules, 'id')
-        print('Number of Program Rules:' + str(len(programRules_uid)))
-        # for uid in programRules:
-        #     print('Program Rule: ' + programRules[uid]['name'])
+        ##########################
+        # Open CSV as df
+        # df = pd.read_csv(filename, sep=None, engine='python')
 
-        programRuleActions = api_source.get('programRuleActions',
-                                            params={"paging": "false",
-                                                    "filter": "programRule.id:in:[" + ','.join(programRules_uid) + "]",
-                                                    "fields": "id,name,programRuleActionType,data,content"}).json()[
-            'programRuleActions']
-        programRuleActions_uid = json_extract(programRuleActions, 'id')
-        print('Number of Program Rule Actions:' + str(len(programRuleActions_uid)))
+        # Get Program Data Elements - Use the df because it is faster and easier than looking at the programStages..
+        global program_des
+        dataelement_uids = list(dict.fromkeys(df['UID'].dropna().tolist()))
+        number_elems = len(dataelement_uids)
+        chunk_max_size = 50
+        chunk = dict()
+        if number_elems < chunk_max_size:
+            chunk_max_size = number_elems
+        count = 0
+        program_des = list()
+        for x in range(0, number_elems, chunk_max_size):
+            chunk = dataelement_uids[x:(
+                (x + chunk_max_size) if number_elems > (x + chunk_max_size) else number_elems)]
+            count += 1
 
-        print('Number of Program Stages:' + str(len(programStages_uid)))
-        programStages = api_source.get('programStages',
-                                       params={"paging": "false", "order": "sortOrder:asc",
-                                               "filter": "id:in:[" + ','.join(programStages_uid) + "]",
-                                               "fields": "id,name,executionDateLabel,programStageSections,programStageDataElements"}).json()[
-            'programStages']
-
-        for programStage in programStages:
-            print('Stage:' + programStage['name'] + " (" + programStage['id'] + ")")
-            # Add header to dataframe
-            event_date_label = 'Event Date'
-            if 'executionDateLabel' in programStage:
-                event_date_label = programStage['executionDateLabel']
-            df = df.append({"Stage": programStage['name'], "Section": "",
-                            "TEA / DE / eventDate": event_date_label,
-                            "UID": programStage['id'], "valueType": "DATE", "optionSet": "", "mandatory": 'True'},
-                           ignore_index=True)
-            des_uid = json_extract_nested_ids(programStage, 'dataElement')
-
-            dataElements = api_source.get('dataElements',
+            program_des += api_source.get('dataElements',
                                           params={"paging": "false",
-                                                  "fields": "id,name,categoryCombo,aggregationType,valueType,optionSet",
-                                                  "filter": "id:in:[" + ','.join(des_uid) + "]"}).json()[
+                                                  "fields": "id,name,aggregationType,valueType,optionSet",
+                                                  "filter": "id:in:[" + ','.join(chunk) + "]"}).json()[
                 'dataElements']
-            dataElements = reindex(dataElements, 'id')
-            # dataElements = reindex(dataElements, 'id')
+        program_des = reindex(program_des, 'id')
 
-            print('Number of DEs:' + str(len(des_uid)))
-            if 'programStageSections' in programStage and len(programStage['programStageSections']) > 0:
-                programStageSections_uid = json_extract_nested_ids(programStage, 'programStageSections')
-                programStageSections = api_source.get('programStageSections',
-                                                      params={"paging": "false", "order": "sortOrder:asc",
-                                                              "fields": "id,name,dataElements",
-                                                              "filter": "id:in:[" + ','.join(
-                                                                  programStageSections_uid) + "]"}).json()[
-                    'programStageSections']
-                dataElements_programStage = dict()
-                for elem in programStage['programStageDataElements']:
-                    key_value = elem['dataElement']['id']
-                    dataElements_programStage[key_value] = elem
+        # Check unique attributes are not repeating
+        correct = check_unique_attributes_do_not_repeat(df)
+        if not correct:
+            exit(1)
+        # Validate values of TEIs
+        correct = check_template_TEIs_in_cols(df, sh.worksheet("DUMMY_DATA"))
+        if not correct and ignore_validation_errors == False:
+            exit(1)
 
-                for programStageSection in programStageSections:
-                    print("Program Stage Section:" + programStageSection['name'])
-                    section_label = programStageSection['name']
+        # print(df)
+        # print(df.info())
 
-                    for dataElement in programStageSection['dataElements']:
-                        dataElement_id = dataElement['id']
-                        # This will fail if the DE is present in the PSSection but not in the PS, so we check first
-                        # if the key exists. If not, we warn the user and skip this
-                        if dataElement_id not in dataElements:
-                            logger.warning("Data Element with UID " + dataElement_id +
-                                           " is present in program stage section but not assigned to the program stage")
-                            logger.warning("SKIPPING")
-                        else:
-                            dataElement_def = dataElements[dataElement_id]
-                            dataElement_PS = dataElements_programStage[dataElement_id]
-                            print('DE: ' + dataElement_def['name'] + " (" + dataElement_def['valueType'] + ")")
-                            optionSet_def = ""
+        #df_out = df[['UID', 'TEI_1']].apply(lambda x: create_dummy_value(x['UID']), axis=1)
 
-                            if 'optionSet' in dataElement_def:
-                                optionSet = dataElement_def['optionSet']['id']
-                                if optionSet not in optionSetDict:
-                                    options = api_source.get('options', params={"paging": "false",
-                                                                                "order": "sortOrder:asc",
-                                                                                "fields": "id,code",
-                                                                                "filter": "optionSet.id:eq:" + optionSet}).json()[
-                                        'options']
-                                    optionsList = json_extract(options, 'code')
-                                    optionSetDict[optionSet] = optionsList
+        # Open TEI template
+        with open('TEI_template.json', 'r') as f:
+            tei_template = json.load(f)
+        # Get template for events and restart the list
+        event_template = tei_template['enrollments'][0]['events'][0]
+        tei_template['enrollments'] = list()
+        tei_template['attributes'] = list()
 
-                                if len(optionsList) <= 20:  # 20 comes from Enzo Rossi :)
-                                    optionSet_def = '\n'.join(optionSetDict[optionSet])
-                                else:
-                                    optionSet_def = '\n'.join(optionSetDict[optionSet][:20]) + '\n(...)'
+        list_of_TEIs = list()
+        for index, row in df_number_replicas.iterrows():
+            tei_id = row['PRIMAL_ID']
+            if tei_id in df.columns and isinstance(row['NUMBER'], int):
+                if row['NUMBER'] == 0:
+                    continue
+                logger.info('Creating ' + str(row['NUMBER']) + ' replicas for ' + tei_id)
+                start_time = time.time()
+                # todo: check if df_distrib has actual date on it
+                if df_ou_distrib is not None and tei_id in df_ou_distrib.columns:
+                    df_ratio = df_ou_distrib[['VALUE', tei_id]]
+                    df_ratio = df_ratio.rename(columns={tei_id: 'RATIO'})
+                    df_ratio["RATIO"] = pd.to_numeric(df_ratio["RATIO"])
+                    if sum(df_ratio["RATIO"].tolist()) == 0.0:
+                        df_ratio = None
+                else:
+                    df_ratio = None
+                replicas = from_df_to_TEI_json(create_replicas_from_df(df, tei_id, start_date, end_date, row['NUMBER'], df_distrib, df_rules), tei_template, event_template, df_ratio)
+                post_chunked_data(api_source, replicas, 'trackedEntityInstances', chunk_size)
+                #post_to_server(api_source, {'trackedEntityInstances': replicas}, 'trackedEntityInstances')
+                list_of_TEIs = list_of_TEIs + replicas
+                logger.info("--- Elapsed time = %s seconds ---" % (time.time() - start_time))
+            else:
+                if tei_id not in df.columns:
+                    if not pd.isnull(tei_id) and tei_id != "":
+                        logger.warning('The PRIMAL_ID ' + tei_id + ' in NUMBER_REPLICAS do not match the IDs in DUMMY DATA:')
+                    [logger.warning(col) for col in df.columns.tolist() if 'TEI_' in col]
 
-                            df = df.append({"Stage": "", "Section": section_label,
-                                            "TEA / DE / eventDate": dataElement_def['name'],
-                                            "UID": dataElement_id, "valueType": dataElement_def['valueType'],
-                                            "optionSet": optionSet_def, "mandatory": dataElement_PS['compulsory']},
-                                           ignore_index=True)
-                        if section_label != "":
-                            section_label = ""
+                else:
+                    logger.warning('Value ' + str(row['NUMBER']) + ' in row ' + tei_id + ' is not valid... Skipping')
 
-            else:  # Assume BASIC todo: create CUSTOM
-                for dataElement in programStage['programStageDataElements']:
-                    dataElement_id = dataElement['dataElement']['id']
-                    dataElement_def = dataElements[dataElement_id]
-                    print('DE: ' + dataElement_def['name'] + " (" + dataElement_def['valueType'] + ")")
-                    optionSet_def = ""
-                    if 'optionSet' in dataElement_def:
-                        optionSet = dataElement_def['optionSet']['id']
-                        if optionSet not in optionSetDict:
-                            options = api_source.get('options', params={"paging": "false",
-                                                                        "order": "sortOrder:asc",
-                                                                        "fields": "id,code",
-                                                                        "filter": "optionSet.id:eq:" + optionSet}).json()[
-                                'options']
-                            optionsList = json_extract(options, 'code')
-                            optionSetDict[optionSet] = optionsList
+        #post_to_server(api_source, {'trackedEntityInstances': list_of_TEIs}, 'trackedEntityInstances')
 
-                        if len(optionsList) <= 20: # 20 comes from Enzo Rossi :)
-                            optionSet_def = '\n'.join(optionSetDict[optionSet])
-                        else:
-                            optionSet_def = '\n'.join(optionSetDict[optionSet][:20]) + '\n(...)'
+        # logger.info(json.dumps(list_of_TEIs, indent=4)) # , sort_keys=True))
 
-                        # print('    with optionSet = ' + dataElement['optionSet']['id'])
-                    df = df.append({"Stage": "", "Section": "", "TEA / DE / eventDate": dataElement_def['name'],
-                                    "UID": dataElement_id, "valueType": dataElement_def['valueType'],
-                                    "optionSet": optionSet_def, "mandatory": dataElement['compulsory']},
-                                   ignore_index=True)
-
-                # Find out if it is used in programRuleVariable
-                # for PRV in programRuleVariables:
-                #     if 'dataElement' in PRV and PRV['dataElement']['id'] == dataElement['id']:
-                #         print('Used in PRV:' + PRV['name'] + " (" + PRV['id'] + ")")
-                # # Find out if used in ProgramRuleAction
-                # for PRA in programRuleActions:
-                #     if 'dataElement' in PRA and PRA['dataElement']['id'] == dataElement['id']:
-                #         print('Used in PRA:' + PRA['name'] + " (" + PRA['id'] + ")")
-                #         print('Program Rule:' + programRules[PRA['programRule']['id']]['name'])
-        # stages_counter = { 'ang4CLldbIu':25 }
-        # df = add_repeatable_stages(df, stages_counter)
-        # for tei in list_teis:
-        #     if len(tei["enrollments"][0]) > 0:  # and tei["enrollments"][0]["storedBy"] == user:
-        #         result = add_json_tei_to_metadata_df(tei, df)
-        #
-        # export_csv = df.to_csv(r'./program-Case_Based_Surveillance-Dummy_data.csv', index=None, header=True)
-
-        # get TEIs from OU
-        if args.OrgUnit is not None:
-            params = {
-                'ou': args.OrgUnit,
-                'ouMode': 'DESCENDANTS',
-                'program': program_uid,
-                'skipPaging': 'true',
-                # 'lastUpdatedDuration': '4d',
-                'fields': '*',
-                'includeAllAttributes': 'true'
-            }
-
-            list_teis = api_source.get('trackedEntityInstances', params=params).json()['trackedEntityInstances']
-
-            logger.info("Found " + str(len(list_teis)) + " TEIs")
-
-            stages_counter = dict()
-            for tei in list_teis:
-                counter = dict()
-                if "enrollments" in tei and len(
-                        tei["enrollments"][0]) > 0:  # and tei["enrollments"][0]["storedBy"] == user:
-                    if len(tei['enrollments']) == 1:
-                        if tei['enrollments'][0]['program'] == program_uid:
-                            if 'events' in tei['enrollments'][0]:
-                                events = tei['enrollments'][0]['events']
-                                for event in events:
-                                    if event["programStage"] in counter:
-                                        counter[event["programStage"]] += 1
-                                    else:
-                                        counter[event["programStage"]] = 1
-                        else:
-                            logger.error(
-                                "TEI enrolled in program " + tei['enrollments'][0]['program'] + " not supported")
-                    else:
-                        logger.error('error, multi-enrollment not supported')
-                for key in counter:
-                    if key not in stages_counter or stages_counter[key] < counter[key]:
-                        stages_counter[key] = counter[key]
-                        # logger.info('Found ' + str(stages_counter[key]) + ' instances of ' + key)
-
-            df = add_repeatable_stages(df, stages_counter)
-            for tei in list_teis:
-                if len(tei["enrollments"][0]) > 0:  # and tei["enrollments"][0]["storedBy"] == user:
-                    result = add_json_tei_to_metadata_df(tei, df)
-
-        # Check if there are repeatable stages (only if TEIs were not provided)
-        elif args.repeat_stage is not None and len(args.repeat_stage) > 0:
-            stages_counter = dict()
-            for param in args.repeat_stage:
-                stages_counter[param[0]] = int(param[1])
-            df = add_repeatable_stages(df, stages_counter)
-
-        # Create the spreadsheet
-        url = create_google_spreadsheet(program, df, args.share_with)
-        if url != "":
-            logger.info('Spreadsheet created here: ' + url)
-        else:
-            logger.error("Something went wrong")
-
-        # Export to csv
-        # export_csv = df.to_csv(r'./program-' + program['name'].replace(' ', '_') + '.csv', index=None, header=True)
+        dateTimeObj = datetime.now()
+        timestampStr = dateTimeObj.strftime("%d-%b-%Y_%H-%M-%S")
+        with open('trackedEntityInstances_' + program_uid + '_' + timestampStr + '.json', 'w') as file:
+            file.write(json.dumps({'trackedEntityInstances': list_of_TEIs}, indent=4))
+        file.close()
 
 
 if __name__ == '__main__':
