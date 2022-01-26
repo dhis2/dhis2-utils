@@ -3,6 +3,7 @@ import logzero
 from logzero import logger
 import sys
 import pandas as pd
+pd.options.mode.chained_assignment = None  # default='warn'
 from tools.json import reindex, json_extract, json_extract_nested_ids
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -192,8 +193,10 @@ def create_google_spreadsheet(program, df, share_with):
         if mode == 'create' or not sh.worksheet('DUMMY_DATA'):
             wks_dd = sh.sheet1
             wks_dd.update_title('DUMMY_DATA')
+            current_dd_df = None
         else:
             wks_dd = sh.worksheet('DUMMY_DATA')
+            current_dd_df = get_as_dataframe(sh.worksheet("DUMMY_DATA"), evaluate_formulas=True)
         if mode == 'create' or not sh.worksheet('PARAMETERS'):
             wks_params = sh.add_worksheet(title="PARAMETERS", rows=df_params.shape[0], cols=df_params.shape[1])
         else:
@@ -207,6 +210,42 @@ def create_google_spreadsheet(program, df, share_with):
         if mode == 'create':
             for tei_col in range(1, 6):
                 tmp_df['TEI_' + str(tei_col)] = ''
+        else:
+            # Add new columns in tmp df to match current one
+            tmp_df = tmp_df.reindex(columns=list(current_dd_df.columns.tolist()))
+            # Find repeatable stages
+            stage_indexes = current_dd_df.index[current_dd_df['Stage'].notnull()].tolist()
+            stages_counter = dict()
+            for index in stage_indexes:
+                if index != 0: # Omit enrollment
+                    stage_uid = current_dd_df.at[index, 'UID']
+                    if stage_uid in stages_counter:
+                        stages_counter[stage_uid] += 1
+                    else:
+                        stages_counter[stage_uid] = 1
+            # Add the repeatable stages to the new empty df
+            tmp_df = add_repeatable_stages(tmp_df, stages_counter)
+            new_stage_indexes = tmp_df.index[(tmp_df.Stage != '')].tolist()
+            # Now we loop through every row in the old dataframe
+            # if we find the UID in the same position -> the element is still there, so copy the row for the old TEIs
+            # we find a UID in the old one which is not in the new one -> the element has been deleted, discard the row
+            # we find a UID in the new one which is not in the old one -> a new element has been added, so leave the row empty
+            for i in range(0, len(stage_indexes)):
+                if (i + 1) != len(stage_indexes):
+                    df_event = current_dd_df[stage_indexes[i]:(stage_indexes[i + 1])]
+                    df_new_event = tmp_df[new_stage_indexes[i]:(new_stage_indexes[i + 1])]
+                else:
+                    df_event = current_dd_df[stage_indexes[i]:]
+                    df_new_event = tmp_df[new_stage_indexes[i]:]
+                for index, row in df_event.iterrows():
+                    if row['UID'] in df_new_event.UID.tolist():
+                        # print('Found UID ' + row['UID'] + ' in both')
+                        # Move column values from current dataframe to the new one in the corresponding row
+                        index_in_new_df = df_new_event.index[df_new_event['UID'] == row['UID']]
+                        for column in tmp_df:
+                            if 'TEI' in column:
+                                tmp_df.at[index_in_new_df, column] = row[column]
+
         set_with_dataframe(wks_dd, tmp_df)
         # wks_dd.add_protected_range('A1:G'+str(df.shape[0]+2))
         wks_dd.freeze(cols=7)
