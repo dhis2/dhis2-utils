@@ -1530,6 +1530,17 @@ def main():
                     # Remove undesired categoryCombos from categories
                     metaobject = remove_undesired_children(metaobject, cat_uids['categoryCombos'], 'categoryCombos')
 
+                # METRGDHIS2-628
+                elif metadata_type == "categoryOptions":
+                    metaobject = remove_undesired_children(metaobject, cat_uids['categories'], 'categories')
+                    metaobject = remove_undesired_children(metaobject, cat_uids['categoryOptionCombos'], 'categoryOptionCombos')
+
+                # Not sure this one is needed
+                elif metadata_type == "categoryCombos":
+                    metaobject = remove_undesired_children(metaobject, cat_uids['categories'], 'categories')
+                    metaobject = remove_undesired_children(metaobject, cat_uids['categoryOptionCombos'], 'categoryOptionCombos')
+
+
                 elif metadata_type == "categoryOptionGroups":
                     new_metaobject = list()
                     cat_opt_group_ids_to_keep = list()
