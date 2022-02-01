@@ -6,6 +6,7 @@ import sys
 import pandas as pd
 from re import match, findall, compile, search
 import argparse
+from tools.json import reindex
 
 
 def get_metadata_element(metadata_type, filter=""):
@@ -402,24 +403,32 @@ def update_last_updated(metaobj, metadata_type):
         None
     """
     global df_report_lastUpdated
+    global users
     if isinstance(metaobj, list):
         for item in metaobj:
             if 'lastUpdated' in item:
-                id = item['id']
-                if 'name' in item:
-                    name = item['name']
-                elif 'displayName' in item:
-                    name = item['displayName']
-                else:
-                    name = ""
                 last_updated = item['lastUpdated']
-                # datetime.datetime.strptime(date_time_str, '%Y-%m-%d %H:%M:%S.%f')
-                last_updated_by = ""
-                if 'lastUpdatedBy' in item:
-                    last_updated_by = item['lastUpdatedBy']['id']
+            else:
+                last_updated = 'NOT AVAILABLE'
+            id = item['id']
+            if 'name' in item:
+                name = item['name']
+            elif 'displayName' in item:
+                name = item['displayName']
+            else:
+                name = ""
+            if 'code' in item:
+                code = item['code']
+            else:
+                code = ""
+            # datetime.datetime.strptime(date_time_str, '%Y-%m-%d %H:%M:%S.%f')
+            if 'lastUpdatedBy' in item:
+                last_updated_by = users[item['lastUpdatedBy']['id']]['name']
+            else:
+                last_updated_by = 'NOT AVAILABLE'
             # Add to dataframe
             df_report_lastUpdated = df_report_lastUpdated.append(
-                {'metadata_type': metadata_type, 'uid': id, 'name': name,
+                {'metadata_type': metadata_type, 'uid': id, 'name': name, 'code': code,
                  'last_updated': last_updated, 'updated_by': last_updated_by}
                 , ignore_index=True)
 
@@ -875,6 +884,7 @@ def main():
     global userGroups_uids
     global df_report_lastUpdated
     global WHOAdmin_uid
+    global users
 
     my_parser = argparse.ArgumentParser(description='Export package')
     my_parser.add_argument('program_or_ds_uid', metavar='program_or_ds_uid', type=str, help='the id of the program to use')
@@ -910,7 +920,7 @@ def main():
             pass
     setup_logger(log_file)
     pd.set_option("display.max_rows", None, "display.max_columns", None, "max_colwidth", 1000)
-    df_report_lastUpdated = pd.DataFrame({}, columns=['metadata_type', 'uid', 'name', 'last_updated', 'updated_by'])
+    df_report_lastUpdated = pd.DataFrame({}, columns=['metadata_type', 'uid', 'name', 'code', 'last_updated', 'updated_by'])
     total_errors = 0
 
     # We need to connect to instance to be able to validate the parameters
@@ -933,6 +943,7 @@ def main():
     print("Server source for package extraction {}".format(api_source.base_url))
     print("Running DHIS2 version {} revision {}".format(api_source.version, api_source.revision))
     print("Username: {}".format(credentials['dhis']['username']))
+    users = reindex(get_metadata_element('users'), 'id')
 
     program_or_ds_uid = args.program_or_ds_uid
     # At present, program uid is mandatory. For an agg package, we are going to allow also
@@ -2208,10 +2219,8 @@ def main():
 
         # Order and group by metadata type getting counts
         df_report_lastUpdated.sort_values(by=['metadata_type']) \
-            .groupby(['metadata_type']).size().reset_index(name='counts') \
-            .to_csv(package_type + '_' + package_prefix + '_metadata_stats.csv', index=None, header=True)
-
-        df_report_lastUpdated[df_report_lastUpdated.metadata_type == 'dashboards'].sort_values(by=['name']).to_csv(package_prefix + '_dashboards_stats.csv', index=None, header=True)
+            .to_csv(package_type + '_' + package_prefix + '_metadata_summary.csv', index=None, header=True)
+        # Use #.groupby(['metadata_type']).size().reset_index(name='counts') \  to get the counts
 
         # for debug - and potential use in pipeline
         print(name_label + '.json')
