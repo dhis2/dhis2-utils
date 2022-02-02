@@ -1286,6 +1286,8 @@ def main():
             # Some programs may have dataSets linked to them, like HIV
             "dataSets": "code:$like:" + package_prefix,
             "sections": "dataSet.id:[" + ','.join(dataset_uids) + "]",
+            "validationRules": "id:in:[" + ','.join(validationRules_uids) + "]",
+            "validationRuleGroups": "code:$like:" + package_prefix
         })
         if program_or_ds_uid in ['TKR']:
             metadata_filters.update({
@@ -1299,7 +1301,7 @@ def main():
             "dataSets": "id:in:[" + ','.join(dataset_uids) + "]",
             "sections": "dataSet.id:[" + ','.join(dataset_uids) + "]",
             "validationRules": "id:in:[" + ','.join(validationRules_uids) + "]",
-            "validationRuleGroups": "code:$like:" + package_prefix,
+            "validationRuleGroups": "code:$like:" + package_prefix
         })
     elif program_or_ds_uid == 'DSH':
         metadata_filters.update({
