@@ -578,6 +578,8 @@ def check_and_replace_root_ou_assigned(metaobj):
         root_uid = ""
         placeholder = '<OU_ROOT_UID>'
         for obj in metaobj:
+            if obj['id'] == 'kWbzSfOYYm8':
+                obj['id'] = 'kWbzSfOYYm8'
             root_uid_replaced = False
             if 'organisationUnits' in obj and len(obj['organisationUnits']) == 1 and \
                     'userOrganisationUnit' in obj and obj['userOrganisationUnit'] == False and \
@@ -593,6 +595,10 @@ def check_and_replace_root_ou_assigned(metaobj):
                     # Remove and use a placeholder
                     obj['organisationUnits'][0] = {'id': placeholder}
                     root_uid_replaced = True
+            elif len(obj['organisationUnits']) > 1:
+                # In this case we have a list of organisation units. Remove them and raise a warning
+                obj['organisationUnits'] = []
+                logger.warning("The dashboard item with UID " + obj['id'] + " has organisation units assigned... Removing")
             # Remove and use a placeholder also for parentGraphMap
             if obj['parentGraphMap'] and root_uid in obj['parentGraphMap']:
                 obj['parentGraphMap'][placeholder] = obj['parentGraphMap'][root_uid]
