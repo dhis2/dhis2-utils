@@ -459,6 +459,7 @@ def clean_metadata(metaobj):
     metaobj = remove_subset_from_set(metaobj, 'displayDenominatorDescription')
     metaobj = remove_subset_from_set(metaobj, 'displayNumeratorDescription')
     metaobj = remove_subset_from_set(metaobj, 'displayDescription')
+    metaobj = remove_subset_from_set(metaobj, 'interpretations')
     if len(metaobj) > 0:
         for subtag in ['dashboardItems', 'analyticsPeriodBoundaries', 'mapViews', 'user', 'userGroupAccesses',
                        'programStageDataElements', 'programTrackedEntityAttributes',
