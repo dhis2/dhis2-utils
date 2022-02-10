@@ -1227,9 +1227,9 @@ def main():
         programIndicators_uids['PRED'] = list()  # Predictor
         programIndicatorGroups_uids = list()
         programStageSections_uids = list()
-    elif program_or_ds_uid == 'AGG':
-        validationRules_uids = list()
-        validationRuleGroups_uids = list()
+
+    validationRules_uids = list()
+    validationRuleGroups_uids = list()
     # Constants can be found in
     # programRules -> condition -> C{gYj2CUoep4O} == 2
     # programRuleActions -> data ????
