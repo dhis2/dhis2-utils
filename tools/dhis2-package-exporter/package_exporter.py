@@ -1124,7 +1124,7 @@ def main():
             'programs',
             'programStageSections', 'programStages',
             'programIndicatorGroups', 'programIndicators',
-            'organisationUnitGroups',  # Assuming this will only be found in indicators
+            'organisationUnitGroupSets', 'organisationUnitGroups',  # Assuming this will only be found in indicators
             'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
             'programRuleVariables', 'programRuleActions', 'programRules',
             'visualizations', 'charts', 'maps', 'reportTables', 'eventReports', 'eventCharts', 'dashboards',
@@ -1156,7 +1156,7 @@ def main():
             'validationRules', 'validationRuleGroups', # group first
             'jobConfigurations',
             'predictors', 'predictorGroups', # group first
-            'organisationUnitGroups',  # Assuming this will only be found in indicators
+            'organisationUnitGroupSets', 'organisationUnitGroups',  # Assuming this will only be found in indicators
             'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups', # groups first, to get indicator uids
             'sections', 'dataSets',
             'visualizations', 'charts', 'maps', 'reportTables', 'eventReports', 'eventCharts', 'dashboards',
@@ -1203,6 +1203,7 @@ def main():
     indicatorTypes_uids = list()
     legendSets_uids = list()
     organisationUnitGroups_uids = list()
+    organisationUnitGroupSets_uids = list()
     predictorGroups_uids = list()
     optionSets_uids = list()
     cat_uids = dict()  # Contains all non DEFAULT uids of categoryOption, categories, CCs and COCs
@@ -1227,7 +1228,6 @@ def main():
         programIndicators_uids['PRED'] = list()  # Predictor
         programIndicatorGroups_uids = list()
         programStageSections_uids = list()
-
     validationRules_uids = list()
     validationRuleGroups_uids = list()
     # Constants can be found in
@@ -1264,6 +1264,7 @@ def main():
         "options": "optionSet.id:in:[" + ','.join(optionSets_uids) + "]",
         "optionSets": "id:in:[" + ','.join(optionSets_uids) + "]",
         "organisationUnitGroups": "id:in:[" + ','.join(organisationUnitGroups_uids) + "]",
+        "organisationUnitGroupSets": "id:in:[" + ','.join(organisationUnitGroupSets_uids) + "]",
         "predictors": "id:in:[" + ','.join(predictor_uids) + "]",
         "predictorGroups": "code:$like:" + package_prefix,
         "reportTables": "id:in:[" + ','.join(dashboard_items['reportTable']) + "]",
@@ -1598,6 +1599,9 @@ def main():
                     metaobject = remove_undesired_children(metaobject,
                                                                             cat_opt_group_ids_to_keep,
                                                                             'categoryOptionGroups')
+                elif metadata_type == "organisationUnitGroupSets":
+                    metaobject = remove_undesired_children(metaobject, organisationUnitGroups_uids,
+                                                                            'organisationUnitGroups')
 
             elif metadata_type == "jobConfigurations":
                 job_configs_to_include = list()
@@ -1635,8 +1639,6 @@ def main():
                 else:
                     logger.warning('There are org units assigned... Removing')
                     metaobject = remove_subset_from_set(metaobject, 'organisationUnits')
-                    if metadata_type == 'organisationUnitGroups':
-                        metaobject = remove_subset_from_set(metaobject, 'groupSets')
             # userAccesses needs to be also empty - so far, so good
             ## Make sure visualizations OUs are set to User OUs
             # if metadata_type in ['charts', 'reportTables', 'eventReports', 'maps']:
@@ -2212,6 +2214,9 @@ def main():
                 cat_uids['categoryOptionGroups'] += json_extract_nested_ids(metaobject, 'categoryOptionGroups')
             elif metadata_type == "categoryOptionGroups":
                 cat_uids['categoryOptionGroupSets'] += json_extract_nested_ids(metaobject, 'groupSets')
+            elif metadata_type == "organisationUnitGroups":
+                organisationUnitGroupSets_uids = json_extract_nested_ids(metaobject, 'groupSets')
+                metadata_filters["organisationUnitGroupSets"] = "id:in:[" + ','.join(organisationUnitGroupSets_uids) + "]"
 
         # Release log handlers
         handlers = logger.handlers[:]
