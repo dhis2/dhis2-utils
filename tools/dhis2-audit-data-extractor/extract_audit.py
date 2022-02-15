@@ -1,6 +1,7 @@
 import psycopg2
 import json
 import gzip
+import configparser
 
 DHIS2_CONF_FILE="/home/dhis/config/dhis.conf"
 CONN_CONFIG = {
@@ -10,21 +11,25 @@ CONN_CONFIG = {
 	"password": None
 }
 
-with open(DHIS2_CONF_FILE) as f:
-    lines = f.readlines()
+with open(DHIS2_CONF_FILE, 'r') as f:
+    lines = '[conf]\n' + f.read()
 
+config = configparser.ConfigParser()
+config.read_string(lines)
 
-for line in lines:
-	split_line = line.split("= ")[1]
-	if line.startswith("connection.url"):
-		split_url = split_line.split(":")
-		if split_url[0] == "jdbc":
-			CONN_CONFIG["host"] = "localhost"
-			CONN_CONFIG["dbname"] = split_url[2].rstrip() 
-	elif line.startswith("connection.username"):
-		CONN_CONFIG["username"] = split_line.rstrip()
-	elif line.startswith("connection.password"):
-		CONN_CONFIG["password"] = split_line.rstrip()
+conn_url = config.get('conf', 'connection.url')
+split_url = conn_url.split(':')
+if len(split_url) == 0:
+	print("Error: cannot find connection URL string in {0}".format(DHIS2_CONF_FILE))
+	exit(1)
+
+if split_url[0] == "jdbc":
+	CONN_CONFIG['host'] = "localhost"
+	CONN_CONFIG['dbname'] = split_url[2].strip()
+
+CONN_CONFIG['username'] = config.get('conf', 'connection.username')
+CONN_CONFIG['password'] = config.get('conf', 'connection.password')
+
 
 for k,v in CONN_CONFIG.items():
 	if CONN_CONFIG[k] is None:
