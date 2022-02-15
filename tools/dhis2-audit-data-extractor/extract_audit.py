@@ -23,13 +23,16 @@ if len(split_url) == 0:
 	print("Error: cannot find connection URL string in {0}".format(DHIS2_CONF_FILE))
 	exit(1)
 
-if split_url[0] == "jdbc":
+db_host = split_url[2].split('/')
+if len(db_host) == 1: # in this case string is jdbc:postgresql:database_name
 	CONN_CONFIG['host'] = "localhost"
-	CONN_CONFIG['dbname'] = split_url[2].strip()
+	CONN_CONFIG['dbname'] = db_host[0]
+else: # in this case string is jdbc:postgresql://remote.host/database_name
+	CONN_CONFIG['host'] = db_host[-2]
+	CONN_CONFIG['dbname'] = db_host[-1]
 
 CONN_CONFIG['username'] = config.get('conf', 'connection.username')
 CONN_CONFIG['password'] = config.get('conf', 'connection.password')
-
 
 for k,v in CONN_CONFIG.items():
 	if CONN_CONFIG[k] is None:
