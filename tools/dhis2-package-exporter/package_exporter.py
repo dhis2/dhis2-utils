@@ -1599,9 +1599,10 @@ def main():
                     metaobject = remove_undesired_children(metaobject,
                                                                             cat_opt_group_ids_to_keep,
                                                                             'categoryOptionGroups')
-                elif metadata_type == "organisationUnitGroupSets":
-                    metaobject = remove_undesired_children(metaobject, organisationUnitGroups_uids,
-                                                                            'organisationUnitGroups')
+            elif metadata_type == "organisationUnitGroupSets":
+                metaobject = remove_undesired_children(metaobject, organisationUnitGroups_uids,
+                                                                        'organisationUnitGroups')
+                metaobject = remove_subset_from_set(metaobject, 'items')
 
             elif metadata_type == "jobConfigurations":
                 job_configs_to_include = list()
