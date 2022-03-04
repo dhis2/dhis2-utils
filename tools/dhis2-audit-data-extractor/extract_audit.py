@@ -10,6 +10,15 @@ CONN_CONFIG = {
 	"username": None,
 	"password": None
 }
+CUR_SIZE = 10
+
+def iter_row(cursor, size=CUR_SIZE):
+	while True:
+		rows = cursor.fetchmany(size)
+		if not rows:
+			break
+		for row in rows:
+			yield row
 
 with open(DHIS2_CONF_FILE, 'r') as f:
     lines = '[conf]\n' + f.read()
@@ -57,7 +66,10 @@ cur = conn.cursor()
 #print(db_version)
        
 cur.execute('SELECT * from audit')
-audit_raw_data = cur.fetchall()
+audit_raw_data = list()
+
+for row in iter_row(cur):
+	audit_raw_data.append(row)
 
 #close the communication with the PostgreSQL
 cur.close()  
