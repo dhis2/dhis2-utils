@@ -104,10 +104,10 @@ def extract_data():
                 k, DHIS2_CONF_FILE))
             exit(1)
 
-    #data = extract_pgcopg2()
-	# print(json.dumps(data))
+    data = extract_pgcopg2()
 
-    data = extract_pandas()
+    #data = extract_pandas()
+
     print(json.dumps(data))
 
 
