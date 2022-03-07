@@ -7,7 +7,8 @@ from memory_profiler import profile
 import pandas as pd
 from sqlalchemy import create_engine
 
-DHIS2_CONF_FILE = os.getenv("DHIS2_HOME", "/home/dhis/config/dhis.conf")
+DHIS2_HOME = os.getenv("DHIS2_HOME", "/home/dhis")
+DHIS2_CONF_FILE =  "{0}/config/dhis.conf".format(DHIS2_HOME)
 CONN_CONFIG = {
     "host": None,
     "dbname": None,
