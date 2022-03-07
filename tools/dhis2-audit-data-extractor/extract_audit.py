@@ -3,6 +3,8 @@ import json
 import gzip
 import configparser
 from memory_profiler import profile
+import pandas as pd
+from sqlalchemy import create_engine
 
 DHIS2_CONF_FILE = "/home/dhis/config/dhis.conf"
 CONN_CONFIG = {
@@ -22,6 +24,54 @@ def iter_row(cursor, size=CUR_SIZE):
         for row in rows:
             yield row
 
+#@profile
+def extract_pandas():
+	audit_data = list()
+	engine = create_engine("postgresql://{0}:{1}@{2}/{3}".format(
+        CONN_CONFIG['username'], CONN_CONFIG['password'], CONN_CONFIG['host'], CONN_CONFIG['dbname']))
+
+	conn = engine.connect().execution_options(
+        stream_results=True)
+
+	for chunk_dataframe in pd.read_sql("SELECT * from audit", conn, chunksize=1000):
+		df = pd.DataFrame(chunk_dataframe)
+		df['createdat'] = df['createdat'].dt.strftime("%Y-%m-%d %H:%M:%S")
+        # df['data'] = json.loads(gzip.decompress(df['data']).decode('utf-8'))
+		audit_data.append(json.loads(df.to_json(orient="records")))
+
+	return audit_data
+
+#@profile
+def extract_pgcopg2():
+	#audit_raw_data = list()
+	audit_data = list()
+
+	conn = psycopg2.connect(
+        host=CONN_CONFIG['host'],
+        database=CONN_CONFIG['dbname'],
+        user=CONN_CONFIG['username'],
+        password=CONN_CONFIG['password'])
+
+	cur = conn.cursor()
+	cur.execute('SELECT * from audit')
+
+	for row in iter_row(cur):
+		event = {
+           "id": row[0],
+           "event": row[1],
+           "type": row[2],
+           "datetime": row[3].strftime("%Y-%m-%d %H:%M:%S"),
+           "createdby": row[4],
+           "klass": row[5],
+           "uid": row[6],
+           "code": row[7],
+           "attributes": row[8],
+           "data": json.loads(gzip.decompress(row[9]).decode('utf-8'))
+       }
+		audit_data.append(event)
+
+	cur.close()
+	return audit_data
 
 def extract_data():
     with open(DHIS2_CONF_FILE, 'r') as f:
@@ -54,49 +104,11 @@ def extract_data():
                 k, DHIS2_CONF_FILE))
             exit(1)
 
-    conn = psycopg2.connect(
-        host=CONN_CONFIG['host'],
-        database=CONN_CONFIG['dbname'],
-        user=CONN_CONFIG['username'],
-        password=CONN_CONFIG['password'])
+    #data = extract_pgcopg2()
+	# print(json.dumps(data))
 
-    cur = conn.cursor()
-
-    # execute a statement
-    #print('PostgreSQL database version:')
-    #cur.execute('SELECT version()')
-
-    # display the PostgreSQL database server version
-    #db_version = cur.fetchone()
-    # print(db_version)
-
-    cur.execute('SELECT * from audit')
-    audit_raw_data = list()
-
-    for row in iter_row(cur):
-        audit_raw_data.append(row)
-
-    # close the communication with the PostgreSQL
-    cur.close()
-
-    audit_data = list()
-    for data in audit_raw_data:
-        event = {
-            "id": data[0],
-            "event": data[1],
-            "type": data[2],
-            "datetime": data[3].strftime("%Y-%m-%d %H:%M:%S"),
-            "createdby": data[4],
-            "klass": data[5],
-            "uid": data[6],
-            "code": data[7],
-            "attributes": data[8],
-            "data": json.loads(gzip.decompress(data[9]).decode('utf-8'))
-        }
-        audit_data.append(event)
-
-    # print(audit_data)
-    print(json.dumps(audit_data))
+    data = extract_pandas()
+    print(json.dumps(data))
 
 
 if __name__ == '__main__':
