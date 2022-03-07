@@ -25,6 +25,9 @@ def iter_row(cursor, size=CUR_SIZE):
         for row in rows:
             yield row
 
+# Currently, this method doesn't work due to the impossibility to decompress gzip data field.
+# More investigation must be done to overcome this issue.
+# Additional memory footprint must be assessed.
 # @profile
 def extract_pandas():
     audit_data = list()
