@@ -1,12 +1,12 @@
 # DHIS2 Audit Data Extactor
 A simple python script to extract audit data from the `audit` table in the  DHIS2 database.
 
-It automatically extracts Postgres connection information from the `/home/dhis/config/dhis.conf` file. If the location is different, please edit the variable `DHIS2_CONF_FILE` in the script.
+It automatically extracts Postgres connection information from the config file `config/dhis.conf` via the environment variable `DHIS2_HOME`. If the location is different, please set the environment variable `DHIS2_HOME` as appropriate. Default is `/home/dhis/config/dhis.conf`.
 
 ## Requirements
-To use it, you need to install the python package `psycopg2`, which can be installed with:
+Install requirements:
 ```
-$ pip install psycopg2
+$ pip install -r requirements.txt
 ```
 N.B. You may need to install the package `libpq-dev`. Please refer to your distro's documentation on how to install it.
 
