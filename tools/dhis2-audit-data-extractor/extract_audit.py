@@ -2,11 +2,12 @@ import psycopg2
 import json
 import gzip
 import configparser
+import os
 from memory_profiler import profile
 import pandas as pd
 from sqlalchemy import create_engine
 
-DHIS2_CONF_FILE = "/home/dhis/config/dhis.conf"
+DHIS2_CONF_FILE = os.getenv("DHIS2_HOME", "/home/dhis/config/dhis.conf")
 CONN_CONFIG = {
     "host": None,
     "dbname": None,
@@ -24,54 +25,54 @@ def iter_row(cursor, size=CUR_SIZE):
         for row in rows:
             yield row
 
-#@profile
+# @profile
 def extract_pandas():
-	audit_data = list()
-	engine = create_engine("postgresql://{0}:{1}@{2}/{3}".format(
+    audit_data = list()
+    engine = create_engine("postgresql://{0}:{1}@{2}/{3}".format(
         CONN_CONFIG['username'], CONN_CONFIG['password'], CONN_CONFIG['host'], CONN_CONFIG['dbname']))
 
-	conn = engine.connect().execution_options(
+    conn = engine.connect().execution_options(
         stream_results=True)
 
-	for chunk_dataframe in pd.read_sql("SELECT * from audit", conn, chunksize=1000):
-		df = pd.DataFrame(chunk_dataframe)
-		df['createdat'] = df['createdat'].dt.strftime("%Y-%m-%d %H:%M:%S")
+    for chunk_dataframe in pd.read_sql("SELECT * from audit", conn, chunksize=1000):
+        df = pd.DataFrame(chunk_dataframe)
+        df['createdat'] = df['createdat'].dt.strftime("%Y-%m-%d %H:%M:%S")
         # df['data'] = json.loads(gzip.decompress(df['data']).decode('utf-8'))
-		audit_data.append(json.loads(df.to_json(orient="records")))
+        audit_data.append(json.loads(df.to_json(orient="records")))
 
-	return audit_data
+    return audit_data
 
-#@profile
+# @profile
 def extract_pgcopg2():
-	#audit_raw_data = list()
-	audit_data = list()
+    audit_data = list()
 
-	conn = psycopg2.connect(
+    conn = psycopg2.connect(
         host=CONN_CONFIG['host'],
         database=CONN_CONFIG['dbname'],
         user=CONN_CONFIG['username'],
         password=CONN_CONFIG['password'])
 
-	cur = conn.cursor()
-	cur.execute('SELECT * from audit')
+    cur = conn.cursor()
+    cur.execute('SELECT * from audit')
 
-	for row in iter_row(cur):
-		event = {
-           "id": row[0],
-           "event": row[1],
-           "type": row[2],
-           "datetime": row[3].strftime("%Y-%m-%d %H:%M:%S"),
-           "createdby": row[4],
-           "klass": row[5],
-           "uid": row[6],
-           "code": row[7],
-           "attributes": row[8],
-           "data": json.loads(gzip.decompress(row[9]).decode('utf-8'))
-       }
-		audit_data.append(event)
+    for row in iter_row(cur):
+        event = {
+            "id": row[0],
+            "event": row[1],
+            "type": row[2],
+            "datetime": row[3].strftime("%Y-%m-%d %H:%M:%S"),
+            "createdby": row[4],
+            "klass": row[5],
+            "uid": row[6],
+            "code": row[7],
+            "attributes": row[8],
+            "data": json.loads(gzip.decompress(row[9]).decode('utf-8'))
+        }
+        audit_data.append(event)
 
-	cur.close()
-	return audit_data
+    cur.close()
+    return audit_data
+
 
 def extract_data():
     with open(DHIS2_CONF_FILE, 'r') as f:
