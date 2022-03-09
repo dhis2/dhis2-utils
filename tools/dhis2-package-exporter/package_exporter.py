@@ -578,8 +578,6 @@ def check_and_replace_root_ou_assigned(metaobj):
         root_uid = ""
         placeholder = '<OU_ROOT_UID>'
         for obj in metaobj:
-            if obj['id'] == 'kWbzSfOYYm8':
-                obj['id'] = 'kWbzSfOYYm8'
             root_uid_replaced = False
             if 'organisationUnits' in obj and len(obj['organisationUnits']) == 1 and \
                     'userOrganisationUnit' in obj and obj['userOrganisationUnit'] == False and \
@@ -1182,6 +1180,7 @@ def main():
                        'I6u65yRc0ct',  # Code SNOMED
                        'vudyDP7jUy5']  # Data element for aggregate data export
     dataDimension_uids = {'dataElement': [], 'indicator': [], 'programIndicator': []}
+    dataSetElements_uids = {'indicator': []}
     dataEntryForms_uids = list()
     dataElements_in_package = list()
     dataElements_uids = dict()
@@ -1904,6 +1903,17 @@ def main():
                     metaobject += indicators_in_data_dimension
                     indicator_uids += diff_data_dimension
 
+                diff_data_set = list(set(dataSetElements_uids['indicator']).difference(indicator_uids))
+                if len(diff_data_set) > 0:
+                    logger.warning("DataSets use indicators not included in the package: "
+                                 + str(diff_data_set) + "... Adding them")
+                    indicators_in_dataset = get_metadata_element(metadata_type,
+                                                                        "id:in:[" + ','.join(diff_data_set) + "]")
+                    indicators_in_dataset = check_sharing(indicators_in_dataset)
+                    indicators_in_dataset = clean_metadata(indicators_in_dataset)
+                    metaobject += indicators_in_dataset
+                    indicator_uids += diff_data_dimension
+
                 # Remove indicatorGroups in indicators which do not belong to the package
                 metaobject = remove_undesired_children(metaobject, indicatorGroups_uids, 'indicatorGroups')
 
@@ -2026,7 +2036,7 @@ def main():
                     if 'legendSets' in ds:
                         legendSets_uids += json_extract_nested_ids(ds, 'legendSet')
                     if 'indicators' in ds:
-                        indicator_uids += json_extract_nested_ids(ds, 'indicators')
+                        dataSetElements_uids['indicator'] += json_extract_nested_ids(ds, 'indicators')
                     if 'dataSetElements' in ds:
                         dataElements_uids['DS'] += json_extract_nested_ids(ds['dataSetElements'], 'dataElement')
                         # Get possible categoryCombos
@@ -2061,6 +2071,7 @@ def main():
                 #metadata_filters["dataElements"] = "id:in:[" + ','.join(dataElements_uids['DS']) + "]"
             elif metadata_type == "dataElements":
                 # Scan for category Combo to make sure it uses default
+                categoryCombos_uids = json_extract_nested_ids(metaobject, 'categoryCombo')
                 categoryCombos_uids = json_extract_nested_ids(metaobject, 'categoryCombo')
                 # Scan for optionSets used
                 optionSets_uids += json_extract_nested_ids(metaobject, 'optionSet')
