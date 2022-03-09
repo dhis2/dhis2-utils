@@ -173,6 +173,7 @@ def main():
                     tea_name = myutils.get_name_by_type_and_uid(package, 'trackedEntityAttributes', tea_uid)
                     logging.error(f"PR-ST-5 Program Rule '{pr_name}' ({pr_uid}) in the PR Action uses a TEA '{tea_name}' ({tea_uid}) that does not belong to the associated program.")
 
+    # -------------------------------------
 
     # code
     PATTERN_OPTION_CODE = re.compile("^([0-9A-Z_\|\-\.]+)+$")
@@ -203,6 +204,75 @@ def main():
                         message = f"ALL-MQ-18- Invalid code='{resource['code']}' (resource type='{resource_type}' name='{resource['name']}' uid={resource['id']})"
                         logger.error(message)
                         num_error += 1
+
+    # -------------------------------------
+
+    # DE-MQ-2: The name/shortName SHOULD not contains "Number of" or "number of"
+    if "dataElements" not in package:
+        package["dataElements"] = []
+    for de in package["dataElements"]:
+        keys_to_validate_de_mq_1 = ["name", "shortName"]
+        for n in keys_to_validate_de_mq_1:
+            if n in de and "NUMBER OF" in de[n].upper():
+                logger.warning(f"DE-MQ-2 - DataElement contains the words 'number of' ({de['id']}) {n}='{de[n]}'")
+
+    # -------------------------------------
+
+    # Indicators Indicators
+    if "indicators" not in package:
+        package["indicators"] = []
+    for indicator in package["indicators"]:
+        keys_to_validate_pi_mq_2 = ["name", "shortName"]
+        for n in keys_to_validate_pi_mq_2:
+            # I-MQ-3. Indicators should not contain "proportion" or "percentage" in the name, shortName
+            if n in indicator and any(t in indicator[n].upper() for t in ["PROPORTION", "PERCENTAGE"]):
+                logger.warning(
+                    "I-MQ-3 - Indicator contains the word 'proportion' or 'percentage'. Resource Indicator with UID " + indicator['id'] + ". " + n + "='" + indicator[n] + "'")
+
+    # Program Indicators
+    if "programIndicators" not in package:
+        package["programIndicators"] = []
+    for pi in package["programIndicators"]:
+        keys_to_validate_pi_mq_2 = ["name", "shortName"]
+        for n in keys_to_validate_pi_mq_2:
+            # PI-MQ-3. Program Indicators should not contain "proportion" or "percentage" in the name, shortName
+            if n in pi and any(t in pi[n].upper() for t in ["PROPORTION", "PERCENTAGE"]):
+                logger.warning(
+                    "PI-MQ-3 - Program Indicator contains the word 'proportion' or 'percentage'. Resource Program Indicator with UID " + pi['id'] + ". " + n + "='" + pi[n] + "'")
+
+    # -------------------------------------
+
+    # Program Indicators
+    if "programIndicators" not in package:
+        package["programIndicators"] = []
+    for pi in package["programIndicators"]:
+        keys_to_validate = ["filter", "expression"]
+        for n in keys_to_validate:
+            if n in pi and "program_stage_name" in pi[n]:
+                logger.error(f"ALL-MQ-20 From program '{myutils.get_name_by_type_and_uid(package, 'programs', pi['program']['id'])}' ({pi['program']['id']}), the PI '{pi['name']}' ({pi['id']}) contains 'program_stage_name' in the {n}.")
+                num_error += 1
+
+    # Program Rules
+    if "programRules" not in package:
+        package["programRules"] = []
+    for pr in package["programRules"]:
+        keys_to_validate = ["condition"]
+        for n in keys_to_validate:
+            if n in pr and "program_stage_name" in pr[n]:
+                logger.error(f"ALL-MQ-20 From program '{myutils.get_name_by_type_and_uid(package, 'programs', pr['program']['id'])}' ({pr['program']['id']}), the PR '{pr['name']}' ({pr['id']}) contains 'program_stage_name' in the {n}.")
+                num_error += 1
+
+    # Program Rule Actions
+    if "programRuleActions" not in package:
+        package["programRuleActions"] = []
+    for pra in package["programRuleActions"]:
+        keys_to_validate = ["data"]
+        for n in keys_to_validate:
+            if n in pra and "program_stage_name" in pra[n]:
+                pr_uid = pra["programRule"]["id"]
+                program_uid = myutils.get_program_referenced_by_type_and_uid(package, "programRules", pr_uid)
+                logger.error(f"ALL-MQ-20 From program '{myutils.get_name_by_type_and_uid(package, 'programs', program_uid)}' ({program_uid}), the PR '{myutils.get_name_by_type_and_uid(package, 'programRules', pr_uid)}' ({pr_uid}) contains 'program_stage_name' in a PRAction ({pra['id']}).")
+                num_error += 1
 
     logger.info('-------------------------------------Finished validation-------------------------------------')
 

@@ -476,7 +476,7 @@ alter table datavalue add constraint fk_datavalue_periodid foreign key (periodid
 select count(*)
 from programstageinstance psi
 where psi.executiondate < '1960-01-01'
-or psi.executiondate > '2020-01-01';
+or psi.executiondate > '2023-01-01';
 
 -- Delete events out of reasonable time range
 

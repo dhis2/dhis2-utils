@@ -41,9 +41,11 @@ To be able to work in Google Spreadsheets, the script needs a token in the form 
 	                        provide a stage uid which is REPEATABLE and specify how many times you are planning to enter it. Eg: --repeat_stage QXtjg5dh34A 3
 	  -sw email, --share_with email
 	                        email address to share the generated spreadsheet with as OWNER. Eg: --share_with=peter@dhis2.org
+   
+   Important: create_flat_file.py uses the instance URL and credentials in auth.json to access the instance
 
 ```bash
-python create_flat_file.py Lt6P15ps7f6 --with_teis_from_ou=GZ5Ty90HtW --share_with=johndoe@dhis2.org
+python create_flat_file.py Lt6P15ps7f6 --with_teis_from=GZ5Ty90HtW --share_with=johndoe@dhis2.org
 
 python create_flat_file Lt6P15ps7f6 --repeat_stage Hj38Uhfo012 5 --repeat_stage 77Ujkfoi9kG 3 --share_with=person1@dhis2.org --share_with=person2@dhis2.org
 ```
