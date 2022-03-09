@@ -1306,6 +1306,10 @@ def main():
         metadata_filters.update({
             "dashboards": "id:in:[" + ','.join(dashboard_uids) + "]"
         })
+    elif program_or_ds_uid == 'DSH':
+        metadata_filters.update({
+            "dashboards": "id:in:[" + ','.join(dashboard_uids) + "]"
+        })
 
     if len(program_uids) > 0 or len(dataset_uids) > 0 or len(dashboard_uids):
 
