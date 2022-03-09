@@ -6,6 +6,7 @@ import sys
 import pandas as pd
 from re import match, findall, compile, search
 import argparse
+from tools.json import reindex
 
 
 def get_metadata_element(metadata_type, filter=""):
@@ -402,24 +403,32 @@ def update_last_updated(metaobj, metadata_type):
         None
     """
     global df_report_lastUpdated
+    global users
     if isinstance(metaobj, list):
         for item in metaobj:
             if 'lastUpdated' in item:
-                id = item['id']
-                if 'name' in item:
-                    name = item['name']
-                elif 'displayName' in item:
-                    name = item['displayName']
-                else:
-                    name = ""
                 last_updated = item['lastUpdated']
-                # datetime.datetime.strptime(date_time_str, '%Y-%m-%d %H:%M:%S.%f')
-                last_updated_by = ""
-                if 'lastUpdatedBy' in item:
-                    last_updated_by = item['lastUpdatedBy']['id']
+            else:
+                last_updated = 'NOT AVAILABLE'
+            id = item['id']
+            if 'name' in item:
+                name = item['name']
+            elif 'displayName' in item:
+                name = item['displayName']
+            else:
+                name = ""
+            if 'code' in item:
+                code = item['code']
+            else:
+                code = ""
+            # datetime.datetime.strptime(date_time_str, '%Y-%m-%d %H:%M:%S.%f')
+            if 'lastUpdatedBy' in item:
+                last_updated_by = users[item['lastUpdatedBy']['id']]['name']
+            else:
+                last_updated_by = 'NOT AVAILABLE'
             # Add to dataframe
             df_report_lastUpdated = df_report_lastUpdated.append(
-                {'metadata_type': metadata_type, 'uid': id, 'name': name,
+                {'metadata_type': metadata_type, 'uid': id, 'name': name, 'code': code,
                  'last_updated': last_updated, 'updated_by': last_updated_by}
                 , ignore_index=True)
 
@@ -450,6 +459,7 @@ def clean_metadata(metaobj):
     metaobj = remove_subset_from_set(metaobj, 'displayDenominatorDescription')
     metaobj = remove_subset_from_set(metaobj, 'displayNumeratorDescription')
     metaobj = remove_subset_from_set(metaobj, 'displayDescription')
+    metaobj = remove_subset_from_set(metaobj, 'interpretations')
     if len(metaobj) > 0:
         for subtag in ['dashboardItems', 'analyticsPeriodBoundaries', 'mapViews', 'user', 'userGroupAccesses',
                        'programStageDataElements', 'programTrackedEntityAttributes',
@@ -568,6 +578,8 @@ def check_and_replace_root_ou_assigned(metaobj):
         root_uid = ""
         placeholder = '<OU_ROOT_UID>'
         for obj in metaobj:
+            if obj['id'] == 'kWbzSfOYYm8':
+                obj['id'] = 'kWbzSfOYYm8'
             root_uid_replaced = False
             if 'organisationUnits' in obj and len(obj['organisationUnits']) == 1 and \
                     'userOrganisationUnit' in obj and obj['userOrganisationUnit'] == False and \
@@ -583,6 +595,10 @@ def check_and_replace_root_ou_assigned(metaobj):
                     # Remove and use a placeholder
                     obj['organisationUnits'][0] = {'id': placeholder}
                     root_uid_replaced = True
+            elif len(obj['organisationUnits']) > 1:
+                # In this case we have a list of organisation units. Remove them and raise a warning
+                obj['organisationUnits'] = []
+                logger.warning("The dashboard item with UID " + obj['id'] + " has organisation units assigned... Removing")
             # Remove and use a placeholder also for parentGraphMap
             if obj['parentGraphMap'] and root_uid in obj['parentGraphMap']:
                 obj['parentGraphMap'][placeholder] = obj['parentGraphMap'][root_uid]
@@ -875,6 +891,7 @@ def main():
     global userGroups_uids
     global df_report_lastUpdated
     global WHOAdmin_uid
+    global users
 
     my_parser = argparse.ArgumentParser(description='Export package')
     my_parser.add_argument('program_or_ds_uid', metavar='program_or_ds_uid', type=str, help='the id of the program to use')
@@ -910,7 +927,7 @@ def main():
             pass
     setup_logger(log_file)
     pd.set_option("display.max_rows", None, "display.max_columns", None, "max_colwidth", 1000)
-    df_report_lastUpdated = pd.DataFrame({}, columns=['metadata_type', 'uid', 'name', 'last_updated', 'updated_by'])
+    df_report_lastUpdated = pd.DataFrame({}, columns=['metadata_type', 'uid', 'name', 'code', 'last_updated', 'updated_by'])
     total_errors = 0
 
     # We need to connect to instance to be able to validate the parameters
@@ -933,6 +950,7 @@ def main():
     print("Server source for package extraction {}".format(api_source.base_url))
     print("Running DHIS2 version {} revision {}".format(api_source.version, api_source.revision))
     print("Username: {}".format(credentials['dhis']['username']))
+    users = reindex(get_metadata_element('users'), 'id')
 
     program_or_ds_uid = args.program_or_ds_uid
     # At present, program uid is mandatory. For an agg package, we are going to allow also
@@ -1098,6 +1116,7 @@ def main():
             'constants', 'documents', 'attributes',
             'dataEntryForms', 'sections', 'dataSets', # Some programs, like HIV, have dataSets
             'dataElements', 'dataElementGroups',
+            'validationRules', 'validationRuleGroups'
             'jobConfigurations',
             'predictors', 'predictorGroups',
             'trackedEntityAttributes', 'trackedEntityTypes', 'trackedEntityInstanceFilters',
@@ -1105,7 +1124,7 @@ def main():
             'programs',
             'programStageSections', 'programStages',
             'programIndicatorGroups', 'programIndicators',
-            'organisationUnitGroups',  # Assuming this will only be found in indicators
+            'organisationUnitGroupSets', 'organisationUnitGroups',  # Assuming this will only be found in indicators
             'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
             'programRuleVariables', 'programRuleActions', 'programRules',
             'visualizations', 'charts', 'maps', 'reportTables', 'eventReports', 'eventCharts', 'dashboards',
@@ -1137,7 +1156,7 @@ def main():
             'validationRules', 'validationRuleGroups', # group first
             'jobConfigurations',
             'predictors', 'predictorGroups', # group first
-            'organisationUnitGroups',  # Assuming this will only be found in indicators
+            'organisationUnitGroupSets', 'organisationUnitGroups',  # Assuming this will only be found in indicators
             'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups', # groups first, to get indicator uids
             'sections', 'dataSets',
             'visualizations', 'charts', 'maps', 'reportTables', 'eventReports', 'eventCharts', 'dashboards',
@@ -1184,6 +1203,7 @@ def main():
     indicatorTypes_uids = list()
     legendSets_uids = list()
     organisationUnitGroups_uids = list()
+    organisationUnitGroupSets_uids = list()
     predictorGroups_uids = list()
     optionSets_uids = list()
     cat_uids = dict()  # Contains all non DEFAULT uids of categoryOption, categories, CCs and COCs
@@ -1208,9 +1228,8 @@ def main():
         programIndicators_uids['PRED'] = list()  # Predictor
         programIndicatorGroups_uids = list()
         programStageSections_uids = list()
-    elif program_or_ds_uid == 'AGG':
-        validationRules_uids = list()
-        validationRuleGroups_uids = list()
+    validationRules_uids = list()
+    validationRuleGroups_uids = list()
     # Constants can be found in
     # programRules -> condition -> C{gYj2CUoep4O} == 2
     # programRuleActions -> data ????
@@ -1245,6 +1264,7 @@ def main():
         "options": "optionSet.id:in:[" + ','.join(optionSets_uids) + "]",
         "optionSets": "id:in:[" + ','.join(optionSets_uids) + "]",
         "organisationUnitGroups": "id:in:[" + ','.join(organisationUnitGroups_uids) + "]",
+        "organisationUnitGroupSets": "id:in:[" + ','.join(organisationUnitGroupSets_uids) + "]",
         "predictors": "id:in:[" + ','.join(predictor_uids) + "]",
         "predictorGroups": "code:$like:" + package_prefix,
         "reportTables": "id:in:[" + ','.join(dashboard_items['reportTable']) + "]",
@@ -1267,6 +1287,8 @@ def main():
             # Some programs may have dataSets linked to them, like HIV
             "dataSets": "code:$like:" + package_prefix,
             "sections": "dataSet.id:[" + ','.join(dataset_uids) + "]",
+            "validationRules": "id:in:[" + ','.join(validationRules_uids) + "]",
+            "validationRuleGroups": "code:$like:" + package_prefix
         })
         if program_or_ds_uid in ['TKR']:
             metadata_filters.update({
@@ -1280,7 +1302,7 @@ def main():
             "dataSets": "id:in:[" + ','.join(dataset_uids) + "]",
             "sections": "dataSet.id:[" + ','.join(dataset_uids) + "]",
             "validationRules": "id:in:[" + ','.join(validationRules_uids) + "]",
-            "validationRuleGroups": "code:$like:" + package_prefix,
+            "validationRuleGroups": "code:$like:" + package_prefix
         })
     elif program_or_ds_uid == 'DSH':
         metadata_filters.update({
@@ -1518,6 +1540,17 @@ def main():
                     # Remove undesired categoryCombos from categories
                     metaobject = remove_undesired_children(metaobject, cat_uids['categoryCombos'], 'categoryCombos')
 
+                # METRGDHIS2-628
+                elif metadata_type == "categoryOptions":
+                    metaobject = remove_undesired_children(metaobject, cat_uids['categories'], 'categories')
+                    metaobject = remove_undesired_children(metaobject, cat_uids['categoryOptionCombos'], 'categoryOptionCombos')
+
+                # Not sure this one is needed
+                elif metadata_type == "categoryCombos":
+                    metaobject = remove_undesired_children(metaobject, cat_uids['categories'], 'categories')
+                    metaobject = remove_undesired_children(metaobject, cat_uids['categoryOptionCombos'], 'categoryOptionCombos')
+
+
                 elif metadata_type == "categoryOptionGroups":
                     new_metaobject = list()
                     cat_opt_group_ids_to_keep = list()
@@ -1566,6 +1599,10 @@ def main():
                     metaobject = remove_undesired_children(metaobject,
                                                                             cat_opt_group_ids_to_keep,
                                                                             'categoryOptionGroups')
+            elif metadata_type == "organisationUnitGroupSets":
+                metaobject = remove_undesired_children(metaobject, organisationUnitGroups_uids,
+                                                                        'organisationUnitGroups')
+                metaobject = remove_subset_from_set(metaobject, 'items')
 
             elif metadata_type == "jobConfigurations":
                 job_configs_to_include = list()
@@ -1603,8 +1640,6 @@ def main():
                 else:
                     logger.warning('There are org units assigned... Removing')
                     metaobject = remove_subset_from_set(metaobject, 'organisationUnits')
-                    if metadata_type == 'organisationUnitGroups':
-                        metaobject = remove_subset_from_set(metaobject, 'groupSets')
             # userAccesses needs to be also empty - so far, so good
             ## Make sure visualizations OUs are set to User OUs
             # if metadata_type in ['charts', 'reportTables', 'eventReports', 'maps']:
@@ -1905,6 +1940,10 @@ def main():
                 # See if there is a reference to a categoryOption Group and/or Set
                 cat_uids['categoryOptionGroups'] += json_extract_nested_ids(metaobject, 'categoryOptionGroups')
                 cat_uids['categoryOptionGroupSets'] += json_extract_nested_ids(metaobject, 'categoryOptionGroupSet')
+                organisationUnitGroups_uids += json_extract_nested_ids(metaobject, 'itemOrganisationUnitGroups')
+                if len(organisationUnitGroups_uids) > 0:
+                    metadata_filters["organisationUnitGroups"] = "id:in:[" + ','.join(organisationUnitGroups_uids) + "]"
+
             elif metadata_type == "programRules":
                 programRuleActions_uids = json_extract_nested_ids(metaobject, 'programRuleActions')
                 # Update the filters
@@ -2080,9 +2119,9 @@ def main():
                     if coc not in cat_uids['categoryOptionCombos']:
                         add_category_option_combo(coc, cat_uids)
 
-                organisationUnitGroups_uids = get_hardcoded_values_in_fields(metaobject, 'organisationUnitGroups',
+                organisationUnitGroups_uids += get_hardcoded_values_in_fields(metaobject, 'organisationUnitGroups',
                                                                              ['numerator', 'denominator'])
-                # We don't expect to find OUG references somewhere else, so we can add the filter already
+                # We don't expect to find any more OUG references at this point, so we can add the filter already
                 if len(organisationUnitGroups_uids) > 0:
                     metadata_filters["organisationUnitGroups"] = "id:in:[" + ','.join(organisationUnitGroups_uids) + "]"
 
@@ -2176,6 +2215,9 @@ def main():
                 cat_uids['categoryOptionGroups'] += json_extract_nested_ids(metaobject, 'categoryOptionGroups')
             elif metadata_type == "categoryOptionGroups":
                 cat_uids['categoryOptionGroupSets'] += json_extract_nested_ids(metaobject, 'groupSets')
+            elif metadata_type == "organisationUnitGroups":
+                organisationUnitGroupSets_uids = json_extract_nested_ids(metaobject, 'groupSets')
+                metadata_filters["organisationUnitGroupSets"] = "id:in:[" + ','.join(organisationUnitGroupSets_uids) + "]"
 
         # Release log handlers
         handlers = logger.handlers[:]
@@ -2203,10 +2245,8 @@ def main():
 
         # Order and group by metadata type getting counts
         df_report_lastUpdated.sort_values(by=['metadata_type']) \
-            .groupby(['metadata_type']).size().reset_index(name='counts') \
-            .to_csv(package_type + '_' + package_prefix + '_metadata_stats.csv', index=None, header=True)
-
-        df_report_lastUpdated[df_report_lastUpdated.metadata_type == 'dashboards'].sort_values(by=['name']).to_csv(package_prefix + '_dashboards_stats.csv', index=None, header=True)
+            .to_csv(package_type + '_' + package_prefix + '_metadata_summary.csv', index=None, header=True)
+        # Use #.groupby(['metadata_type']).size().reset_index(name='counts') \  to get the counts
 
         # for debug - and potential use in pipeline
         print(name_label + '.json')
