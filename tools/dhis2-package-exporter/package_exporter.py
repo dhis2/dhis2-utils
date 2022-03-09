@@ -578,8 +578,6 @@ def check_and_replace_root_ou_assigned(metaobj):
         root_uid = ""
         placeholder = '<OU_ROOT_UID>'
         for obj in metaobj:
-            if obj['id'] == 'kWbzSfOYYm8':
-                obj['id'] = 'kWbzSfOYYm8'
             root_uid_replaced = False
             if 'organisationUnits' in obj and len(obj['organisationUnits']) == 1 and \
                     'userOrganisationUnit' in obj and obj['userOrganisationUnit'] == False and \
