@@ -358,7 +358,7 @@ def get_hardcoded_values_in_fields(metaobj, metadata_type, fields):
             for key in element:
                 if key in fields:
                     if metadata_type == 'dataElements_ind' or metadata_type == 'categoryOptionCombos':
-                        pattern = compile(r'#\{([a-zA-Z0-9]{11})(\.[a-zA-Z0-9]{11})*\}')
+                        pattern = compile(r'#\{([a-zA-Z0-9]{11})\.*([a-zA-Z0-9]{11})*\}')
                     elif metadata_type == 'dataElements_prgInd':
                         pattern = compile(r'#\{[a-zA-Z0-9]{11}\.([a-zA-Z0-9]{11})\}')
                     elif metadata_type == 'programIndicators':
@@ -578,8 +578,6 @@ def check_and_replace_root_ou_assigned(metaobj):
         root_uid = ""
         placeholder = '<OU_ROOT_UID>'
         for obj in metaobj:
-            if obj['id'] == 'kWbzSfOYYm8':
-                obj['id'] = 'kWbzSfOYYm8'
             root_uid_replaced = False
             if 'organisationUnits' in obj and len(obj['organisationUnits']) == 1 and \
                     'userOrganisationUnit' in obj and obj['userOrganisationUnit'] == False and \
@@ -972,7 +970,7 @@ def main():
     dataSets = None
     dashboard_uids = list()
     dashboards = None
-    if program_or_ds_uid not in ['AGG', 'TKR', 'EVT', 'DSH']:
+    if program_or_ds_uid not in ['AGG', 'TKR', 'EVT', 'DSH', 'GEN']:
         uids = program_or_ds_uid.split(',')
         for uid in uids:
             if not is_valid_uid(uid):
@@ -1100,6 +1098,8 @@ def main():
         logger.info('Exporting ' + message_only_dashboard + 'AGG dataSet(s) ' + ','.join(dataset_uids))
     elif dashboards is not None and len(dashboards) > 0 and len(dashboard_uids) > 0:
         logger.info('Exporting ' + message_only_dashboard + 'DSH dashboard(s) ' + ','.join(dashboard_uids))
+    elif program_or_ds_uid == 'GEN':
+        logger.info('Exporting GEN package:  ' + package_prefix)
     else:
         logger.error('The parameters (' + args.program_or_ds_uid + ', ' + args.health_area + ', ' +
                      args.intervention + ', ' + str(args.package_prefix) + ') returned no result for programs / dataSets / dashboards')
@@ -1162,14 +1162,26 @@ def main():
             'visualizations', 'charts', 'maps', 'reportTables', 'eventReports', 'eventCharts', 'dashboards',
             'package', 'users', 'userGroups']
 
+    elif program_or_ds_uid == 'GEN':
+        metadata_import_order = [
+            'categoryOptions', 'categoryOptionGroups', #'categoryCombos',
+            'options', 'optionSets',
+            'dataElements', 'dataElementGroups',
+            'indicatorTypes', 'indicators', 'indicatorGroups',
+            'trackedEntityAttributes', 'trackedEntityTypes',
+            'package']
+
     # Starting from >=2.34, charts and reportTables are called visualizations
     if '2.33' in api_source.version:
         # No need for visualizations
-        metadata_import_order.remove('visualizations')
+        if 'visualizations' in metadata_import_order:
+            metadata_import_order.remove('visualizations')
     else:
         # No need for charts and reportTables
-        metadata_import_order.remove('charts')
-        metadata_import_order.remove('reportTables')
+        if 'charts' in metadata_import_order:
+            metadata_import_order.remove('charts')
+        if 'reportTables' in metadata_import_order:
+            metadata_import_order.remove('reportTables')
 
     metadata = dict()
 
@@ -1213,10 +1225,10 @@ def main():
     cat_uids['categoryOptionCombos'] = list()
     cat_uids['categoryOptionGroups'] = list()
     cat_uids['categoryOptionGroupSets'] = list()
-    if program_or_ds_uid in ['TKR', 'EVT']:
+    if program_or_ds_uid in ['TKR', 'EVT', 'GEN']:
         programNotificationTemplates_uids = list()
         programRuleActions_uids = list()
-        if program_or_ds_uid == 'TKR':
+        if program_or_ds_uid in ['TKR','GEN']:
             trackedEntityAttributes_uids = dict()
             trackedEntityAttributes_uids['PR'] = list()
             trackedEntityAttributes_uids['P'] = list()
@@ -1308,8 +1320,25 @@ def main():
         metadata_filters.update({
             "dashboards": "id:in:[" + ','.join(dashboard_uids) + "]"
         })
+    elif program_or_ds_uid == 'GEN':
+        metadata_filters = {
+            "categoryOptions": "id:in:[" + ','.join(cat_uids['categoryOptions']) + "]",
+            #"categoryCombos": "id:in:[" + ','.join(cat_uids['categoryCombos']) + "]",
+            "categoryOptionGroups": "code:$like:" + package_prefix,
+            "dataElementGroups": "code:$like:" + package_prefix,
+            "dataElements": "id:in:[" + ','.join(dataElements_in_package) + "]",
+            "indicatorGroups": "code:$like:" + package_prefix,
+            "indicators": "id:in:[" + ','.join(indicator_uids) + "]",
+            "indicatorTypes": "code:$like:" + package_prefix,
+            "optionGroups": "optionSet.id:in:[" + ','.join(optionSets_uids) + "]",
+            "options": "optionSet.id:in:[" + ','.join(optionSets_uids) + "]",
+            "optionSets": "id:in:[" + ','.join(optionSets_uids) + "]",
+            "trackedEntityAttributes": "id:in:[" + ','.join(trackedEntityAttributes_uids['P']) + "]",
+            "trackedEntityTypes": "code:$like:" + package_prefix
+        }
 
-    if len(program_uids) > 0 or len(dataset_uids) > 0 or len(dashboard_uids):
+
+    if len(program_uids) > 0 or len(dataset_uids) > 0 or len(dashboard_uids) or program_or_ds_uid == 'GEN':
 
         if args.package_version is not None:
             package_version = args.package_version
@@ -1526,6 +1555,19 @@ def main():
                 index = 0
                 for index in range(0, len(metaobject)):
                     metaobject[index]["publicAccess"] = "r-------"
+            elif program_or_ds_uid == 'GEN':
+                if metadata_type == "categoryOptions":
+                    metaobject = remove_undesired_children(metaobject, cat_uids['categories'], 'categories')
+                    metaobject = remove_undesired_children(metaobject, cat_uids['categoryOptionCombos'], 'categoryOptionCombos')
+                    metaobject = remove_undesired_children(metaobject, cat_uids['categoryOptionGroups'],
+                                                           'categoryOptionGroups')
+                elif metadata_type == "options":
+                    metaobject = remove_undesired_children(metaobject, [], 'optionGroups')
+                elif metadata_type == "dataElements":
+                    metaobject = remove_subset_from_set(metaobject, "legendSets")
+                    # Delete categoryCombos from DE?
+                    metaobject = remove_subset_from_set(metaobject, "categoryCombo")
+                    metaobject = remove_subset_from_set(metaobject, "dataSetElements")
 
             elif metadata_type[:3] == 'cat':
                 # Add the default uid if it does not exist yet in cat_uids list
@@ -2078,6 +2120,9 @@ def main():
                 for de in metaobject:
                     if 'categoryCombo' in de:
                         cat_uids = get_category_elements(de['categoryCombo']['id'], cat_uids)
+                        # GEN PACKAGE
+                        # metadata_filters["categoryCombos"] = "id:in:[" + ','.join(
+                        #     cat_uids['categoryCombos']) + "]"
 
             elif metadata_type == "trackedEntityTypes":
                 # Scan for trackedEntityAttributes used
@@ -2093,6 +2138,18 @@ def main():
                     trackedEntityAttributes_uids['P'] += diff_att
                     metadata_filters["trackedEntityAttributes"] = "id:in:[" + ','.join(
                         trackedEntityAttributes_uids['P']) + "]"
+                if program_or_ds_uid == 'GEN':
+                    # Delete GNTR00_TEAS only used to group metadata
+                    new_tet_list = list()
+                    codes_to_remove = list()
+                    for tet in metaobject:
+                        if 'name' not in tet or 'GEN' not in tet['name']:
+                            new_tet_list.append(tet)
+                        else:
+                            if 'code' in tet:
+                                codes_to_remove.append(tet['code'])
+                    metadata["trackedEntityTypes"] = new_tet_list
+                    df_report_lastUpdated = df_report_lastUpdated[~df_report_lastUpdated.code.isin(codes_to_remove)]
             elif metadata_type == "trackedEntityAttributes":
                 # Scan for optionSets used
                 optionSets_uids += json_extract_nested_ids(metaobject, 'optionSet')
@@ -2126,8 +2183,9 @@ def main():
                     metadata_filters["organisationUnitGroups"] = "id:in:[" + ','.join(organisationUnitGroups_uids) + "]"
 
                 # Scan for indicatorTypes
-                indicatorTypes_uids = json_extract_nested_ids(metaobject, 'indicatorType')
-                metadata_filters["indicatorTypes"] = "id:in:[" + ','.join(indicatorTypes_uids) + "]"
+                if program_or_ds_uid != "GEN":
+                    indicatorTypes_uids = json_extract_nested_ids(metaobject, 'indicatorType')
+                    metadata_filters["indicatorTypes"] = "id:in:[" + ','.join(indicatorTypes_uids) + "]"
 
                 # Update the filters
                 legendSets_uids += json_extract_nested_ids(metaobject, 'legendSets')
@@ -2212,9 +2270,16 @@ def main():
                     if coc not in cat_uids['categoryOptionCombos']:
                         add_category_option_combo(coc, cat_uids)
             elif metadata_type == "categoryOptions":
-                cat_uids['categoryOptionGroups'] += json_extract_nested_ids(metaobject, 'categoryOptionGroups')
+                if program_or_ds_uid != 'GEN':
+                    cat_uids['categoryOptionGroups'] += json_extract_nested_ids(metaobject, 'categoryOptionGroups')
             elif metadata_type == "categoryOptionGroups":
-                cat_uids['categoryOptionGroupSets'] += json_extract_nested_ids(metaobject, 'groupSets')
+                # For the GEN package, the groups are going to give us the categoryOptions
+                if program_or_ds_uid == 'GEN':
+                    cat_uids['categoryOptions'] = json_extract_nested_ids(metaobject, 'categoryOptions')
+                    # There should be just one group
+                    cat_uids['categoryOptionGroups'] = json_extract(metaobject, 'id')
+                    metadata_filters["categoryOptions"] = "id:in:[" + ','.join(cat_uids['categoryOptions']) + "]"
+                cat_uids['categoryOptions'] += json_extract_nested_ids(metaobject, 'groupSets')
             elif metadata_type == "organisationUnitGroups":
                 organisationUnitGroupSets_uids = json_extract_nested_ids(metaobject, 'groupSets')
                 metadata_filters["organisationUnitGroupSets"] = "id:in:[" + ','.join(organisationUnitGroupSets_uids) + "]"
