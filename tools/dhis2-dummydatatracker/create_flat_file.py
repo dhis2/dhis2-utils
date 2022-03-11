@@ -235,7 +235,7 @@ def create_google_spreadsheet(program, df, share_with):
 
         batch = batch_updater(sh)
         # Add header formatting
-        header = chr(65) + str(1) + ':' + chr(65 + df.shape[1] - 1) + str(1)
+        header = str(1)
         batch.format_cell_range(wks_dd, header, CellFormat(
             backgroundColor=Color(0.40, 0.65, 1),
             textFormat=TextFormat(bold=True, foregroundColor=Color(1, 1, 1), fontSize=11),
@@ -243,7 +243,7 @@ def create_google_spreadsheet(program, df, share_with):
         ))
         # Added alternative formatting
         for i in range(3, df.shape[0], 2):
-            even_row = chr(65) + str(i) + ':' + chr(65 + df.shape[1] - 1) + str(i)
+            even_row = str(i)
             batch.format_cell_range(wks_dd, even_row, CellFormat(
                 backgroundColor=Color(0.90, 0.95, 1)
             ))
@@ -251,7 +251,7 @@ def create_google_spreadsheet(program, df, share_with):
         # Add border to the stages
         stage_indexes = df.index[df['Stage'] != ''].tolist()
         for i in stage_indexes:
-            stage_row = chr(65) + str(i + 2) + ':' + chr(65 + df.shape[1] - 1) + str(i + 2)
+            stage_row = str(i + 2)
             batch.format_cell_range(wks_dd, stage_row, CellFormat(borders=Borders(top=b)))
         # Add formatting to spreadsheet
         batch.execute()
