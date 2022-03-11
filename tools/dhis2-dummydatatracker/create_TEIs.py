@@ -1116,10 +1116,20 @@ def main():
                                   params={"paging": "false",
                                           "filter": "level:eq:"+str(orgUnit_level),
                                           "fields":"id,name,level,parent"}).json()['organisationUnits']
-        program_orgunits = list()
-        for ou in all_orgunits_at_level:
-            if ou['id'] in orgunits_uid:
-                program_orgunits.append(ou)
+        if custom_orgunits is None or len(custom_orgunits) == 0:
+            all_orgunits_at_level = api_source.get('organisationUnits',
+                                      params={"paging": "false",
+                                              "filter": "level:eq:"+str(orgUnit_level),
+                                              "fields":"id,name,level,parent"}).json()['organisationUnits']
+            program_orgunits = list()
+            for ou in all_orgunits_at_level:
+                if ou['id'] in orgunits_uid:
+                    program_orgunits.append(ou)
+        else:
+            program_orgunits = list()
+            for ou in custom_orgunits:
+                if ou['id'] in orgunits_uid:
+                    program_orgunits.append(ou)
 
         df_ou_distrib = None
         if df_distrib is not None and df_distrib[df_distrib.NAME == 'Organisation Unit'].shape[0] > 0:
