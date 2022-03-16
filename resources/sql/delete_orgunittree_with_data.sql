@@ -119,8 +119,6 @@ EXECUTE 'update eventreport_organisationunits set sort_order = -(sort_order+1) w
 END LOOP;
 EXECUTE 'TRUNCATE temp1';
 
-EXECUTE 'DELETE FROM organisationunittranslations WHERE organisationunitid = $1 ' USING organisationunitid;
-
 EXECUTE 'DELETE FROM organisationunit WHERE organisationunitid = $1 ' USING organisationunitid;
 
 RETURN 1;
