@@ -965,7 +965,7 @@ def main():
     dataSets = None
     dashboard_uids = list()
     dashboards = None
-    if package_type_or_uid not in ['AGG', 'TKR', 'EVT', 'DSH', 'GEN']:
+    if package_type_or_uid not in ['AGG', 'TRK', 'EVT', 'DSH', 'GEN']:
         uids = package_type_or_uid.split(',')
         for uid in uids:
             if not is_valid_uid(uid):
@@ -997,7 +997,7 @@ def main():
                     logger.error("NOT supported: The UIDs provided mix tracker and event programs")
                     exit(1)
                 elif is_tracker:
-                    package_type_or_uid = 'TKR'
+                    package_type_or_uid = 'TRK'
                 elif is_event:
                     package_type_or_uid = 'EVT'
             elif len(programs) > 0:
@@ -1007,7 +1007,7 @@ def main():
                 exit(1)
 
         # If we could not find the uids as programs, let's try dataSets
-        if package_type_or_uid not in ['TKR', 'EVT']:
+        if package_type_or_uid not in ['TRK', 'EVT']:
         # Check if it is a dataSet
             try:
                 dataSets = api_source.get('dataSets',
@@ -1045,7 +1045,7 @@ def main():
                 for ds in dataSets:
                     dataset_uids.append(ds['id'])
         # Tracker or event - program
-        elif package_type_or_uid in ['TKR', 'EVT']:
+        elif package_type_or_uid in ['TRK', 'EVT']:
             tmp_programs = list()
             try:
                 for prefix in all_package_prefixes:
@@ -1057,7 +1057,7 @@ def main():
                 programs = list()
                 for program in tmp_programs:
                     # A tracker program has a 'trackedEntityType'
-                    if package_type_or_uid == 'TKR' and 'trackedEntityType' in program:
+                    if package_type_or_uid == 'TRK' and 'trackedEntityType' in program:
                         programs.append(program)
                     elif package_type_or_uid == 'EVT' and 'trackedEntityType' not in program:
                         programs.append(program)
@@ -1100,7 +1100,7 @@ def main():
                      args.intervention + ', ' + str(args.package_prefix) + ') returned no result for programs / dataSets / dashboards')
         exit(1)
 
-    if package_type_or_uid in ['TKR', 'EVT']:
+    if package_type_or_uid in ['TRK', 'EVT']:
         # Iteration over this list happens in reversed order
         # Altering the order can cause the script to stop working
         metadata_import_order = [
@@ -1221,10 +1221,10 @@ def main():
     cat_uids['categoryOptionCombos'] = list()
     cat_uids['categoryOptionGroups'] = list()
     cat_uids['categoryOptionGroupSets'] = list()
-    if package_type_or_uid in ['TKR', 'EVT', 'GEN']:
+    if package_type_or_uid in ['TRK', 'EVT', 'GEN']:
         programNotificationTemplates_uids = list()
         programRuleActions_uids = list()
-        if package_type_or_uid in ['TKR','GEN']:
+        if package_type_or_uid in ['TRK','GEN']:
             trackedEntityAttributes_uids = dict()
             trackedEntityAttributes_uids['PR'] = list()
             trackedEntityAttributes_uids['P'] = list()
@@ -1281,7 +1281,7 @@ def main():
         "users": "id:eq:" + WHOAdmin_uid
     }
 
-    if package_type_or_uid in ['TKR', 'EVT']:
+    if package_type_or_uid in ['TRK', 'EVT']:
         metadata_filters.update({
             "programs": "id:in:[" + ','.join(program_uids) + "]",
             "programIndicatorGroups": "",
@@ -1298,7 +1298,7 @@ def main():
             "validationRules": "id:in:[" + ','.join(validationRules_uids) + "]",
             "validationRuleGroups": "code:$like:" + package_prefix
         })
-        if package_type_or_uid in ['TKR']:
+        if package_type_or_uid in ['TRK']:
             metadata_filters.update({
                 "trackedEntityAttributes": "id:in:[" + ','.join(trackedEntityAttributes_uids['P']) + "]",
                 "trackedEntityInstanceFilters": "program.id:in:[" + ','.join(program_uids) + "]",
@@ -1574,7 +1574,7 @@ def main():
             #    metaobject = check_sharing(metaobject, ['userGroupAccesses'])
 
             ## Custom checks
-            if package_type_or_uid in ['TKR', 'EVT']:
+            if package_type_or_uid in ['TRK', 'EVT']:
                 if metadata_type == "eventReports":
                     # Get number of eventReports assigned to the program(s) and compare
                     eventReports = get_metadata_element(metadata_type, "program.id:in:[" + ','.join(program_uids) + "]")
@@ -1709,7 +1709,7 @@ def main():
 
             elif metadata_type == "dataElements":
                 diff_ps = list()
-                if package_type_or_uid in ['TKR', 'EVT']:
+                if package_type_or_uid in ['TRK', 'EVT']:
                     # Compare those dataElements with those assigned to PS -> Is there a dataElement missing?
                     diff_ps = list(set(dataElements_uids['PS']).difference(dataElements_in_package))
                     if len(diff_ps) > 0:
@@ -1884,14 +1884,14 @@ def main():
             elif metadata_type == "programRuleActions":
                 # Scan for DE / TEA used in programRuleActions. We will check if they are assigned to the program
                 dataElements_uids['PR'] += json_extract_nested_ids(metaobject, 'dataElement')
-                if package_type_or_uid == 'TKR':
+                if package_type_or_uid == 'TRK':
                     trackedEntityAttributes_uids['PR'] += json_extract_nested_ids(metaobject, 'trackedEntityAttribute')
                 # There is a field templateUid which may not be null and might reference a programNotificationTemplate
                 # which should be part of a program / programStage, so no need to check it for now
             elif metadata_type == "programRuleVariables":
                 # Scan for DE / TEA used in programRuleVariables. We will check if they are assigned to the program
                 dataElements_uids['PR'] += json_extract_nested_ids(metaobject, 'dataElement')
-                if package_type_or_uid == 'TKR':
+                if package_type_or_uid == 'TRK':
                     trackedEntityAttributes_uids['PR'] += json_extract_nested_ids(metaobject, 'trackedEntityAttribute')
             elif metadata_type == "programIndicators":
                 programIndicatorGroups_uids = json_extract_nested_ids(metaobject, 'programIndicatorGroups')
@@ -1899,7 +1899,7 @@ def main():
                 constants_uids += get_hardcoded_values_in_fields(metaobject, 'constants', ['expression', 'filter'])
                 dataElements_uids['PI'] = get_hardcoded_values_in_fields(metaobject, 'dataElements_prgInd',
                                                                          ['expression', 'filter'])
-                if package_type_or_uid == 'TKR':
+                if package_type_or_uid == 'TRK':
                     trackedEntityAttributes_uids['PI'] = get_hardcoded_values_in_fields(metaobject,
                                                                                     'trackedEntityAttributes',
                                                                                     ['expression', 'filter'])
@@ -1923,7 +1923,7 @@ def main():
                 # Please note that for PSS the key is dataElements with "s"
                 dataElements_uids['PSS'] = json_extract_nested_ids(metaobject, 'dataElements')
             elif metadata_type == "programs":
-                if package_type_or_uid == 'TKR':
+                if package_type_or_uid == 'TRK':
                     trackedEntityTypes_uids = json_extract_nested_ids(metaobject, 'trackedEntityType')
                     trackedEntityAttributes_uids['P'] = json_extract_nested_ids(metaobject, 'trackedEntityAttribute')
                     # Update filter
@@ -2034,8 +2034,8 @@ def main():
                 # Update the filters not needed because dataElements will take care of it
                 legendSets_uids += json_extract_nested_ids(metaobject, 'legendSets')
             elif metadata_type == "indicators":
-                if package_type_or_uid in ['TKR', 'EVT']:
-                    if package_type_or_uid == 'TKR':
+                if package_type_or_uid in ['TRK', 'EVT']:
+                    if package_type_or_uid == 'TRK':
                         trackedEntityAttributes_uids['I'] = get_hardcoded_values_in_fields(metaobject,
                                                                                                'trackedEntityAttributes',
                                                                                                ['numerator', 'denominator'])
@@ -2111,7 +2111,7 @@ def main():
                 # Remove duplicates from the list
                 dataElements_uids['PRED'] = list(dict.fromkeys(dataElements_uids['PRED']))
                 # Used for validation
-                if package_type_or_uid in ['TKR', 'EVT']:
+                if package_type_or_uid in ['TRK', 'EVT']:
                     programIndicators_uids['PRED'] += get_hardcoded_values_in_fields(metaobject, 'programIndicators',
                                                                                      'generator.expression')
                 hardcoded_cocs = get_hardcoded_values_in_fields(metaobject, 'categoryOptionCombos',
