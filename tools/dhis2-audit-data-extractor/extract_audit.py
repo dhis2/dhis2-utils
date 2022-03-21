@@ -57,7 +57,7 @@ def extract_pgcopg2():
         password=CONN_CONFIG['password'])
 
     cur = conn.cursor()
-    cur.execute('SELECT * from audit')
+    cur.execute('SELECT * from audit ORDER BY createdat ASC')
 
     for row in iter_row(cur):
         event = {
