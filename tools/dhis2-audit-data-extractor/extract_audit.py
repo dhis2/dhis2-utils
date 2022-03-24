@@ -1,3 +1,4 @@
+from ast import arg
 import psycopg2
 import json
 import gzip
@@ -6,6 +7,7 @@ import os
 from memory_profiler import profile
 import pandas as pd
 from sqlalchemy import create_engine
+import argparse
 
 DHIS2_HOME = os.getenv("DHIS2_HOME", "/home/dhis")
 DHIS2_CONF_FILE =  "{0}/config/dhis.conf".format(DHIS2_HOME)
@@ -16,6 +18,7 @@ CONN_CONFIG = {
     "password": None
 }
 CUR_SIZE = 10
+AUDITS_NUMBER = 100
 
 
 def iter_row(cursor, size=CUR_SIZE):
@@ -25,6 +28,50 @@ def iter_row(cursor, size=CUR_SIZE):
             break
         for row in rows:
             yield row
+
+def set_pg_connection():
+    with open(DHIS2_CONF_FILE, 'r') as f:
+        lines = '[conf]\n' + f.read()
+
+    config = configparser.ConfigParser()
+    config.read_string(lines)
+
+    conn_url = config.get('conf', 'connection.url')
+    split_url = conn_url.split(':')
+    if len(split_url) == 0:
+        print("Error: cannot find connection URL string in {0}".format(
+            DHIS2_CONF_FILE))
+        exit(1)
+
+    db_host = split_url[2].split('/')
+    if len(db_host) == 1:  # in this case string is jdbc:postgresql:database_name
+        CONN_CONFIG['host'] = "localhost"
+        CONN_CONFIG['dbname'] = db_host[0]
+    else:  # in this case string is jdbc:postgresql://remote.host/database_name
+        CONN_CONFIG['host'] = db_host[-2]
+        CONN_CONFIG['dbname'] = db_host[-1]
+
+    CONN_CONFIG['username'] = config.get('conf', 'connection.username')
+    CONN_CONFIG['password'] = config.get('conf', 'connection.password')
+
+    for k, v in CONN_CONFIG.items():
+        if CONN_CONFIG[k] is None:
+            print("{0} is None. Parsing error. Check {1}. Quitting".format(
+                k, DHIS2_CONF_FILE))
+            exit(1)
+
+def get_audit_number():
+    conn = psycopg2.connect(
+        host=CONN_CONFIG['host'],
+        database=CONN_CONFIG['dbname'],
+        user=CONN_CONFIG['username'],
+        password=CONN_CONFIG['password'])
+
+    cur = conn.cursor()
+    cur.execute('SELECT COUNT(*) from audit')
+    data = cur.fetchone()
+    cur.close()
+    return data[0]
 
 # Currently, this method doesn't work due to the impossibility to decompress gzip data field.
 # More investigation must be done to overcome this issue.
@@ -57,7 +104,8 @@ def extract_pgcopg2():
         password=CONN_CONFIG['password'])
 
     cur = conn.cursor()
-    cur.execute('SELECT * from audit')
+    #cur.execute('SELECT * from audit ORDER BY createdat ASC')
+    cur.execute('SELECT * from audit ORDER BY createdat ASC LIMIT {}'.format(AUDITS_NUMBER))
 
     for row in iter_row(cur):
         event = {
@@ -77,44 +125,17 @@ def extract_pgcopg2():
     cur.close()
     return audit_data
 
-
-def extract_data():
-    with open(DHIS2_CONF_FILE, 'r') as f:
-        lines = '[conf]\n' + f.read()
-
-    config = configparser.ConfigParser()
-    config.read_string(lines)
-
-    conn_url = config.get('conf', 'connection.url')
-    split_url = conn_url.split(':')
-    if len(split_url) == 0:
-        print("Error: cannot find connection URL string in {0}".format(
-            DHIS2_CONF_FILE))
-        exit(1)
-
-    db_host = split_url[2].split('/')
-    if len(db_host) == 1:  # in this case string is jdbc:postgresql:database_name
-        CONN_CONFIG['host'] = "localhost"
-        CONN_CONFIG['dbname'] = db_host[0]
-    else:  # in this case string is jdbc:postgresql://remote.host/database_name
-        CONN_CONFIG['host'] = db_host[-2]
-        CONN_CONFIG['dbname'] = db_host[-1]
-
-    CONN_CONFIG['username'] = config.get('conf', 'connection.username')
-    CONN_CONFIG['password'] = config.get('conf', 'connection.password')
-
-    for k, v in CONN_CONFIG.items():
-        if CONN_CONFIG[k] is None:
-            print("{0} is None. Parsing error. Check {1}. Quitting".format(
-                k, DHIS2_CONF_FILE))
-            exit(1)
-
-    data = extract_pgcopg2()
-
-    #data = extract_pandas()
-
-    print(json.dumps(data))
-
-
 if __name__ == '__main__':
-    extract_data()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('extract', nargs='?')
+    parser.add_argument('--entries', type=int)
+    args = parser.parse_args()
+    if args.entries:
+        AUDITS_NUMBER = args.entries
+
+    set_pg_connection()
+    if args.extract:
+        print(json.dumps(extract_pgcopg2()))
+        #data = extract_pandas()
+    else:
+        print("Audit table contains {} entries".format(get_audit_number()))
