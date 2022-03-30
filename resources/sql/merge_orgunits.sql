@@ -203,18 +203,38 @@ value,
 ''admin''::character varying(100) as modifiedby,
 ''DELETE''::character varying(255) as audittype,
 attributeoptioncomboid,
-now()::timestamp without time zone 
-FROM datavalue where sourceid = ( SELECT organisationunitid 
-	from organisationunit where uid = %L )',dest_uid,source_uid);
+now()::timestamp without time zone
+FROM datavalue
+where sourceid = ( SELECT organisationunitid
+	from organisationunit where uid = %L ) ON CONFLICT (datavalueauditid) DO NOTHING',dest_uid,source_uid);
 
 --Switch all datavalue audit records for the unit to be removed
-EXECUTE format('UPDATE datavalueaudit set organisationunitid = 
+EXECUTE format('UPDATE datavalueaudit set organisationunitid =
 (SELECT organisationunitid from organisationunit where uid = %L )
-WHERE organisationunitid = (select organisationunitid 
+WHERE organisationunitid = (select organisationunitid
 	from organisationunit where uid = %L )',dest_uid,source_uid);
 
+--Merge tracker data
+
+EXECUTE format('UPDATE programinstance set organisationunitid = 
+(SELECT organisationunitid from organisationunit where uid = %L )
+WHERE organisationunitid = (select organisationunitid
+	from organisationunit where uid = %L )',dest_uid,source_uid);
+
+EXECUTE format('UPDATE programstageinstance set organisationunitid = 
+(SELECT organisationunitid from organisationunit where uid = %L )
+WHERE organisationunitid = (select organisationunitid
+	from organisationunit where uid = %L )',dest_uid,source_uid);
+
+EXECUTE format('UPDATE trackedentityinstance set organisationunitid = 
+(SELECT organisationunitid from organisationunit where uid = %L )
+WHERE organisationunitid = (select organisationunitid
+	from organisationunit where uid = %L )',dest_uid,source_uid);
+
+
+
 --DELETE all records for the source
-EXECUTE format('SELECT * FROM delete_site_with_data( %L )',source_uid);
+EXECUTE format('SELECT * FROM delete_orgunittree_with_data( %L )',source_uid);
 
 
 RETURN 1;

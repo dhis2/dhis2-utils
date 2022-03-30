@@ -3,8 +3,15 @@ DECLARE
 organisationunitid integer;
 resort_object RECORD;
 resort_integer integer;
+major_version integer;
 
 BEGIN
+
+--Attempt to deduce the version from the flyway schema history.
+SELECT MAX(substring(version from '(?!\.)\d{2,}(?=\.)' )::integer) from flyway_schema_history 
+INTO major_version;
+
+RAISE NOTICE 'DHIS2 major version % detected.', major_version ;
 
 EXECUTE 'SELECT organisationunitid from organisationunit where uid = ''' ||   $1  || ''''  INTO organisationunitid;
 
@@ -21,27 +28,28 @@ EXECUTE 'DELETE FROM interpretation WHERE organisationunitid = $1 ' USING organi
 EXECUTE 'DELETE FROM lockexception WHERE organisationunitid = $1 ' USING organisationunitid;
 EXECUTE 'DELETE FROM minmaxdataelement WHERE sourceid = $1 ' USING organisationunitid;
 EXECUTE 'DELETE FROM orgunitgroupmembers WHERE organisationunitid = $1 ' USING organisationunitid;
+EXECUTE 'DELETE FROM validationresult where organisationunitid = $1' USING organisationunitid;
+
 
 --delete all data from programstageinstance and down based on first programstageinstance orgunit then programinstance orgunit and lastly trackedentityinstance orgunit
-EXECUTE 'DELETE FROM trackedentitydatavalue WHERE programstageinstanceid IN (SELECT programstageinstanceid FROM programstageinstance WHERE organisationunitid = $1 OR programinstanceid IN (SELECT programinstanceid FROM programinstance WHERE organisationunitid = $1 OR trackedentityinstanceid IN (SELECT trackedentityinstanceid FROM trackedentityinstance WHERE organisationunitid = $1))) '
-USING organisationunitid;
-EXECUTE 'DELETE FROM trackedentitydatavalueaudit WHERE programstageinstanceid IN (SELECT programstageinstanceid FROM programstageinstance WHERE organisationunitid = $1 OR programinstanceid IN (SELECT programinstanceid FROM programinstance WHERE organisationunitid = $1 OR trackedentityinstanceid IN (SELECT trackedentityinstanceid FROM trackedentityinstance WHERE organisationunitid = $1))) '
-USING organisationunitid;
 EXECUTE 'DELETE FROM programstageinstancecomments WHERE programstageinstanceid IN (SELECT programstageinstanceid FROM programstageinstance WHERE organisationunitid = $1 OR programinstanceid IN (SELECT programinstanceid FROM programinstance WHERE organisationunitid = $1 OR trackedentityinstanceid IN (SELECT trackedentityinstanceid FROM trackedentityinstance WHERE organisationunitid = $1))) '
 USING organisationunitid;
-EXECUTE 'DELETE FROM programstageinstance_outboundsms WHERE programstageinstanceid IN (SELECT programstageinstanceid FROM programstageinstance WHERE organisationunitid = $1 OR programinstanceid IN (SELECT programinstanceid FROM programinstance WHERE organisationunitid = $1 OR trackedentityinstanceid IN (SELECT trackedentityinstanceid FROM trackedentityinstance WHERE organisationunitid = $1))) '
-USING organisationunitid;
+-- Table removed
+--EXECUTE 'DELETE FROM programstageinstance_outboundsms WHERE programstageinstanceid IN (SELECT programstageinstanceid FROM programstageinstance WHERE organisationunitid = $1 OR programinstanceid IN (SELECT programinstanceid FROM programinstance WHERE organisationunitid = $1 OR trackedentityinstanceid IN (SELECT trackedentityinstanceid FROM trackedentityinstance WHERE organisationunitid = $1))) '
+--USING organisationunitid;
 EXECUTE 'DELETE FROM programstageinstance WHERE programstageinstanceid IN (SELECT programstageinstanceid FROM programstageinstance WHERE organisationunitid = $1 OR programinstanceid IN (SELECT programinstanceid FROM programinstance WHERE organisationunitid = $1 OR trackedentityinstanceid IN (SELECT trackedentityinstanceid FROM trackedentityinstance WHERE organisationunitid = $1))) '
 USING organisationunitid;
 
 --delete all programinstances based on first programinstance orgunit then tracked entity instance orgunit
 EXECUTE 'DELETE FROM programinstancecomments WHERE programinstanceid in (SELECT programinstanceid FROM programinstance WHERE organisationunitid = $1 OR trackedentityinstanceid IN (SELECT trackedentityinstanceid FROM trackedentityinstance WHERE organisationunitid = $1 )) ' USING organisationunitid;
 EXECUTE 'DELETE FROM programinstance WHERE organisationunitid = $1 OR trackedentityinstanceid IN (SELECT trackedentityinstanceid FROM trackedentityinstance WHERE organisationunitid = $1 ) ' USING organisationunitid;
+EXECUTE 'DELETE FROM trackedentityprogramowner where organisationunitid = $1' USING organisationunitid;
 
 --delete all data still connected to trackedentityinstances based on trackedentityinstance orgunit
 EXECUTE 'DELETE FROM trackedentityattributevalue WHERE trackedentityinstanceid IN(SELECT trackedentityinstanceid from trackedentityinstance where organisationunitid = $1) ' USING organisationunitid;
 EXECUTE 'DELETE FROM trackedentityattributevalueaudit WHERE trackedentityinstanceid IN(SELECT trackedentityinstanceid from trackedentityinstance where organisationunitid = $1) ' USING organisationunitid;
 EXECUTE 'DELETE FROM trackedentityinstance WHERE organisationunitid = $1 ' USING organisationunitid;
+EXECUTE 'DELETE FROM userteisearchorgunits WHERE organisationunitid = $1 ' USING organisationunitid;
 
 EXECUTE 'DELETE FROM userdatavieworgunits WHERE organisationunitid = $1 ' USING organisationunitid;
 EXECUTE 'DELETE FROM program_organisationunits WHERE organisationunitid = $1 ' USING organisationunitid;
@@ -53,7 +61,8 @@ SET client_min_messages=WARNING;
 CREATE TEMP TABLE IF NOT EXISTS temp1 (
    objectid integer ) ON COMMIT DROP;
 
---chart_organisationunits
+
+IF major_version < 36 THEN
 EXECUTE 'DELETE FROM chart_organisationunits WHERE organisationunitid = $1 ' USING organisationunitid;
 EXECUTE 'INSERT INTO temp1 SELECT chartid from chart_organisationunits where organisationunitid = $1 'USING organisationunitid;
 
@@ -61,7 +70,8 @@ FOR resort_object IN SELECT objectid from temp1 LOOP
 EXECUTE 'update chart_organisationunits set sort_order = -t.i
 from (select row_number() over (ORDER BY sort_order) as i, chartid, sort_order, organisationunitid
    from chart_organisationunits where chartid=$1 order by sort_order) t
-where chart_organisationunits.organisationunitid = t.organisationunitid and chart_organisationunits.chartid=$1' USING resort_object.objectid ;
+where chart_organisationunits.organisationunitid = t.organisationunitid
+ and chart_organisationunits.visualizationid=$1' USING resort_object.objectid ;
 EXECUTE 'update chart_organisationunits set sort_order = -(sort_order+1) where chartid=$1' USING resort_object.objectid ;
 END LOOP;
 EXECUTE 'TRUNCATE temp1';
@@ -80,6 +90,32 @@ EXECUTE 'update reporttable_organisationunits set sort_order = -(sort_order+1) w
 
 END LOOP;
 EXECUTE 'TRUNCATE temp1';
+
+END IF;
+
+
+IF major_version >= 34 THEN
+--Charts renamed to visualisations in 2.36
+EXECUTE 'DELETE FROM visualization_organisationunits WHERE organisationunitid = $1 ' USING organisationunitid;
+EXECUTE 'INSERT INTO temp1 SELECT visualizationid from visualization_organisationunits where organisationunitid = $1 'USING organisationunitid;
+
+FOR resort_object IN SELECT objectid from temp1 LOOP
+EXECUTE 'update visualization_organisationunits set sort_order = -t.i
+from (select row_number() over (ORDER BY sort_order) as i, visualizationid, sort_order, organisationunitid
+   from visualization_organisationunits where visualizationid=$1 order by sort_order) t
+where visualization_organisationunits.organisationunitid = t.organisationunitid
+ and visualization_organisationunits.visualizationid=$1' USING resort_object.objectid ;
+EXECUTE 'update visualization_organisationunits set sort_order = -(sort_order+1) where visualizationid=$1' USING resort_object.objectid ;
+END LOOP;
+EXECUTE 'TRUNCATE temp1';
+END IF;
+
+
+--Feature was introduced in 2.35
+IF major_version >= 35 THEN
+EXECUTE 'DELETE FROM feature where organisationunitid = $1' USING organisationunitid;
+END IF;
+
 
 --mapview_organisationunits
 
@@ -121,7 +157,7 @@ EXECUTE 'update eventreport_organisationunits set sort_order = -(sort_order+1) w
 END LOOP;
 EXECUTE 'TRUNCATE temp1';
 
-EXECUTE 'DELETE FROM organisationunittranslations WHERE organisationunitid = $1 ' USING organisationunitid;
+--EXECUTE 'DELETE FROM organisationunittranslations WHERE organisationunitid = $1 ' USING organisationunitid;
 
 EXECUTE 'DELETE FROM organisationunit WHERE organisationunitid = $1 ' USING organisationunitid;
 
