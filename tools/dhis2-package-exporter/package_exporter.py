@@ -2086,6 +2086,9 @@ def main():
                     if 'indicatorGroupSet' in indGroup:
                         indicatorGroupSets_uids.append(indGroup['indicatorGroupSet']['id'])
                 metadata_filters["indicatorGroupSets"] = "id:in:[" + ','.join(indicatorGroupSets_uids) + "]"
+            elif metadata_type == 'indicatorTypes':
+                # Update legendSets filter (especially important for AGG and GEN packages)
+                metadata_filters["legendSets"] = "id:in:[" + ','.join(legendSets_uids) + "]" 
             elif metadata_type == 'dataElementGroups':
                 dataElements_in_package = json_extract_nested_ids(metaobject, 'dataElements')
                 metadata_filters["dataElements"] = "id:in:[" + ','.join(dataElements_in_package) + "]"
