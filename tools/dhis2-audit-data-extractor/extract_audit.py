@@ -24,6 +24,7 @@ CONN_CONFIG = {
 CUR_SIZE = 100
 AUDITS_NUMBER = 1000
 OUTPUT_MODE = "CSV"
+VERSION = 1.0
 
 def iter_row(cursor, size=CUR_SIZE):
     while True:
