@@ -98,7 +98,7 @@ def get_audit_number():
 #     return audit_data
 
 # @profile
-def extract_pgcopg2(format, output_mode, offset):
+def extract_pgcopg2(format, output_mode, nr_rows, offset):
     audit_data = list()
     format = format.upper()
     output_mode = output_mode.lower()
@@ -111,7 +111,7 @@ def extract_pgcopg2(format, output_mode, offset):
         password=CONN_CONFIG['password'])
 
     cur = conn.cursor()
-    cur.execute('SELECT * from audit ORDER BY createdat ASC LIMIT {} OFFSET {}'.format(AUDITS_NUMBER, offset))
+    cur.execute('SELECT * from audit ORDER BY createdat ASC LIMIT {} OFFSET {}'.format(nr_rows, offset))
 
     if output_mode == "file":
         filename = "dhis2_audit_extract-{0}.{1}".format(current_date, "csv" if format == "CSV" else "json")
@@ -171,19 +171,17 @@ def extract_pgcopg2(format, output_mode, offset):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('command', nargs='?', choices=['extract', 'enum'] )
-    parser.add_argument('-e', '--entries', type=int, help="Number of rows to pull. Default {0}".format(AUDITS_NUMBER))
+    parser.add_argument('-e', '--entries', type=int, help="Number of rows to pull. Default 1000", default=1000)
     parser.add_argument('-m', '--mode', type=str, choices=['file', 'stdout'], default="file")
     parser.add_argument('-f', '--format', type=str, choices=['CSV', 'JSON'], default="CSV")
     parser.add_argument('-s', '--skip', type=int, help="Number of rows to skip", default=0)
 
     args = parser.parse_args()
-    if args.entries:
-        AUDITS_NUMBER = args.entries
 
     set_pg_connection()
     if args.command:
         if args.command.lower() == "extract":
-            extract_pgcopg2(args.format, args.output, args.skip)
+            extract_pgcopg2(args.format, args.mode, args.entries, args.skip)
             #data = extract_pandas()
         elif args.command.lower() == "enum":
             print("Audit table contains {} entries".format(get_audit_number()))
