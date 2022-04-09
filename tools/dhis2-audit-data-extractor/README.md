@@ -10,8 +10,10 @@ The script uses python library psycopg2, although some tests have been done with
 - List and extract rows from audit table.
 - Output in CSV (default) and JSON.
 - Automatically saves to file.
-- Select the number of events to extract.
-- Skip rows
+- Option to output to stdout.
+- Option to specify a file for saving output.
+- Option to select the number of events to extract.
+- Option to skip rows.
 
 ## Requirements
 Install requirements:
@@ -46,7 +48,6 @@ You can enumerate how many events (=rows) there are in the table:
 Audit table contains 612 entries
 ~/dhis2-utils/tools/dhis2-audit-data-extractor$
 ```
-
 
 By default the script saves the data to a file (`-m file`) automatically created in the current folder. Format is CSV (`-f CVS`).
 
