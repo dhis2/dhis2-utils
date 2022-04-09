@@ -98,7 +98,7 @@ def get_audit_number():
 #     return audit_data
 
 # @profile
-def extract_pgcopg2(format, output_mode):
+def extract_pgcopg2(format, output_mode, offset):
     audit_data = list()
     format = format.upper()
     output_mode = output_mode.lower()
@@ -111,7 +111,7 @@ def extract_pgcopg2(format, output_mode):
         password=CONN_CONFIG['password'])
 
     cur = conn.cursor()
-    cur.execute('SELECT * from audit ORDER BY createdat ASC LIMIT {}'.format(AUDITS_NUMBER))
+    cur.execute('SELECT * from audit ORDER BY createdat ASC LIMIT {} OFFSET {}'.format(AUDITS_NUMBER, offset))
 
     if output_mode == "file":
         filename = "dhis2_audit_extract-{0}.{1}".format(current_date, "csv" if format == "CSV" else "json")
@@ -174,6 +174,7 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--entries', type=int, help="Number of rows to pull. Default {0}".format(AUDITS_NUMBER))
     parser.add_argument('-o', '--output', type=str, choices=['file', 'stdout'], default="file")
     parser.add_argument('-f', '--format', type=str, choices=['CSV', 'JSON'], default="CSV")
+    parser.add_argument('-s', '--skip', type=int, help="Number of rows to skip", default=0)
 
     args = parser.parse_args()
     if args.entries:
@@ -182,7 +183,7 @@ if __name__ == '__main__':
     set_pg_connection()
     if args.command:
         if args.command.lower() == "extract":
-            extract_pgcopg2(args.format, args.output)
+            extract_pgcopg2(args.format, args.output, args.skip)
             #data = extract_pandas()
         elif args.command.lower() == "enum":
             print("Audit table contains {} entries".format(get_audit_number()))
