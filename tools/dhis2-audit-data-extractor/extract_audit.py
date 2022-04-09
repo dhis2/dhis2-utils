@@ -172,7 +172,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('command', nargs='?', choices=['extract', 'enum'] )
     parser.add_argument('-e', '--entries', type=int, help="Number of rows to pull. Default {0}".format(AUDITS_NUMBER))
-    parser.add_argument('-o', '--output', type=str, choices=['file', 'stdout'], default="file")
+    parser.add_argument('-m', '--mode', type=str, choices=['file', 'stdout'], default="file")
     parser.add_argument('-f', '--format', type=str, choices=['CSV', 'JSON'], default="CSV")
     parser.add_argument('-s', '--skip', type=int, help="Number of rows to skip", default=0)
 
