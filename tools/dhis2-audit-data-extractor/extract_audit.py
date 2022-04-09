@@ -98,7 +98,7 @@ def get_audit_number():
 #     return audit_data
 
 # @profile
-def extract_pgcopg2(format, output_mode, nr_rows, offset):
+def extract_pgcopg2(format, output_mode, output_file, nr_rows, offset):
     audit_data = list()
     format = format.upper()
     output_mode = output_mode.lower()
@@ -114,10 +114,11 @@ def extract_pgcopg2(format, output_mode, nr_rows, offset):
     cur.execute('SELECT * from audit ORDER BY createdat ASC LIMIT {} OFFSET {}'.format(nr_rows, offset))
 
     if output_mode == "file":
-        filename = "dhis2_audit_extract-{0}.{1}".format(current_date, "csv" if format == "CSV" else "json")
+        filename = output_file if output_file else "dhis2_audit_extract-{0}.{1}".format(current_date, "csv" if format == "CSV" else "json")
+
         with open(filename, 'a') as fd:
             writer = csv.DictWriter(fd, fieldnames = ["id", "event", "type", "datetime", "createdby", "klass", "uid", "code", "attributes", "data"])
-            if format == "CSV":
+            if format == "CSV" and not os.path.exists(filename):
                 writer.writeheader()
 
             for row in iter_row(cur):
@@ -175,13 +176,14 @@ if __name__ == '__main__':
     parser.add_argument('-m', '--mode', type=str, choices=['file', 'stdout'], default="file")
     parser.add_argument('-f', '--format', type=str, choices=['CSV', 'JSON'], default="CSV")
     parser.add_argument('-s', '--skip', type=int, help="Number of rows to skip", default=0)
+    parser.add_argument('-o', '--output', type=str, help="Output file")
 
     args = parser.parse_args()
 
     set_pg_connection()
     if args.command:
         if args.command.lower() == "extract":
-            extract_pgcopg2(args.format, args.mode, args.entries, args.skip)
+            extract_pgcopg2(args.format, args.mode, args.output, args.entries, args.skip)
             #data = extract_pandas()
         elif args.command.lower() == "enum":
             print("Audit table contains {} entries".format(get_audit_number()))
