@@ -180,8 +180,13 @@ if __name__ == '__main__':
     parser.add_argument('-f', '--format', type=str, choices=['CSV', 'JSON'], default="CSV")
     parser.add_argument('-s', '--skip', type=int, help="Number of rows to skip", default=0)
     parser.add_argument('-o', '--output', type=str, help="Output file")
+    parser.add_argument('-V', '--version', action="store_true", help="Print version and exit")
 
     args = parser.parse_args()
+
+    if args.version:
+        print("Version {}".format(VERSION))
+        exit(0)
 
     set_pg_connection()
     if args.command:
