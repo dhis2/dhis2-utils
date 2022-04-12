@@ -1,6 +1,6 @@
 # This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 3 of the License.
 # This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>. 
+# You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 from ast import arg
 from curses.ascii import NUL
@@ -18,7 +18,7 @@ from datetime import datetime
 import csv
 
 DHIS2_HOME = os.getenv("DHIS2_HOME", "/home/dhis")
-DHIS2_CONF_FILE =  "{0}/config/dhis.conf".format(DHIS2_HOME)
+DHIS2_CONF_FILE = "{0}/config/dhis.conf".format(DHIS2_HOME)
 CONN_CONFIG = {
     "host": None,
     "dbname": None,
@@ -28,6 +28,7 @@ CONN_CONFIG = {
 CUR_SIZE = 100
 VERSION = 1.0
 
+
 def iter_row(cursor, size=CUR_SIZE):
     while True:
         rows = cursor.fetchmany(size)
@@ -35,6 +36,7 @@ def iter_row(cursor, size=CUR_SIZE):
             break
         for row in rows:
             yield row
+
 
 def set_pg_connection():
     with open(DHIS2_CONF_FILE, 'r') as f:
@@ -67,6 +69,7 @@ def set_pg_connection():
                 k, DHIS2_CONF_FILE))
             exit(1)
 
+
 def get_audit_number():
     conn = psycopg2.connect(
         host=CONN_CONFIG['host'],
@@ -79,6 +82,21 @@ def get_audit_number():
     data = cur.fetchone()
     cur.close()
     return data[0]
+
+
+def parse_row(row):
+    return {
+        "id": row[0],
+        "event": row[1],
+        "type": row[2],
+        "datetime": row[3].strftime("%Y-%m-%d %H:%M:%S"),
+        "createdby": row[4],
+        "klass": row[5],
+        "uid": row[6],
+        "code": row[7],
+        "attributes": row[8],
+        "data": json.loads(gzip.decompress(row[9]).decode('utf-8')) if row[9] else None
+    }
 
 # Currently, this method doesn't work due to the impossibility to decompress gzip data field.
 # More investigation must be done to overcome this issue.
@@ -101,6 +119,8 @@ def get_audit_number():
 #     return audit_data
 
 # @profile
+
+
 def extract_pgcopg2(format, output_mode, output_file, nr_rows, offset):
     audit_data = list()
     format = format.upper()
@@ -114,29 +134,21 @@ def extract_pgcopg2(format, output_mode, output_file, nr_rows, offset):
         password=CONN_CONFIG['password'])
 
     cur = conn.cursor()
-    cur.execute('SELECT * from audit ORDER BY createdat ASC LIMIT {} OFFSET {}'.format(nr_rows, offset))
+    cur.execute(
+        'SELECT * from audit ORDER BY createdat ASC LIMIT {} OFFSET {}'.format(nr_rows, offset))
 
     if output_mode == "file":
-        filename = output_file if output_file else "dhis2_audit_extract-{0}.{1}".format(current_date, "csv" if format == "CSV" else "json")
+        filename = output_file if output_file else "dhis2_audit_extract-{0}.{1}".format(
+            current_date, "csv" if format == "CSV" else "json")
 
         with open(filename, 'a') as fd:
-            writer = csv.DictWriter(fd, fieldnames = ["id", "event", "type", "datetime", "createdby", "klass", "uid", "code", "attributes", "data"])
+            writer = csv.DictWriter(fd, fieldnames=[
+                                    "id", "event", "type", "datetime", "createdby", "klass", "uid", "code", "attributes", "data"])
             if format == "CSV" and not os.path.exists(filename):
                 writer.writeheader()
 
             for row in iter_row(cur):
-                event = {
-                    "id": row[0],
-                    "event": row[1],
-                    "type": row[2],
-                    "datetime": row[3].strftime("%Y-%m-%d %H:%M:%S"),
-                    "createdby": row[4],
-                    "klass": row[5],
-                    "uid": row[6],
-                    "code": row[7],
-                    "attributes": row[8],
-                    "data": json.loads(gzip.decompress(row[9]).decode('utf-8')) if row[9] else None
-                }
+                event = parse_row(row)
 
                 if format == "CSV":
                     writer.writerow(event)
@@ -149,20 +161,10 @@ def extract_pgcopg2(format, output_mode, output_file, nr_rows, offset):
     elif output_mode == "stdout":
         for row in iter_row(cur):
             if format == "CSV":
-                event = """{0},{1},{2},{3},{4},{5},{6},{7},'{8}','{9}'""".format(row[0],row[1],row[2],row[3].strftime("%Y-%m-%d %H:%M:%S"),row[4],row[5],row[6],row[7],row[8], json.loads(gzip.decompress(row[9]).decode('utf-8')) if row[9] else None)
+                event = """{0},{1},{2},{3},{4},{5},{6},{7},'{8}','{9}'""".format(row[0], row[1], row[2], row[3].strftime(
+                    "%Y-%m-%d %H:%M:%S"), row[4], row[5], row[6], row[7], row[8], json.loads(gzip.decompress(row[9]).decode('utf-8')) if row[9] else None)
             elif format == "JSON":
-                event = {
-                    "id": row[0],
-                    "event": row[1],
-                    "type": row[2],
-                    "datetime": row[3].strftime("%Y-%m-%d %H:%M:%S"),
-                    "createdby": row[4],
-                    "klass": row[5],
-                    "uid": row[6],
-                    "code": row[7],
-                    "attributes": row[8],
-                    "data": json.loads(gzip.decompress(row[9]).decode('utf-8')) if row[9] else None
-                }
+                event = parse_row(row)
             audit_data.append(event)
         if format == "JSON":
             print(json.dumps(audit_data))
@@ -172,15 +174,21 @@ def extract_pgcopg2(format, output_mode, output_file, nr_rows, offset):
 
     cur.close()
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('command', nargs='?', choices=['extract', 'enum'] )
-    parser.add_argument('-e', '--entries', type=int, help="Number of rows to pull. Default 1000", default=1000)
-    parser.add_argument('-m', '--mode', type=str, choices=['file', 'stdout'], default="file")
-    parser.add_argument('-f', '--format', type=str, choices=['CSV', 'JSON'], default="CSV")
-    parser.add_argument('-s', '--skip', type=int, help="Number of rows to skip", default=0)
+    parser.add_argument('command', nargs='?', choices=['extract', 'enum'])
+    parser.add_argument('-e', '--entries', type=int,
+                        help="Number of rows to pull. Default 1000", default=1000)
+    parser.add_argument('-m', '--mode', type=str,
+                        choices=['file', 'stdout'], default="file")
+    parser.add_argument('-f', '--format', type=str,
+                        choices=['CSV', 'JSON'], default="CSV")
+    parser.add_argument('-s', '--skip', type=int,
+                        help="Number of rows to skip", default=0)
     parser.add_argument('-o', '--output', type=str, help="Output file")
-    parser.add_argument('-V', '--version', action="store_true", help="Print version and exit")
+    parser.add_argument('-V', '--version', action="store_true",
+                        help="Print version and exit")
 
     args = parser.parse_args()
 
@@ -191,7 +199,8 @@ if __name__ == '__main__':
     set_pg_connection()
     if args.command:
         if args.command.lower() == "extract":
-            extract_pgcopg2(args.format, args.mode, args.output, args.entries, args.skip)
+            extract_pgcopg2(args.format, args.mode,
+                            args.output, args.entries, args.skip)
             #data = extract_pandas()
         elif args.command.lower() == "enum":
             print("Audit table contains {} entries".format(get_audit_number()))
