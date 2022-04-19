@@ -1109,7 +1109,7 @@ def main():
             'predictors', 'predictorGroups',
             'trackedEntityAttributes', 'trackedEntityTypes', 'trackedEntityInstanceFilters',
             'programNotificationTemplates',
-            'programs',
+            'programs', 'programSections',
             'programStageSections', 'programStages',
             'programIndicatorGroups', 'programIndicators',
             'organisationUnitGroupSets', 'organisationUnitGroups',  # Assuming this will only be found in indicators
@@ -1283,6 +1283,7 @@ def main():
             "programRuleActions": "id:in:[" + ','.join(programRuleActions_uids) + "]",
             "programRules": "program.id:in:[" + ','.join(program_uids) + "]",
             "programRuleVariables": "program.id:in:[" + ','.join(program_uids) + "]",
+            "programSections": "program.id:in:[" + ','.join(program_uids) + "]",
             "programStages": "program.id:in:[" + ','.join(program_uids) + "]",
             "programStageSections": "id:in:[" + ','.join(programStageSections_uids) + "]",
             # Some programs may have dataSets linked to them, like HIV
@@ -1585,6 +1586,9 @@ def main():
                         logger.error("Indicators use trackedEntityAttributes not included in the program: "
                                      + str(diff))
                         total_errors += 1
+                    # Note: including programSections (PS), we are assuming that the trackedEntityAttributes (TEAs)
+                    # referenced by the PS(s) are part of the program TEAs. The tests carried out point in that
+                    # direction so initially there is no need to check the programSections TEAs
 
                 elif metadata_type == "programIndicators":
                     # Get UIDs to analyze PIs included in the Program (P) VS the ones used in num/den of indicators
