@@ -1104,7 +1104,7 @@ def main():
             'constants', 'documents', 'attributes',
             'dataEntryForms', 'sections', 'dataSets', # Some programs, like HIV, have dataSets
             'dataElements', 'dataElementGroups',
-            'validationRules', 'validationRuleGroups',
+            'validationNotificationTemplates', 'validationRules', 'validationRuleGroups',
             'jobConfigurations',
             'predictors', 'predictorGroups',
             'trackedEntityAttributes', 'trackedEntityTypes', 'trackedEntityInstanceFilters',
@@ -1141,7 +1141,7 @@ def main():
             'constants', 'documents', 'attributes',
             'dataEntryForms',
             'dataElements', 'dataElementGroups', # group first
-            'validationRules', 'validationRuleGroups', # group first
+            'validationNotificationTemplates', 'validationRules', 'validationRuleGroups', # group first
             'jobConfigurations',
             'predictors', 'predictorGroups', # group first
             'organisationUnitGroupSets', 'organisationUnitGroups',  # Assuming this will only be found in indicators
@@ -1289,6 +1289,7 @@ def main():
             # Some programs may have dataSets linked to them, like HIV
             "dataSets": "code:$like:" + package_prefix,
             "sections": "dataSet.id:[" + ','.join(dataset_uids) + "]",
+            "validationNotificationTemplates": "validationRules.id:in:[" + ','.join(validationRules_uids) + "]",
             "validationRules": "id:in:[" + ','.join(validationRules_uids) + "]",
             "validationRuleGroups": "code:$like:" + package_prefix
         })
@@ -1303,6 +1304,7 @@ def main():
         metadata_filters.update({
             "dataSets": "id:in:[" + ','.join(dataset_uids) + "]",
             "sections": "dataSet.id:[" + ','.join(dataset_uids) + "]",
+            "validationNotificationTemplates": "validationRules.id:in:[" + ','.join(validationRules_uids) + "]",
             "validationRules": "id:in:[" + ','.join(validationRules_uids) + "]",
             "validationRuleGroups": "code:$like:" + package_prefix
         })
@@ -1675,6 +1677,30 @@ def main():
                         # Before calling check_sharing, update the userGroup uids global variable
                         userGroups_uids += new_userGroups_uids
                         metadata['userGroups'] = check_sharing(metadata['userGroups'])
+
+            elif metadata_type == "validationNotificationTemplates":
+                # Check for userGroups used which are not included in the package
+                new_userGroups_uids = list()
+                for VNT in metaobject:
+                    if 'recipientUserGroup' in VNT and VNT['recipientUserGroup']['id'] not in userGroups_uids and \
+                            VNT['recipientUserGroup']['id'] not in new_userGroups_uids:
+                        new_userGroups_uids.append(VNT['recipientUserGroup']['id'])
+                if len(new_userGroups_uids) > 0:
+                    # Get those user Groups
+                    new_userGroups = get_metadata_element('userGroups',
+                                                          'id:in:[' + ','.join(new_userGroups_uids) + ']')
+                    logger.warning(
+                        "ValidationNotificationTemplates use a userGroup recipient not included in the package... ADDING")
+                    for UG in new_userGroups:
+                        logger.warning(" ! " + UG['id'] + " - " + UG['name'])
+                    new_userGroups = clean_metadata(new_userGroups)
+                    # Remove all users from the group
+                    new_userGroups = remove_subset_from_set(new_userGroups, 'users')
+                    # Add userGroups and check sharing
+                    metadata['userGroups'] += new_userGroups
+                    # Before calling check_sharing, update the userGroup uids global variable
+                    userGroups_uids += new_userGroups_uids
+                    metadata['userGroups'] = check_sharing(metadata['userGroups'])
 
             if metadata_type == "dataEntryForms":
                 for custom_form in metaobject:
@@ -2119,6 +2145,7 @@ def main():
                 # And then use those to find the validation rules
                 validationRules_uids = json_extract_nested_ids(metaobject, 'validationRules')
                 metadata_filters["validationRules"] = "id:in:[" + ','.join(validationRules_uids) + "]"
+                metadata_filters["validationNotificationTemplates"] = "validationRules.id:in:[" + ','.join(validationRules_uids) + "]"
                 validationRuleGroups_uids = json_extract(metaobject, 'id')
             elif metadata_type == 'validationRules':
                 # Analyze hardcoded expressions
