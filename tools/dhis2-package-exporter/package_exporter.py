@@ -1550,6 +1550,20 @@ def main():
                 else:
                     logger.warning('There are org units assigned... Removing')
                     metaobject = remove_subset_from_set(metaobject, 'organisationUnits')
+                    
+            ## Warn about relative Periods not being used
+            if metadata_type in ['reportTables', 'eventReports', 'eventCharts', 'visualizations', 'maps']:
+                for dashboard_item in metaobject:
+                    if 'relativePeriods' in dashboard_item:
+                        at_least_one_relative_period = False
+                        # Loop all the keys in the dictionary until you find one set to True
+                        # Every key represents a relative period type, such as thisYear, yesterday, last4Weeks...
+                        for relative_period in dashboard_item['relativePeriods']:
+                            if dashboard_item['relativePeriods'][relative_period]:
+                                at_least_one_relative_period = True
+                                break
+                        if not at_least_one_relative_period:
+                            logger.warning('Dashboard item of type ' + metadata_type + ' with UID = ' + dashboard_item['id'] + ' does not have any relative period configured. Please review')
 
             ## Check sharing
             ### With userGroups
