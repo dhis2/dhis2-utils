@@ -56,8 +56,7 @@ def set_pg_connection(config_file):
         print("Error: cannot find connection URL string in {0}".format(
             config_file))
         exit(1)
-
-    if len(split_url) == 3: # in this case string is jdbc:postgresql:database_name or jdbc:postgresql://remote.host/database_name
+    elif len(split_url) == 3: # in this case string is jdbc:postgresql:database_name or jdbc:postgresql://remote.host/database_name
         db_host = split_url[2].split('/')
         if len(db_host) == 1:  # in this case string is jdbc:postgresql:database_name
             CONN_CONFIG['host'] = "localhost"
