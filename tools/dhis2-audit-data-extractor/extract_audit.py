@@ -27,16 +27,16 @@ CONN_CONFIG = {
     "password": None
 }
 SEVERITY_LEVELS = {
-    "low" : 1,
+    "low": 1,
     "medium": 2,
     "high": 3
 }
 
 DEFAULT_SEVERITY_LOG = "low"
-
 VERBOSE = 0
 CUR_SIZE = 100
 VERSION = 1.0
+
 
 def print_output(msg, severity=DEFAULT_SEVERITY_LOG):
     if not VERBOSE:
@@ -47,6 +47,7 @@ def print_output(msg, severity=DEFAULT_SEVERITY_LOG):
         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
 
         print("{0} - {1} - {2}".format(dt_string, severity, msg))
+
 
 def iter_row(cursor, size=CUR_SIZE):
     while True:
@@ -78,7 +79,7 @@ def set_pg_connection(config_file):
         print("Error: cannot find connection URL string in {0}".format(
             config_file))
         exit(1)
-    elif len(split_url) == 3: # in this case string is jdbc:postgresql:database_name or jdbc:postgresql://remote.host/database_name
+    elif len(split_url) == 3:  # in this case string is jdbc:postgresql:database_name or jdbc:postgresql://remote.host/database_name
         db_host = split_url[2].split('/')
         if len(db_host) == 1:  # in this case string is jdbc:postgresql:database_name
             CONN_CONFIG['host'] = "localhost"
@@ -86,7 +87,7 @@ def set_pg_connection(config_file):
         else:  # in this case string is jdbc:postgresql://remote.host/database_name
             CONN_CONFIG['host'] = db_host[-2]
             CONN_CONFIG['dbname'] = db_host[-1]
-    elif len(split_url) == 4: # in this case string is jdbc:postgresql://remote.host:port/database_name
+    elif len(split_url) == 4:  # in this case string is jdbc:postgresql://remote.host:port/database_name
         split_url = conn_url.split('/')
         db_host = split_url[2].split(':')
         CONN_CONFIG['host'] = db_host[0]
@@ -96,13 +97,15 @@ def set_pg_connection(config_file):
 
         CONN_CONFIG['dbname'] = split_url[3]
     else:
-        print("Malformed connection.url string: {0} in {1}, quitting".format(conn_url, config_file))
+        print("Malformed connection.url string: {0} in {1}, quitting".format(
+            conn_url, config_file))
         exit(1)
 
     CONN_CONFIG['username'] = config.get('conf', 'connection.username')
     CONN_CONFIG['password'] = config.get('conf', 'connection.password')
 
-    print_output("Database connection object: \"Host\": {0}, \"Port\": {1}, \"Database Name\": {2}, \"Username\": {3}".format(CONN_CONFIG['host'], CONN_CONFIG['port'], CONN_CONFIG['dbname'], CONN_CONFIG['username']), "high")
+    print_output("Database connection object: \"Host\": {0}, \"Port\": {1}, \"Database Name\": {2}, \"Username\": {3}".format(
+        CONN_CONFIG['host'], CONN_CONFIG['port'], CONN_CONFIG['dbname'], CONN_CONFIG['username']), "high")
     for k, v in CONN_CONFIG.items():
         if CONN_CONFIG[k] is None:
             print("{0} is None. Parsing error. Check {1}. Quitting".format(
@@ -219,7 +222,8 @@ def extract_pgcopg2(format, output_mode, output_file, nr_rows, offset):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('command', nargs='?', choices=['extract', 'enum'])
-    parser.add_argument('-c', '--config', help="Select a DHIS2 config file", default=DHIS2_CONF_FILE)
+    parser.add_argument(
+        '-c', '--config', help="Select a DHIS2 config file", default=DHIS2_CONF_FILE)
     parser.add_argument('-e', '--entries', type=int,
                         help="Number of rows to pull. Default 1000", default=1000)
     parser.add_argument('-m', '--mode', type=str,
@@ -231,8 +235,10 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output', type=str, help="Output file")
     parser.add_argument('-V', '--version', action="store_true",
                         help="Print version and exit")
-    parser.add_argument('-v', '--verbose', action="store_true", help="Turn on verbose logging with default severity of {}".format(DEFAULT_SEVERITY_LOG))
-    parser.add_argument('-sv', '--severity', type=str, help="Set the severity for logging. Default to {}. Verbose flag must also be set".format(DEFAULT_SEVERITY_LOG), default=DEFAULT_SEVERITY_LOG)
+    parser.add_argument('-v', '--verbose', action="store_true",
+                        help="Turn on verbose logging with default severity of {}".format(DEFAULT_SEVERITY_LOG))
+    parser.add_argument('-sv', '--severity', type=str, help="Set the severity for logging. Default to {}. Verbose flag must also be set".format(
+        DEFAULT_SEVERITY_LOG), default=DEFAULT_SEVERITY_LOG)
 
     args = parser.parse_args()
 
