@@ -68,7 +68,10 @@ def set_pg_connection(config_file):
         split_url = conn_url.split('/')
         db_host = split_url[2].split(':')
         CONN_CONFIG['host'] = db_host[0]
-        CONN_CONFIG['port'] = db_host[1]
+
+        if len(db_host) == 2:
+            CONN_CONFIG['port'] = db_host[1]
+
         CONN_CONFIG['dbname'] = split_url[3]
     else:
         print("Malformed connection.url string: {0} in {1}, quitting".format(conn_url, config_file))
