@@ -39,8 +39,8 @@ def iter_row(cursor, size=CUR_SIZE):
             yield row
 
 
-def set_pg_connection():
-    with open(DHIS2_CONF_FILE, 'r') as f:
+def set_pg_connection(config_file):
+    with open(config_file, 'r') as f:
         lines = '[conf]\n' + f.read()
 
     config = configparser.ConfigParser()
@@ -50,7 +50,7 @@ def set_pg_connection():
     split_url = conn_url.split(':')
     if len(split_url) == 0:
         print("Error: cannot find connection URL string in {0}".format(
-            DHIS2_CONF_FILE))
+            config_file))
         exit(1)
 
     if len(split_url) == 3: # in this case string is jdbc:postgresql:database_name or jdbc:postgresql://remote.host/database_name
@@ -74,7 +74,7 @@ def set_pg_connection():
     for k, v in CONN_CONFIG.items():
         if CONN_CONFIG[k] is None:
             print("{0} is None. Parsing error. Check {1}. Quitting".format(
-                k, DHIS2_CONF_FILE))
+                k, config_file))
             exit(1)
 
 
@@ -187,6 +187,7 @@ def extract_pgcopg2(format, output_mode, output_file, nr_rows, offset):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('command', nargs='?', choices=['extract', 'enum'])
+    parser.add_argument('-c', '--config', help="Select a DHIS2 config file", default=DHIS2_CONF_FILE)
     parser.add_argument('-e', '--entries', type=int,
                         help="Number of rows to pull. Default 1000", default=1000)
     parser.add_argument('-m', '--mode', type=str,
@@ -205,7 +206,7 @@ if __name__ == '__main__':
         print("Version {}".format(VERSION))
         exit(0)
 
-    set_pg_connection()
+    set_pg_connection(args.config)
     if args.command:
         if args.command.lower() == "extract":
             extract_pgcopg2(args.format, args.mode,
