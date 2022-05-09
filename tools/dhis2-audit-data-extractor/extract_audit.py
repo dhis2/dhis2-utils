@@ -46,7 +46,7 @@ def print_output(msg, severity=DEFAULT_SEVERITY_LOG):
         now = datetime.now()
         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
 
-        print("[{0}] [{1}] - {2}".format(dt_string, severity, msg))
+        print("{0} - {1} - {2}".format(dt_string, severity, msg))
 
 def iter_row(cursor, size=CUR_SIZE):
     while True:
