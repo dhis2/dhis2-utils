@@ -35,6 +35,7 @@ SEVERITY_LEVELS = {
 DEFAULT_SEVERITY_LOG = "low"
 VERBOSE = 0
 CUR_SIZE = 100
+TOT_ENTRIES = 1000
 VERSION = 1.0
 
 
@@ -225,7 +226,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '-c', '--config', help="Select a DHIS2 config file", default=DHIS2_CONF_FILE)
     parser.add_argument('-e', '--entries', type=int,
-                        help="Number of rows to pull. Default 1000", default=1000)
+                        help="Number of rows to pull. Default {}".format(TOT_ENTRIES), default=TOT_ENTRIES)
     parser.add_argument('-m', '--mode', type=str,
                         choices=['file', 'stdout'], default="file")
     parser.add_argument('-f', '--format', type=str,
