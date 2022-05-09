@@ -36,7 +36,7 @@ DEFAULT_SEVERITY_LOG = "low"
 VERBOSE = 0
 CUR_SIZE = 100
 TOT_ENTRIES = 1000
-VERSION = 1.0
+VERSION = 1.1
 
 
 def print_output(msg, severity=DEFAULT_SEVERITY_LOG):
