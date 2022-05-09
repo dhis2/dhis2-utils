@@ -220,7 +220,7 @@ def extract_pgcopg2(format, output_mode, output_file, nr_rows, offset):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(epilog="Version {}".format(VERSION))
     parser.add_argument('command', nargs='?', choices=['extract', 'enum'])
     parser.add_argument(
         '-c', '--config', help="Select a DHIS2 config file", default=DHIS2_CONF_FILE)
