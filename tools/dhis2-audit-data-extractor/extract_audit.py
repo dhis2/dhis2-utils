@@ -40,6 +40,10 @@ def iter_row(cursor, size=CUR_SIZE):
 
 
 def set_pg_connection(config_file):
+    if not os.path.exists(config_file):
+        print("{0} DHIS2 config file not found, quitting".format(config_file))
+        exit(1)
+
     with open(config_file, 'r') as f:
         lines = '[conf]\n' + f.read()
 
