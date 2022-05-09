@@ -231,12 +231,15 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output', type=str, help="Output file")
     parser.add_argument('-V', '--version', action="store_true",
                         help="Print version and exit")
+    parser.add_argument('-v', '--verbose', action="store_true", help="Turn on verbose logging with default severity of {}".format(DEFAULT_SEVERITY_LOG))
 
     args = parser.parse_args()
 
     if args.version:
         print("Version {}".format(VERSION))
         exit(0)
+
+    VERBOSE = args.verbose
 
     if args.command:
         if args.command.lower() == "extract":
