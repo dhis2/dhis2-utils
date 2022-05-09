@@ -21,6 +21,7 @@ DHIS2_HOME = os.getenv("DHIS2_HOME", "/home/dhis")
 DHIS2_CONF_FILE = "{0}/config/dhis.conf".format(DHIS2_HOME)
 CONN_CONFIG = {
     "host": None,
+    "port": 5432,
     "dbname": None,
     "username": None,
     "password": None
@@ -52,13 +53,20 @@ def set_pg_connection():
             DHIS2_CONF_FILE))
         exit(1)
 
-    db_host = split_url[2].split('/')
-    if len(db_host) == 1:  # in this case string is jdbc:postgresql:database_name
-        CONN_CONFIG['host'] = "localhost"
-        CONN_CONFIG['dbname'] = db_host[0]
-    else:  # in this case string is jdbc:postgresql://remote.host/database_name
-        CONN_CONFIG['host'] = db_host[-2]
-        CONN_CONFIG['dbname'] = db_host[-1]
+    if len(split_url) == 3: # in this case string is jdbc:postgresql:database_name or jdbc:postgresql://remote.host/database_name
+        db_host = split_url[2].split('/')
+        if len(db_host) == 1:  # in this case string is jdbc:postgresql:database_name
+            CONN_CONFIG['host'] = "localhost"
+            CONN_CONFIG['dbname'] = db_host[0]
+        else:  # in this case string is jdbc:postgresql://remote.host/database_name
+            CONN_CONFIG['host'] = db_host[-2]
+            CONN_CONFIG['dbname'] = db_host[-1]
+    elif len(split_url) == 4: # in this case string is jdbc:postgresql://remote.host:port/database_name
+        split_url = conn_url.split('/')
+        db_host = split_url[2].split(':')
+        CONN_CONFIG['host'] = db_host[0]
+        CONN_CONFIG['port'] = db_host[1]
+        CONN_CONFIG['dbname'] = split_url[3]
 
     CONN_CONFIG['username'] = config.get('conf', 'connection.username')
     CONN_CONFIG['password'] = config.get('conf', 'connection.password')
@@ -73,6 +81,7 @@ def set_pg_connection():
 def get_audit_number():
     conn = psycopg2.connect(
         host=CONN_CONFIG['host'],
+        port=CONN_CONFIG['port'],
         database=CONN_CONFIG['dbname'],
         user=CONN_CONFIG['username'],
         password=CONN_CONFIG['password'])
