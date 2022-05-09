@@ -97,6 +97,59 @@ def main():
     myutils.iterate_complex(package, check_favorites)
 
     # -------------------------------------
+    # Translations
+    # -------------------------------------
+
+    def check_translations(k, v):
+        if k == "translations":
+            trans_duplicate = list()
+            for translation in v:
+                if "locale" not in translation:
+                    logger.error(f"ALL-MQ-21: Unexpected translation. Missing locale in translation. Double check translation {translation}")
+                else:
+                    trans_duplicate.append(translation["locale"] + "|" + translation["property"])
+                    if not all(x.isalpha() or x in ["-", "_"] for x in translation["locale"]):
+                        logger.error(f"ALL-MQ-21: Unexpected translation. Unexpected symbol in locale. Translation {translation}")
+
+            if len(trans_duplicate) != len(set(trans_duplicate)):
+                duplicates = set([x for x in trans_duplicate if trans_duplicate.count(x) > 1])
+                for dup in duplicates:
+                    translation_values = list()
+                    for translation in v:
+                        if "locale"in translation and translation["locale"] == dup.split('|')[0] and translation["property"] == dup.split('|')[1]:
+                            translation_values.append(translation["value"])
+                    logger.error(f"ALL-MQ-19. Translation duplicated. Translation property={dup.split('|')[1]} locale={dup.split('|')[0]} values={translation_values}")
+
+    for resource_type, resource_list in package.items():
+        if resource_type == "package":
+            continue
+        for resource in resource_list:
+            # Review translations of the package that are placed under the 2 hierarchy level (not directly under package).
+            for k, v in resource.items():
+                if k != "translations":
+                    myutils.iterate_complex(v, check_translations)
+
+            if "translations" in resource:
+                trans_duplicate = list()
+                for translation in resource["translations"]:
+                    if "locale" not in translation:
+                        logger.error(f"ALL-MQ-21: Unexpected translation. Missing locale in translation. Resource {resource_type} with UID {resource['id']}. Translation {translation}")
+                        num_error += 1
+                    else:
+                        # for locale-property duplicates
+                        trans_duplicate.append(translation["locale"] + "|" + translation["property"])
+
+                        if not all(x.isalpha() or x in ["-", "_"] for x in translation["locale"]):
+                            logger.error(f"ALL-MQ-21: Unexpected translation. Unexpected symbol in locale. Resource {resource_type} with UID {resource['id']}. Translation {translation}")
+                            num_error += 1
+
+                if len(trans_duplicate) != len(set(trans_duplicate)):
+                    duplicates = set([x for x in trans_duplicate if trans_duplicate.count(x) > 1])
+                    for dup in duplicates:
+                        logger.error(f"ALL-MQ-19. Translation duplicated. Resource {resource_type} with UID {resource['id']}. Translation property='{dup.split('|')[1]}' locale='{dup.split('|')[0]}'")
+                        num_error += 1
+
+    # -------------------------------------
 
     # Program Rules
     if "programRules" not in package:

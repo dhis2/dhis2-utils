@@ -545,7 +545,7 @@ def check_sharing(json_object, omit=[], verbose=False):
                 item['userGroupAccesses'] = correct_user_groups
                 if len(outsider_user_groups) > 0:
                     if verbose:
-                        logger.error('Element ' + item["id"] + ' is shared with a User Group(s) outside the package: ' +
+                        logger.warning('Element ' + item["id"] + ' is shared with a User Group(s) outside the package: ' +
                                      ', '.join(outsider_user_groups) + '... Deleted')
             # Starting in 2.36 a new sharing object was introduced
             if 'sharing' in item and 'sharing' not in omit:
@@ -638,55 +638,55 @@ def replace_organisation_level_with_placeholder(metaobj):
     return metaobj
 
 
-def check_naming_convention(metaobj, health_area, package_prefix):
-    """
-    Check if name is in te standard format "PREFIX - "
-
-    Args:
-      metaobj (list): metadata to process
-      package_prefix (str) - intervention, e.g. CS, EIR, etc...
-
-    Returns:
-        metaobj (list): same metadata after removing potential undesired matches
-    """
-    filtered_list = list()
-    # Try new naming convention health area + prefix, e.g. MAL-CS-
-    for element in metaobj:
-        # Remove leading and trailing spaces and any extra white spaces
-        name = element['code'].strip()
-        # Prefix should come at the beginning
-        # if (element['name'].find(package_prefix)) == 0:
-        if search(pattern="^" + package_prefix + "[.]?[0-9]{0,2}[ ]?[-]?[ ]?", string=name):
-            filtered_list.append(element)
-    # if len(filtered_list) == 0:
-    #     # Try old naming convention ONLY prefix - TO BE REMOVED
-    #     for element in metaobj:
-    #         # Handle special case where the name equals the package prefix
-    #         if element['code'] == package_prefix:
-    #             filtered_list.append(element)
-    #             continue
-    #         if (element['code'].find(package_prefix)) == 0:
-    #             if search(pattern="^" + package_prefix + "[.]?[0-9]{0,2}[ ]?[-]?[ ]?", string=name):
-    #                 filtered_list.append(element)
-    if len(filtered_list) == 0:
-        # Try just health area elements
-        for element in metaobj:
-            name = element['code']
-            if search(pattern="^" + health_area + "[.]?[0-9]{0,2}[ ]?[-]?[ ]?", string=name):
-                filtered_list.append(element)
-    if len(filtered_list) == 0:
-        # Last chance
-        for element in metaobj:
-            name = element['code'].strip()
-            name = ' '.join(name.split())
-            # Try again and consider other options
-            if search(pattern="^[ ]*" + package_prefix + "[ ]?[_:]?[ ]?", string=name):
-                filtered_list.append(element)
-                logger.warning('Adding element with wrong naming convention to package: ' + name)
-            elif search(pattern="^[0-9]{0,2}[.]?[ ]*" + package_prefix + "[ ]?[_:]?[ ]?", string=name):
-                filtered_list.append(element)
-                logger.warning('Adding element with wrong naming convention to package: ' + name)
-    return filtered_list
+# def check_naming_convention(metaobj, health_area, package_prefix):
+#     """
+#     Check if name is in te standard format "PREFIX - "
+#
+#     Args:
+#       metaobj (list): metadata to process
+#       package_prefix (str) - intervention, e.g. CS, EIR, etc...
+#
+#     Returns:
+#         metaobj (list): same metadata after removing potential undesired matches
+#     """
+#     filtered_list = list()
+#     # Try new naming convention health area + prefix, e.g. MAL-CS-
+#     for element in metaobj:
+#         # Remove leading and trailing spaces and any extra white spaces
+#         name = element['code'].strip()
+#         # Prefix should come at the beginning
+#         # if (element['name'].find(package_prefix)) == 0:
+#         if search(pattern="^" + package_prefix + "[.]?[0-9]{0,2}[ ]?[-]?[ ]?", string=name):
+#             filtered_list.append(element)
+#     # if len(filtered_list) == 0:
+#     #     # Try old naming convention ONLY prefix - TO BE REMOVED
+#     #     for element in metaobj:
+#     #         # Handle special case where the name equals the package prefix
+#     #         if element['code'] == package_prefix:
+#     #             filtered_list.append(element)
+#     #             continue
+#     #         if (element['code'].find(package_prefix)) == 0:
+#     #             if search(pattern="^" + package_prefix + "[.]?[0-9]{0,2}[ ]?[-]?[ ]?", string=name):
+#     #                 filtered_list.append(element)
+#     if len(filtered_list) == 0:
+#         # Try just health area elements
+#         for element in metaobj:
+#             name = element['code']
+#             if search(pattern="^" + health_area + "[.]?[0-9]{0,2}[ ]?[-]?[ ]?", string=name):
+#                 filtered_list.append(element)
+#     if len(filtered_list) == 0:
+#         # Last chance
+#         for element in metaobj:
+#             name = element['code'].strip()
+#             name = ' '.join(name.split())
+#             # Try again and consider other options
+#             if search(pattern="^[ ]*" + package_prefix + "[ ]?[_:]?[ ]?", string=name):
+#                 filtered_list.append(element)
+#                 logger.warning('Adding element with wrong naming convention to package: ' + name)
+#             elif search(pattern="^[0-9]{0,2}[.]?[ ]*" + package_prefix + "[ ]?[_:]?[ ]?", string=name):
+#                 filtered_list.append(element)
+#                 logger.warning('Adding element with wrong naming convention to package: ' + name)
+#     return filtered_list
 
 
 def check_issues_with_program_rules(metaobj, elem_list, elem_type='DE'):
@@ -796,7 +796,7 @@ def check_issues_with_program_rules(metaobj, elem_list, elem_type='DE'):
                                 # api_source.delete('programRules/' + pr['id'])
                                 found_pr = True
                 if not found_pr:
-                    logger.info("   NOT Used in ANY programRule")
+                    logger.warning("   NOT Used in ANY programRule")
 
 
 def get_category_elements(cat_combo_uid, cat_uid_dict = None):
@@ -893,18 +893,16 @@ def main():
 
     my_parser = argparse.ArgumentParser(description='Export package')
     my_parser.add_argument('package_type_or_uid', metavar='package_type_or_uid', type=str, help='package type from [TRK,EVT,AGG,DSH,GEN] or UID(s) separated with commas')
-    my_parser.add_argument('health_area', metavar='health_area', type=str,
-                           help='the health_area of the package, e.g. HIV, TB, EPI, COVID19')
-    my_parser.add_argument('intervention', metavar='intervention', type=str,
-                           help='the intervention, formerly the package prefix, i.e. CS, EIR, etc..')
+    my_parser.add_argument('package_prefix', metavar='package_prefix', type=str,
+                           help='the package prefix to look for in the metadata code')
+    my_parser.add_argument('package_code', metavar='package_code', type=str,
+                           help='the code corresponding to the package')
     my_parser.add_argument('-v', '--version', action="store", dest="package_version", type=str,
                            help='the package version to use')
     my_parser.add_argument('-i', '--instance', action="store", dest="instance", type=str,
                            help='instance to extract the package from (robot account is required!) - tracker_dev by default')
     my_parser.add_argument('-desc', '--description', action="store", dest="description", type=str,
                            help='Description of the package or any comments you want to add')
-    my_parser.add_argument('-pf', '--package_prefix', action="store", dest="package_prefix", type=str,
-                           help='The actual package prefix used. By default this will be HEALTH-AREA_INTERVENTION')
     my_parser.add_argument('-vb', '--verbose', dest='verbose', action='store_true')
     my_parser.set_defaults(verbose=False)
     my_parser.add_argument('-od', '--only_dashboards', dest='only_dashboards', action='store_true')
@@ -949,12 +947,8 @@ def main():
     users = reindex(get_metadata_element('users'), 'id')
 
     package_type_or_uid = args.package_type_or_uid
-
-    # If a specific package prefix has not been provided, use health area + intervention
-    if args.package_prefix is None:
-        package_prefix = args.health_area + '_' + args.intervention
-    else:
-        package_prefix = args.package_prefix
+    package_prefix = args.package_prefix
+    package_code = args.package_code
 
     # Process now the prefix. We accept multiple prefixes
     all_package_prefixes = package_prefix.split(',')
@@ -1038,7 +1032,7 @@ def main():
                                              params={"paging": "false",
                                                      "filter": "code:$like:"+prefix,
                                                      "fields": "*"}).json()['dataSets']
-                dataSets = check_naming_convention(dataSets, args.health_area, package_prefix)
+
             except RequestException as e:
                 pass
             else:
@@ -1053,7 +1047,6 @@ def main():
                                              params={"paging": "false",
                                                      "filter": "code:$like:"+prefix,
                                                      "fields": "*"}).json()['programs']
-                tmp_programs = check_naming_convention(tmp_programs, args.health_area, package_prefix)
                 programs = list()
                 for program in tmp_programs:
                     # A tracker program has a 'trackedEntityType'
@@ -1096,8 +1089,8 @@ def main():
     elif package_type_or_uid == 'GEN':
         logger.info('Exporting GEN package:  ' + package_prefix)
     else:
-        logger.error('The parameters (' + args.package_type_or_uid + ', ' + args.health_area + ', ' +
-                     args.intervention + ', ' + str(args.package_prefix) + ') returned no result for programs / dataSets / dashboards')
+        logger.error('The parameters (' + args.package_type_or_uid + ', ' + args.package_prefix + ', ' +
+                     args.package_code + ') returned no result for programs / dataSets / dashboards')
         exit(1)
 
     if package_type_or_uid in ['TRK', 'EVT']:
@@ -1111,12 +1104,12 @@ def main():
             'constants', 'documents', 'attributes',
             'dataEntryForms', 'sections', 'dataSets', # Some programs, like HIV, have dataSets
             'dataElements', 'dataElementGroups',
-            'validationRules', 'validationRuleGroups',
+            'validationNotificationTemplates', 'validationRules', 'validationRuleGroups',
             'jobConfigurations',
             'predictors', 'predictorGroups',
             'trackedEntityAttributes', 'trackedEntityTypes', 'trackedEntityInstanceFilters',
             'programNotificationTemplates',
-            'programs',
+            'programs', 'programSections',
             'programStageSections', 'programStages',
             'programIndicatorGroups', 'programIndicators',
             'organisationUnitGroupSets', 'organisationUnitGroups',  # Assuming this will only be found in indicators
@@ -1148,7 +1141,7 @@ def main():
             'constants', 'documents', 'attributes',
             'dataEntryForms',
             'dataElements', 'dataElementGroups', # group first
-            'validationRules', 'validationRuleGroups', # group first
+            'validationNotificationTemplates', 'validationRules', 'validationRuleGroups', # group first
             'jobConfigurations',
             'predictors', 'predictorGroups', # group first
             'organisationUnitGroupSets', 'organisationUnitGroups',  # Assuming this will only be found in indicators
@@ -1290,11 +1283,13 @@ def main():
             "programRuleActions": "id:in:[" + ','.join(programRuleActions_uids) + "]",
             "programRules": "program.id:in:[" + ','.join(program_uids) + "]",
             "programRuleVariables": "program.id:in:[" + ','.join(program_uids) + "]",
+            "programSections": "program.id:in:[" + ','.join(program_uids) + "]",
             "programStages": "program.id:in:[" + ','.join(program_uids) + "]",
             "programStageSections": "id:in:[" + ','.join(programStageSections_uids) + "]",
             # Some programs may have dataSets linked to them, like HIV
             "dataSets": "code:$like:" + package_prefix,
             "sections": "dataSet.id:[" + ','.join(dataset_uids) + "]",
+            "validationNotificationTemplates": "validationRules.id:in:[" + ','.join(validationRules_uids) + "]",
             "validationRules": "id:in:[" + ','.join(validationRules_uids) + "]",
             "validationRuleGroups": "code:$like:" + package_prefix
         })
@@ -1309,6 +1304,7 @@ def main():
         metadata_filters.update({
             "dataSets": "id:in:[" + ','.join(dataset_uids) + "]",
             "sections": "dataSet.id:[" + ','.join(dataset_uids) + "]",
+            "validationNotificationTemplates": "validationRules.id:in:[" + ','.join(validationRules_uids) + "]",
             "validationRules": "id:in:[" + ','.join(validationRules_uids) + "]",
             "validationRuleGroups": "code:$like:" + package_prefix
         })
@@ -1343,35 +1339,23 @@ def main():
                 exit(1)
         else:
             package_version = "SNAPSHOT"
-        if args.intervention is not None:
-            intervention = args.intervention
-        else:
-            intervention = ""
+
         if args.description is not None:
             package_description = args.description
         else:
             package_description = ""
-        if args.health_area is not None:
-            health_area = args.health_area
-            separator = "_"
-        else:
-            health_area = ""
-            separator = ""
 
         for metadata_type in reversed(metadata_import_order):
             logger.info("------------ " + metadata_type + " ------------")
             if metadata_type == "package":
-                # Package prefix corresponds to intervention but historically it used to
-                # contain both Health Area and Intervention
                 locale = "en"
                 if args.only_dashboards:
                     package_type = "DSH"
                 else:
                     package_type = package_type_or_uid
 
-                name_label = health_area + separator + intervention + '_' + package_type + '_' + \
+                name_label = package_code + '_' + package_type + '_' + \
                              package_version + '_DHIS' + api_source.version + '-' + locale
-                package_code = health_area + "_" + intervention
 
                 metadata["package"] = {
                     "name": name_label,
@@ -1399,11 +1383,12 @@ def main():
             # If we are matching on code, make sure we are only picking up those following the naming convention
             if "code:$like" in metadata_filters[metadata_type]:
                 # There is a chance that we grabbed nothing using the package prefix. For some elements
-                # like userGroups, these could be generic to the health area
+                # like userGroups, these could be generic
                 # For example, the package prefix could be COVID-19_CS, but there is also another package COVID-19_POE
                 # These two packages share the same userGroups, prefixed COVID-19
                 if len(metaobject) == 0 and metadata_type in ['userGroups']:
-                    metaobject += get_metadata_element(metadata_type, 'code:$like:' + health_area)
+                    # Try with first to chars of the package_prefix
+                    metaobject += get_metadata_element(metadata_type, 'code:$like:' + package_prefix[0:2])
 
             if len(metaobject) > 0 and 'name' in metaobject[0]:
                 elements_no_delete = list()
@@ -1565,6 +1550,20 @@ def main():
                 else:
                     logger.warning('There are org units assigned... Removing')
                     metaobject = remove_subset_from_set(metaobject, 'organisationUnits')
+                    
+            ## Warn about relative Periods not being used
+            if metadata_type in ['reportTables', 'eventReports', 'eventCharts', 'visualizations', 'maps']:
+                for dashboard_item in metaobject:
+                    if 'relativePeriods' in dashboard_item:
+                        at_least_one_relative_period = False
+                        # Loop all the keys in the dictionary until you find one set to True
+                        # Every key represents a relative period type, such as thisYear, yesterday, last4Weeks...
+                        for relative_period in dashboard_item['relativePeriods']:
+                            if dashboard_item['relativePeriods'][relative_period]:
+                                at_least_one_relative_period = True
+                                break
+                        if not at_least_one_relative_period:
+                            logger.warning('Dashboard item of type ' + metadata_type + ' with UID = ' + dashboard_item['id'] + ' does not have any relative period configured. Please review')
 
             ## Check sharing
             ### With userGroups
@@ -1603,6 +1602,9 @@ def main():
                         logger.error("Indicators use trackedEntityAttributes not included in the program: "
                                      + str(diff))
                         total_errors += 1
+                    # Note: including programSections (PS), we are assuming that the trackedEntityAttributes (TEAs)
+                    # referenced by the PS(s) are part of the program TEAs. The tests carried out point in that
+                    # direction so initially there is no need to check the programSections TEAs
 
                 elif metadata_type == "programIndicators":
                     # Get UIDs to analyze PIs included in the Program (P) VS the ones used in num/den of indicators
@@ -1689,6 +1691,30 @@ def main():
                         # Before calling check_sharing, update the userGroup uids global variable
                         userGroups_uids += new_userGroups_uids
                         metadata['userGroups'] = check_sharing(metadata['userGroups'])
+
+            elif metadata_type == "validationNotificationTemplates":
+                # Check for userGroups used which are not included in the package
+                new_userGroups_uids = list()
+                for VNT in metaobject:
+                    if 'recipientUserGroup' in VNT and VNT['recipientUserGroup']['id'] not in userGroups_uids and \
+                            VNT['recipientUserGroup']['id'] not in new_userGroups_uids:
+                        new_userGroups_uids.append(VNT['recipientUserGroup']['id'])
+                if len(new_userGroups_uids) > 0:
+                    # Get those user Groups
+                    new_userGroups = get_metadata_element('userGroups',
+                                                          'id:in:[' + ','.join(new_userGroups_uids) + ']')
+                    logger.warning(
+                        "ValidationNotificationTemplates use a userGroup recipient not included in the package... ADDING")
+                    for UG in new_userGroups:
+                        logger.warning(" ! " + UG['id'] + " - " + UG['name'])
+                    new_userGroups = clean_metadata(new_userGroups)
+                    # Remove all users from the group
+                    new_userGroups = remove_subset_from_set(new_userGroups, 'users')
+                    # Add userGroups and check sharing
+                    metadata['userGroups'] += new_userGroups
+                    # Before calling check_sharing, update the userGroup uids global variable
+                    userGroups_uids += new_userGroups_uids
+                    metadata['userGroups'] = check_sharing(metadata['userGroups'])
 
             if metadata_type == "dataEntryForms":
                 for custom_form in metaobject:
@@ -2086,6 +2112,9 @@ def main():
                     if 'indicatorGroupSet' in indGroup:
                         indicatorGroupSets_uids.append(indGroup['indicatorGroupSet']['id'])
                 metadata_filters["indicatorGroupSets"] = "id:in:[" + ','.join(indicatorGroupSets_uids) + "]"
+            elif metadata_type == 'indicatorTypes':
+                # Update legendSets filter (especially important for AGG and GEN packages)
+                metadata_filters["legendSets"] = "id:in:[" + ','.join(legendSets_uids) + "]"
             elif metadata_type == 'dataElementGroups':
                 dataElements_in_package = json_extract_nested_ids(metaobject, 'dataElements')
                 metadata_filters["dataElements"] = "id:in:[" + ','.join(dataElements_in_package) + "]"
@@ -2130,6 +2159,7 @@ def main():
                 # And then use those to find the validation rules
                 validationRules_uids = json_extract_nested_ids(metaobject, 'validationRules')
                 metadata_filters["validationRules"] = "id:in:[" + ','.join(validationRules_uids) + "]"
+                metadata_filters["validationNotificationTemplates"] = "validationRules.id:in:[" + ','.join(validationRules_uids) + "]"
                 validationRuleGroups_uids = json_extract(metaobject, 'id')
             elif metadata_type == 'validationRules':
                 # Analyze hardcoded expressions

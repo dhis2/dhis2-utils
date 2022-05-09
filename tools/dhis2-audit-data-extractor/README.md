@@ -32,6 +32,7 @@ N.B. You may need to install the package `libpq-dev`. Please refer to your distr
 ~/dhis2-utils/tools/dhis2-audit-data-extractor$ python extract_audit.py
 usage: extract_audit.py [-h] [-c CONFIG] [-e ENTRIES] [-m {file,stdout}] [-f {CSV,JSON}] [-s SKIP] [-o OUTPUT] [-V] [-v] [-sv SEVERITY] [{extract,enum}]
 
+
 positional arguments:
   {extract,enum}
 
