@@ -26,9 +26,27 @@ CONN_CONFIG = {
     "username": None,
     "password": None
 }
+SEVERITY_LEVELS = {
+    "low" : 1,
+    "medium": 2,
+    "high": 3
+}
+
+DEFAULT_SEVERITY_LOG = "low"
+
+VERBOSE = 0
 CUR_SIZE = 100
 VERSION = 1.0
 
+def print_output(msg, severity=DEFAULT_SEVERITY_LOG):
+    if not VERBOSE:
+        return
+
+    if SEVERITY_LEVELS.get(severity, DEFAULT_SEVERITY_LOG) <= SEVERITY_LEVELS.get(DEFAULT_SEVERITY_LOG):
+        now = datetime.now()
+        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+
+        print("[{0}] [{1}] - {2}".format(dt_string, severity, msg))
 
 def iter_row(cursor, size=CUR_SIZE):
     while True:
@@ -44,6 +62,7 @@ def set_pg_connection(config_file):
         print("{0} DHIS2 config file not found, quitting".format(config_file))
         exit(1)
 
+    print_output("Parsing config file {}".format(config_file))
     with open(config_file, 'r') as f:
         lines = '[conf]\n' + f.read()
 
@@ -51,7 +70,10 @@ def set_pg_connection(config_file):
     config.read_string(lines)
 
     conn_url = config.get('conf', 'connection.url')
+    print_output("Connection URL: {}".format(conn_url), "low")
+
     split_url = conn_url.split(':')
+    print_output("URL split: {}".format(split_url), "medium")
     if len(split_url) == 0:
         print("Error: cannot find connection URL string in {0}".format(
             config_file))
@@ -80,6 +102,7 @@ def set_pg_connection(config_file):
     CONN_CONFIG['username'] = config.get('conf', 'connection.username')
     CONN_CONFIG['password'] = config.get('conf', 'connection.password')
 
+    print_output("Database connection object: \"Host\": {0}, \"Port\": {1}, \"Database Name\": {2}, \"Username\": {3}".format(CONN_CONFIG['host'], CONN_CONFIG['port'], CONN_CONFIG['dbname'], CONN_CONFIG['username']), "high")
     for k, v in CONN_CONFIG.items():
         if CONN_CONFIG[k] is None:
             print("{0} is None. Parsing error. Check {1}. Quitting".format(
