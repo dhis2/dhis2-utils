@@ -206,13 +206,14 @@ if __name__ == '__main__':
         print("Version {}".format(VERSION))
         exit(0)
 
-    set_pg_connection(args.config)
     if args.command:
         if args.command.lower() == "extract":
+            set_pg_connection(args.config)
             extract_pgcopg2(args.format, args.mode,
                             args.output, args.entries, args.skip)
             #data = extract_pandas()
         elif args.command.lower() == "enum":
+            set_pg_connection(args.config)
             print("Audit table contains {} entries".format(get_audit_number()))
     else:
         parser.print_help()
