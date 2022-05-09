@@ -71,6 +71,9 @@ def set_pg_connection(config_file):
         CONN_CONFIG['host'] = db_host[0]
         CONN_CONFIG['port'] = db_host[1]
         CONN_CONFIG['dbname'] = split_url[3]
+    else:
+        print("Malformed connection.url string: {0} in {1}, quitting".format(conn_url, config_file))
+        exit(1)
 
     CONN_CONFIG['username'] = config.get('conf', 'connection.username')
     CONN_CONFIG['password'] = config.get('conf', 'connection.password')
