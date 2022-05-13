@@ -5,6 +5,11 @@ It automatically extracts Postgres connection information from the config file `
 
 The script uses python library psycopg2, although some tests have been done with pandas. Code is left here as a reference for future development.
 
+## Version 1.1
+- Basic logging thanks to `--verbose` and `--severity` (`low`, `medium` and `high`).
+- Option to specify a DHIS2 config file from command line.
+- Support for parsing more different database connection URL strings.
+
 ## Version 1.0
 - Automatically connects to DHIS2 postgres database by parsing DHIS2 config file.
 - List and extract rows from audit table.
@@ -25,13 +30,16 @@ N.B. You may need to install the package `libpq-dev`. Please refer to your distr
 ## Run
 ```
 ~/dhis2-utils/tools/dhis2-audit-data-extractor$ python extract_audit.py
-usage: extract_audit.py [-h] [-e ENTRIES] [-m {file,stdout}] [-f {CSV,JSON}] [-s SKIP] [-o OUTPUT] [{extract,enum}]
+usage: extract_audit.py [-h] [-c CONFIG] [-e ENTRIES] [-m {file,stdout}] [-f {CSV,JSON}] [-s SKIP] [-o OUTPUT] [-V] [-v] [-sv SEVERITY] [{extract,enum}]
+
 
 positional arguments:
   {extract,enum}
 
 optional arguments:
   -h, --help            show this help message and exit
+  -c CONFIG, --config CONFIG
+                        Select a DHIS2 config file
   -e ENTRIES, --entries ENTRIES
                         Number of rows to pull. Default 1000
   -m {file,stdout}, --mode {file,stdout}
@@ -39,6 +47,12 @@ optional arguments:
   -s SKIP, --skip SKIP  Number of rows to skip
   -o OUTPUT, --output OUTPUT
                         Output file
+  -V, --version         Print version and exit
+  -v, --verbose         Turn on verbose logging with default severity of low
+  -sv SEVERITY, --severity SEVERITY
+                        Set the severity for logging. Default to low. Verbose flag must also be set
+
+Version 1.1
 ~/dhis2-utils/tools/dhis2-audit-data-extractor$
 ```
 
