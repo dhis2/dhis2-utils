@@ -16,6 +16,8 @@ import os
 import argparse
 from datetime import datetime
 import csv
+import sys
+import re
 
 DHIS2_HOME = os.getenv("DHIS2_HOME", "/home/dhis")
 DHIS2_CONF_FILE = "{0}/config/dhis.conf".format(DHIS2_HOME)
@@ -166,6 +168,13 @@ def parse_row(row):
 # @profile
 
 
+def parse_stdin():
+    global_dict = list()
+    for i in sys.stdin:
+        event = json.loads(re.search('({.+})', i).group(0).replace("u'", '"').replace("'", '"'))
+        global_dict.append(event)
+    print(json.dumps(global_dict))
+
 def extract_pgcopg2(format, output_mode, output_file, nr_rows, offset):
     audit_data = list()
     format = format.upper()
@@ -222,7 +231,7 @@ def extract_pgcopg2(format, output_mode, output_file, nr_rows, offset):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(epilog="Version {}".format(VERSION))
-    parser.add_argument('command', nargs='?', choices=['extract', 'enum'])
+    parser.add_argument('command', nargs='?', choices=['extract', 'enum', 'parse'])
     parser.add_argument(
         '-c', '--config', help="Select a DHIS2 config file", default=DHIS2_CONF_FILE)
     parser.add_argument('-e', '--entries', type=int,
@@ -255,5 +264,7 @@ if __name__ == '__main__':
         elif args.command.lower() == "enum":
             set_pg_connection(args.config)
             print("Audit table contains {} entries".format(get_audit_number()))
+        elif args.command.lower() == "parse":
+            parse_stdin()
     else:
         parser.print_help()
