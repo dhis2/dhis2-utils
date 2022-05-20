@@ -37,7 +37,7 @@ def get_metadata_element(metadata_type, filter=""):
             return api_source.get(metadata_type, params=params).json()[metadata_type]
     except RequestException as e:
         logger.error('Server return ' + str(e.code) + ' when getting ' + metadata_type)
-        #if e.code == 414 or e.code == 400:
+        # if e.code == 414 or e.code == 400:
         sys.exit(1)
 
     return []
@@ -64,7 +64,7 @@ def get_metadata_element_with_fields(metadata_type, filter=""):
 
     except RequestException as e:
         logger.error('Server return ' + str(e.code) + ' when getting ' + metadata_type)
-        #if e.code == 414 or e.code == 400:
+        # if e.code == 414 or e.code == 400:
         sys.exit(1)
 
     return []
@@ -274,7 +274,7 @@ def get_elements_in_data_dimension(analytics_items, analytics_uids):
     return analytics_uids
 
 
-def remove_undesired_children(parent_group_list, children_uid_list, children_label, verbose = False):
+def remove_undesired_children(parent_group_list, children_uid_list, children_label, verbose=False):
     """
     Remove elements in a group
 
@@ -545,8 +545,9 @@ def check_sharing(json_object, omit=[], verbose=False):
                 item['userGroupAccesses'] = correct_user_groups
                 if len(outsider_user_groups) > 0:
                     if verbose:
-                        logger.warning('Element ' + item["id"] + ' is shared with a User Group(s) outside the package: ' +
-                                     ', '.join(outsider_user_groups) + '... Deleted')
+                        logger.warning(
+                            'Element ' + item["id"] + ' is shared with a User Group(s) outside the package: ' +
+                            ', '.join(outsider_user_groups) + '... Deleted')
             # Starting in 2.36 a new sharing object was introduced
             if 'sharing' in item and 'sharing' not in omit:
                 if 'owner' in item['sharing']:
@@ -596,7 +597,8 @@ def check_and_replace_root_ou_assigned(metaobj):
             elif len(obj['organisationUnits']) > 1:
                 # In this case we have a list of organisation units. Remove them and raise a warning
                 obj['organisationUnits'] = []
-                logger.warning("The dashboard item with UID " + obj['id'] + " has organisation units assigned... Removing")
+                logger.warning(
+                    "The dashboard item with UID " + obj['id'] + " has organisation units assigned... Removing")
             # Remove and use a placeholder also for parentGraphMap
             if obj['parentGraphMap'] and root_uid in obj['parentGraphMap']:
                 obj['parentGraphMap'][placeholder] = obj['parentGraphMap'][root_uid]
@@ -799,7 +801,7 @@ def check_issues_with_program_rules(metaobj, elem_list, elem_type='DE'):
                     logger.warning("   NOT Used in ANY programRule")
 
 
-def get_category_elements(cat_combo_uid, cat_uid_dict = None):
+def get_category_elements(cat_combo_uid, cat_uid_dict=None):
     """
     Get all elements referenced by a cat combo
 
@@ -827,21 +829,24 @@ def get_category_elements(cat_combo_uid, cat_uid_dict = None):
     if 'code' not in catCombo or catCombo['code'].lower() != 'default':
         cat['categoryCombos'] = list(dict.fromkeys(cat['categoryCombos'] + [cat_combo_uid]))
         cat['categories'] = list(dict.fromkeys(cat['categories'] + json_extract_nested_ids(catCombo, 'categories')))
-        cat['categoryOptionCombos'] = list(dict.fromkeys(cat['categoryOptionCombos'] + json_extract_nested_ids(catCombo, 'categoryOptionCombos')))
+        cat['categoryOptionCombos'] = list(
+            dict.fromkeys(cat['categoryOptionCombos'] + json_extract_nested_ids(catCombo, 'categoryOptionCombos')))
 
         # Get the categoryOptions used in COCs
         COCs = api_source.get('categoryOptionCombos', params={"fields": "id,name,categoryOptions", "paging": "false",
-                                                            "filter": "id:in:[" + ','.join(cat['categoryOptionCombos']) + "]"}).json()[
+                                                              "filter": "id:in:[" + ','.join(
+                                                                  cat['categoryOptionCombos']) + "]"}).json()[
             'categoryOptionCombos']
         for coc in COCs:
-            cat['categoryOptions'] = list(dict.fromkeys(cat['categoryOptions'] + json_extract_nested_ids(coc, 'categoryOptions')))
+            cat['categoryOptions'] = list(
+                dict.fromkeys(cat['categoryOptions'] + json_extract_nested_ids(coc, 'categoryOptions')))
 
     return cat
 
 
 def add_category_option_combo(cat_opt_combo_uid, cat_uid_dict=None):
     cat_combo_uid = api_source.get('categoryOptionCombos/' + cat_opt_combo_uid,
-                              params={"fields": "id,categoryCombo"}).json()['categoryCombo']['id']
+                                   params={"fields": "id,categoryCombo"}).json()['categoryCombo']['id']
     get_category_elements(cat_combo_uid, cat_uid_dict)
 
 
@@ -861,14 +866,17 @@ def add_metadata_object_list_with_merge(current_metadata_obj, new_metadata_obj, 
             for current_metadata_element in current_metadata_obj:
                 if current_metadata_element['id'] == metadata_element['id']:
                     # Need to look at Sets
-                    if metadata_type in ['dataElements', 'options', 'indicators', 'categoryOptions', 'programIndicators', 'predictors', 'validationRules']:
+                    if metadata_type in ['dataElements', 'options', 'indicators', 'categoryOptions',
+                                         'programIndicators', 'predictors', 'validationRules']:
                         key = metadata_type[:-1] + 'Groups'
-                    elif metadata_type in ['dataElementGroups', 'optionGroups', 'indicatorGroups', 'categoryOptionGroups', 'programIndicatorGroups', 'predictorGroups', 'validationRuleGroups']:
+                    elif metadata_type in ['dataElementGroups', 'optionGroups', 'indicatorGroups',
+                                           'categoryOptionGroups', 'programIndicatorGroups', 'predictorGroups',
+                                           'validationRuleGroups']:
                         key = metadata_type.replace('Groups', '') + 's'
                     else:
                         key = None
                     if key is not None and key in metadata_element and key in current_metadata_element and \
-                        len(metadata_element[key]) > 0 and len(current_metadata_element[key]) > 0:
+                            len(metadata_element[key]) > 0 and len(current_metadata_element[key]) > 0:
                         logger.warning('MERGING A GROUP')
                         # Get ids from both of them
                         current_uids = json_extract(current_metadata_element[key], 'id')
@@ -876,7 +884,7 @@ def add_metadata_object_list_with_merge(current_metadata_obj, new_metadata_obj, 
                         all_unique_uids = list(set(current_uids) | set(new_uids))
                         current_metadata_obj[index_of_element][key] = list()
                         for uid in all_unique_uids:
-                            current_metadata_obj[index_of_element][key].append({'id':uid})
+                            current_metadata_obj[index_of_element][key].append({'id': uid})
 
                 index_of_element += 1
 
@@ -884,7 +892,6 @@ def add_metadata_object_list_with_merge(current_metadata_obj, new_metadata_obj, 
 
 
 def main():
-
     global api_source
     global userGroups_uids
     global df_report_lastUpdated
@@ -892,7 +899,8 @@ def main():
     global users
 
     my_parser = argparse.ArgumentParser(description='Export package')
-    my_parser.add_argument('package_type_or_uid', metavar='package_type_or_uid', type=str, help='package type from [TRK,EVT,AGG,DSH,GEN] or UID(s) separated with commas')
+    my_parser.add_argument('package_type_or_uid', metavar='package_type_or_uid', type=str,
+                           help='package type from [TRK,EVT,AGG,DSH,GEN] or UID(s) separated with commas')
     my_parser.add_argument('package_prefix', metavar='package_prefix', type=str,
                            help='the package prefix to look for in the metadata code')
     my_parser.add_argument('package_code', metavar='package_code', type=str,
@@ -921,7 +929,8 @@ def main():
             pass
     setup_logger(log_file)
     pd.set_option("display.max_rows", None, "display.max_columns", None, "max_colwidth", 1000)
-    df_report_lastUpdated = pd.DataFrame({}, columns=['metadata_type', 'uid', 'name', 'code', 'last_updated', 'updated_by'])
+    df_report_lastUpdated = pd.DataFrame({},
+                                         columns=['metadata_type', 'uid', 'name', 'code', 'last_updated', 'updated_by'])
     total_errors = 0
 
     # We need to connect to instance to be able to validate the parameters
@@ -968,9 +977,9 @@ def main():
         # Check if they are uids of programs
         try:
             programs = api_source.get('programs',
-                                     params={"paging": "false",
-                                             "fields": "id,name,enrollmentDateLabel,programTrackedEntityAttributes,programStages,programRuleVariables,organisationUnits,trackedEntityType,version,categoryCombo",
-                                             "filter": "id:in:["+package_type_or_uid+"]"}).json()['programs']
+                                      params={"paging": "false",
+                                              "fields": "id,name,enrollmentDateLabel,programTrackedEntityAttributes,programStages,programRuleVariables,organisationUnits,trackedEntityType,version,categoryCombo",
+                                              "filter": "id:in:[" + package_type_or_uid + "]"}).json()['programs']
         except RequestException as e:
             # if e.code == 404:
             #     logger.warning('Program ' + package_type_or_uid + ' does not exist')
@@ -1002,12 +1011,12 @@ def main():
 
         # If we could not find the uids as programs, let's try dataSets
         if package_type_or_uid not in ['TRK', 'EVT']:
-        # Check if it is a dataSet
+            # Check if it is a dataSet
             try:
                 dataSets = api_source.get('dataSets',
-                                         params={"paging": "false",
-                                                 "fields": "*",
-                                                 "filter": "id:in:["+package_type_or_uid+"]"}).json()['dataSets']
+                                          params={"paging": "false",
+                                                  "fields": "*",
+                                                  "filter": "id:in:[" + package_type_or_uid + "]"}).json()['dataSets']
             except RequestException as e:
                 # if e.code == 404:
                 #     logger.warning('dataSet ' + package_type_or_uid + ' does not exist')
@@ -1017,7 +1026,7 @@ def main():
                 for dataSet in dataSets:
                     dataset_uids.append(dataSet['id'])
                 if len(dataSets) == len(uids):
-                        package_type_or_uid = 'AGG'
+                    package_type_or_uid = 'AGG'
                 elif len(dataSets) > 0:
                     logger.error("Some dataSet UIDs could not be found: " + str(set(uids).difference(dataset_uids)))
                     exit(1)
@@ -1029,9 +1038,9 @@ def main():
             try:
                 for prefix in all_package_prefixes:
                     dataSets += api_source.get('dataSets',
-                                             params={"paging": "false",
-                                                     "filter": "code:$like:"+prefix,
-                                                     "fields": "*"}).json()['dataSets']
+                                               params={"paging": "false",
+                                                       "filter": "code:$like:" + prefix,
+                                                       "fields": "*"}).json()['dataSets']
 
             except RequestException as e:
                 pass
@@ -1044,9 +1053,9 @@ def main():
             try:
                 for prefix in all_package_prefixes:
                     tmp_programs += api_source.get('programs',
-                                             params={"paging": "false",
-                                                     "filter": "code:$like:"+prefix,
-                                                     "fields": "*"}).json()['programs']
+                                                   params={"paging": "false",
+                                                           "filter": "code:$like:" + prefix,
+                                                           "fields": "*"}).json()['programs']
                 programs = list()
                 for program in tmp_programs:
                     # A tracker program has a 'trackedEntityType'
@@ -1066,9 +1075,9 @@ def main():
             try:
                 for prefix in all_package_prefixes:
                     dashboards += api_source.get('dashboards',
-                                             params={"paging": "false",
-                                                     "filter": "code:$like:"+prefix,
-                                                     "fields": "*"}).json()['dashboards']
+                                                 params={"paging": "false",
+                                                         "filter": "code:$like:" + prefix,
+                                                         "fields": "*"}).json()['dashboards']
             except RequestException as e:
                 pass
             else:
@@ -1081,7 +1090,8 @@ def main():
         message_only_dashboard = ""
 
     if programs is not None and len(programs) > 0 and len(program_uids) > 0:
-        logger.info('Exporting ' + message_only_dashboard + package_type_or_uid + ' program(s) ' + ','.join(program_uids))
+        logger.info(
+            'Exporting ' + message_only_dashboard + package_type_or_uid + ' program(s) ' + ','.join(program_uids))
     elif dataSets is not None and len(dataSets) > 0 and len(dataset_uids) > 0:
         logger.info('Exporting ' + message_only_dashboard + 'AGG dataSet(s) ' + ','.join(dataset_uids))
     elif dashboards is not None and len(dashboards) > 0 and len(dashboard_uids) > 0:
@@ -1102,7 +1112,7 @@ def main():
             'legendSets',  # used in indicators, optionGroups, programIndicators and trackedEntityAttributes
             'optionGroups', 'options', 'optionSets',
             'constants', 'documents', 'attributes',
-            'dataEntryForms', 'sections', 'dataSets', # Some programs, like HIV, have dataSets
+            'dataEntryForms', 'sections', 'dataSets',  # Some programs, like HIV, have dataSets
             'dataElements', 'dataElementGroups',
             'validationNotificationTemplates', 'validationRules', 'validationRuleGroups',
             'jobConfigurations',
@@ -1140,19 +1150,20 @@ def main():
             'optionGroups', 'options', 'optionSets',
             'constants', 'documents', 'attributes',
             'dataEntryForms',
-            'dataElements', 'dataElementGroups', # group first
-            'validationNotificationTemplates', 'validationRules', 'validationRuleGroups', # group first
+            'dataElements', 'dataElementGroups',  # group first
+            'validationNotificationTemplates', 'validationRules', 'validationRuleGroups',  # group first
             'jobConfigurations',
-            'predictors', 'predictorGroups', # group first
+            'predictors', 'predictorGroups',  # group first
             'organisationUnitGroupSets', 'organisationUnitGroups',  # Assuming this will only be found in indicators
-            'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups', # groups first, to get indicator uids
+            'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
+            # groups first, to get indicator uids
             'sections', 'dataSets',
             'visualizations', 'charts', 'maps', 'reportTables', 'eventReports', 'eventCharts', 'dashboards',
             'package', 'users', 'userGroups']
 
     elif package_type_or_uid == 'GEN':
         metadata_import_order = [
-            'categoryOptions', 'categoryOptionGroups', #'categoryCombos',
+            'categoryOptions', 'categoryOptionGroups',  # 'categoryCombos',
             'options', 'optionSets',
             'dataElements', 'dataElementGroups',
             'indicatorTypes', 'indicators', 'indicatorGroups',
@@ -1217,7 +1228,7 @@ def main():
     if package_type_or_uid in ['TRK', 'EVT', 'GEN']:
         programNotificationTemplates_uids = list()
         programRuleActions_uids = list()
-        if package_type_or_uid in ['TRK','GEN']:
+        if package_type_or_uid in ['TRK', 'GEN']:
             trackedEntityAttributes_uids = dict()
             trackedEntityAttributes_uids['PR'] = list()
             trackedEntityAttributes_uids['P'] = list()
@@ -1315,7 +1326,7 @@ def main():
     elif package_type_or_uid == 'GEN':
         metadata_filters = {
             "categoryOptions": "id:in:[" + ','.join(cat_uids['categoryOptions']) + "]",
-            #"categoryCombos": "id:in:[" + ','.join(cat_uids['categoryCombos']) + "]",
+            # "categoryCombos": "id:in:[" + ','.join(cat_uids['categoryCombos']) + "]",
             "categoryOptionGroups": "code:$like:" + package_prefix,
             "dataElementGroups": "code:$like:" + package_prefix,
             "dataElements": "id:in:[" + ','.join(dataElements_in_package) + "]",
@@ -1328,7 +1339,6 @@ def main():
             "trackedEntityAttributes": "id:in:[" + ','.join(trackedEntityAttributes_uids['P']) + "]",
             "trackedEntityTypes": "code:$like:" + package_prefix
         }
-
 
     if len(program_uids) > 0 or len(dataset_uids) > 0 or len(dashboard_uids) or package_type_or_uid == 'GEN':
 
@@ -1429,7 +1439,8 @@ def main():
             elif package_type_or_uid == 'GEN':
                 if metadata_type == "categoryOptions":
                     metaobject = remove_undesired_children(metaobject, cat_uids['categories'], 'categories')
-                    metaobject = remove_undesired_children(metaobject, cat_uids['categoryOptionCombos'], 'categoryOptionCombos')
+                    metaobject = remove_undesired_children(metaobject, cat_uids['categoryOptionCombos'],
+                                                           'categoryOptionCombos')
                     metaobject = remove_undesired_children(metaobject, cat_uids['categoryOptionGroups'],
                                                            'categoryOptionGroups')
                 elif metadata_type == "options":
@@ -1447,7 +1458,8 @@ def main():
                         cat_uids[metadata_type].append(cat['id'])
                 if metadata_type in cat_uids and len(cat_uids[metadata_type]) > 0:
                     logger.info('Getting extra uids for ' + metadata_type)
-                    metaobject = get_metadata_element(metadata_type, 'id:in:[' + ','.join(cat_uids[metadata_type]) + ']')
+                    metaobject = get_metadata_element(metadata_type,
+                                                      'id:in:[' + ','.join(cat_uids[metadata_type]) + ']')
 
                 if metadata_type == "categories":
                     # Remove undesired categoryCombos from categories
@@ -1455,12 +1467,14 @@ def main():
 
                 elif metadata_type == "categoryOptions":
                     metaobject = remove_undesired_children(metaobject, cat_uids['categories'], 'categories')
-                    metaobject = remove_undesired_children(metaobject, cat_uids['categoryOptionCombos'], 'categoryOptionCombos')
+                    metaobject = remove_undesired_children(metaobject, cat_uids['categoryOptionCombos'],
+                                                           'categoryOptionCombos')
 
                 # Not sure this one is needed
                 elif metadata_type == "categoryCombos":
                     metaobject = remove_undesired_children(metaobject, cat_uids['categories'], 'categories')
-                    metaobject = remove_undesired_children(metaobject, cat_uids['categoryOptionCombos'], 'categoryOptionCombos')
+                    metaobject = remove_undesired_children(metaobject, cat_uids['categoryOptionCombos'],
+                                                           'categoryOptionCombos')
 
                 elif metadata_type == "categoryOptionGroups":
                     new_metaobject = list()
@@ -1501,17 +1515,17 @@ def main():
                             new_metaobject.append(catOptGroupSet)
                             cat_opt_group_set_ids_to_keep.append(catOptGroupSet['id'])
                     metadata['categoryOptionGroups'] = remove_undesired_children(metadata['categoryOptionGroups'],
-                                                                            cat_opt_group_set_ids_to_keep,
-                                                                            'groupSets')
+                                                                                 cat_opt_group_set_ids_to_keep,
+                                                                                 'groupSets')
                     metaobject = new_metaobject
 
                     # categoryOptionGroups and categoryOptionGroupSets reference each other, so also do this clean up
                     metaobject = remove_undesired_children(metaobject,
-                                                                            cat_opt_group_ids_to_keep,
-                                                                            'categoryOptionGroups')
+                                                           cat_opt_group_ids_to_keep,
+                                                           'categoryOptionGroups')
             elif metadata_type == "organisationUnitGroupSets":
                 metaobject = remove_undesired_children(metaobject, organisationUnitGroups_uids,
-                                                                        'organisationUnitGroups')
+                                                       'organisationUnitGroups')
                 metaobject = remove_subset_from_set(metaobject, 'items')
 
             elif metadata_type == "jobConfigurations":
@@ -1550,7 +1564,7 @@ def main():
                 else:
                     logger.warning('There are org units assigned... Removing')
                     metaobject = remove_subset_from_set(metaobject, 'organisationUnits')
-                    
+
             ## Warn about relative Periods not being used
             if metadata_type in ['reportTables', 'eventReports', 'eventCharts', 'visualizations', 'maps']:
                 for dashboard_item in metaobject:
@@ -1563,7 +1577,8 @@ def main():
                                 at_least_one_relative_period = True
                                 break
                         if not at_least_one_relative_period:
-                            logger.warning('Dashboard item of type ' + metadata_type + ' with UID = ' + dashboard_item['id'] + ' does not have any relative period configured. Please review')
+                            logger.warning('Dashboard item of type ' + metadata_type + ' with UID = ' + dashboard_item[
+                                'id'] + ' does not have any relative period configured. Please review')
 
             ## Check sharing
             ### With userGroups
@@ -1616,7 +1631,7 @@ def main():
                     if len(diff) > 0:
                         # Turning this error into a warning due to an issue with MAL FOCI and MAL CS
                         logger.warning("Indicators use programIndicators not included in the program: "
-                                     + str(diff))
+                                       + str(diff))
                         # total_errors += 1
                         for uid in diff:
                             ind_num = api_source.get('indicators',
@@ -1643,7 +1658,7 @@ def main():
                         set(dataDimension_uids['programIndicator']).difference(programIndicators_uids['P']))
                     if len(diff_data_dimension) > 0:
                         logger.warning("Data dimension in analytics use programIndicators not included in the package: "
-                                     + str(diff_data_dimension) + "... Adding them")
+                                       + str(diff_data_dimension) + "... Adding them")
                         total_errors += 1
                         programIndicators_in_data_dimension = get_metadata_element(metadata_type, "id:in:[" + ','.join(
                             diff_data_dimension) + "]")
@@ -1726,7 +1741,7 @@ def main():
                             diff_with_coc = list(set(diff).difference(cat_uids['categoryOptionCombos']))
                             if len(diff_with_coc) > 0:
                                 for element_uid in diff_with_coc:
-                                    element = api_source.get('identifiableObjects/'+element_uid).json()
+                                    element = api_source.get('identifiableObjects/' + element_uid).json()
                                     if 'code' in element and element['code'].lower() == 'default':
                                         diff_with_coc.remove(element_uid)
                             if len(diff_with_coc) > 0:
@@ -1790,7 +1805,7 @@ def main():
                     # In pre-processing we add ot the package those DEs with package prefix
                     # here we add the package those used in indicators
                     logger.warning("Indicators use dataElements not included in the package: "
-                                 + str(diff_ind) + "... Adding them")
+                                   + str(diff_ind) + "... Adding them")
                 # Check DEs used in Predictors
                 diff_pred = list(set(dataElements_uids['PRED']).difference(dataElements_in_package))
                 if len(diff_pred) > 0:
@@ -1798,7 +1813,7 @@ def main():
                     # In pre-processing we add ot the package those DEs with package prefix
                     # here we add the package those used in indicators
                     logger.warning("Predictors use dataElements not included in the package: "
-                                 + str(diff_pred) + "... Adding them")
+                                   + str(diff_pred) + "... Adding them")
 
                 # In this case, we add the DEs... Why? Program Indicators have a direct reference to the program
                 # they belong to... So we expect them to use DEs which are part of the program (the UI does not
@@ -1818,7 +1833,7 @@ def main():
                 diff_data_dimension = list(set(dataDimension_uids['dataElement']).difference(dataElements_in_package))
                 if len(diff_data_dimension) > 0:
                     logger.warning("Data dimension in analytics use dataElements not included in the package: "
-                                 + str(diff_data_dimension) + "... Adding them")
+                                   + str(diff_data_dimension) + "... Adding them")
                     dataElements_in_data_dimension = get_metadata_element(metadata_type, "id:in:[" + ','.join(
                         diff_data_dimension) + "]")
                     dataElements_in_data_dimension = check_sharing(dataElements_in_data_dimension)
@@ -1828,7 +1843,8 @@ def main():
 
                 # Clean dataElementGroups
                 if len(metadata['dataElementGroups']) > 0:
-                    metadata['dataElementGroups'] = remove_undesired_children(metadata['dataElementGroups'], dataElements_in_package,
+                    metadata['dataElementGroups'] = remove_undesired_children(metadata['dataElementGroups'],
+                                                                              dataElements_in_package,
                                                                               'dataElements')
                 # Remove dataElementGroups in dataElements which do not belong to the package
                 metaobject = remove_undesired_children(metaobject, dataElementsGroups_uids, 'dataElementGroups')
@@ -1842,7 +1858,7 @@ def main():
                 diff_data_dimension = list(set(dataDimension_uids['indicator']).difference(indicator_uids))
                 if len(diff_data_dimension) > 0:
                     logger.warning("Data dimension in analytics use indicators not included in the package: "
-                                 + str(diff_data_dimension) + "... Adding them")
+                                   + str(diff_data_dimension) + "... Adding them")
                     indicators_in_data_dimension = get_metadata_element(metadata_type,
                                                                         "id:in:[" + ','.join(diff_data_dimension) + "]")
                     indicators_in_data_dimension = check_sharing(indicators_in_data_dimension)
@@ -1853,9 +1869,9 @@ def main():
                 diff_data_set = list(set(dataSetElements_uids['indicator']).difference(indicator_uids))
                 if len(diff_data_set) > 0:
                     logger.warning("DataSets use indicators not included in the package: "
-                                 + str(diff_data_set) + "... Adding them")
+                                   + str(diff_data_set) + "... Adding them")
                     indicators_in_dataset = get_metadata_element(metadata_type,
-                                                                        "id:in:[" + ','.join(diff_data_set) + "]")
+                                                                 "id:in:[" + ','.join(diff_data_set) + "]")
                     indicators_in_dataset = check_sharing(indicators_in_dataset)
                     indicators_in_dataset = clean_metadata(indicators_in_dataset)
                     metaobject += indicators_in_dataset
@@ -1927,8 +1943,8 @@ def main():
                                                                          ['expression', 'filter'])
                 if package_type_or_uid == 'TRK':
                     trackedEntityAttributes_uids['PI'] = get_hardcoded_values_in_fields(metaobject,
-                                                                                    'trackedEntityAttributes',
-                                                                                    ['expression', 'filter'])
+                                                                                        'trackedEntityAttributes',
+                                                                                        ['expression', 'filter'])
                 legendSets_uids += json_extract_nested_ids(metaobject, 'legendSets')
             elif metadata_type == "programStages":
                 # Scan for DE used in program stage. We will check against program stage sections
@@ -1990,7 +2006,7 @@ def main():
                     if 'notificationRecipients' in ds and ds['notificationRecipients']['id'] not in userGroups_uids:
                         logger.warning("dataSet use a userGroup recipient not included in the package... ADDING")
                         new_userGroup = get_metadata_element('userGroups',
-                                                              'id:in:[' + ds['notificationRecipients']['id'] + ']')
+                                                             'id:in:[' + ds['notificationRecipients']['id'] + ']')
                         logger.warning(" ! " + new_userGroup[0]['id'] + " - " + new_userGroup[0]['name'])
                         new_userGroup = clean_metadata(new_userGroup)
                         # Remove all users from the group
@@ -2063,8 +2079,8 @@ def main():
                 if package_type_or_uid in ['TRK', 'EVT']:
                     if package_type_or_uid == 'TRK':
                         trackedEntityAttributes_uids['I'] = get_hardcoded_values_in_fields(metaobject,
-                                                                                               'trackedEntityAttributes',
-                                                                                               ['numerator', 'denominator'])
+                                                                                           'trackedEntityAttributes',
+                                                                                           ['numerator', 'denominator'])
                     programIndicators_uids['I'] = get_hardcoded_values_in_fields(metaobject,
                                                                                  'programIndicators',
                                                                                  ['numerator', 'denominator'])
@@ -2072,13 +2088,13 @@ def main():
                 dataElements_uids['I'] = get_hardcoded_values_in_fields(metaobject, 'dataElements_ind',
                                                                         ['numerator', 'denominator'])
                 hardcoded_cocs = get_hardcoded_values_in_fields(metaobject, 'categoryOptionCombos',
-                                                                        ['numerator', 'denominator'])
+                                                                ['numerator', 'denominator'])
                 for coc in hardcoded_cocs:
                     if coc not in cat_uids['categoryOptionCombos']:
                         add_category_option_combo(coc, cat_uids)
 
                 organisationUnitGroups_uids += get_hardcoded_values_in_fields(metaobject, 'organisationUnitGroups',
-                                                                             ['numerator', 'denominator'])
+                                                                              ['numerator', 'denominator'])
                 # We don't expect to find any more OUG references at this point, so we can add the filter already
                 if len(organisationUnitGroups_uids) > 0:
                     metadata_filters["organisationUnitGroups"] = "id:in:[" + ','.join(organisationUnitGroups_uids) + "]"
@@ -2144,7 +2160,7 @@ def main():
                     programIndicators_uids['PRED'] += get_hardcoded_values_in_fields(metaobject, 'programIndicators',
                                                                                      'generator.expression')
                 hardcoded_cocs = get_hardcoded_values_in_fields(metaobject, 'categoryOptionCombos',
-                                                                        'generator.expression')
+                                                                'generator.expression')
                 for coc in hardcoded_cocs:
                     if coc not in cat_uids['categoryOptionCombos']:
                         add_category_option_combo(coc, cat_uids)
@@ -2159,15 +2175,17 @@ def main():
                 # And then use those to find the validation rules
                 validationRules_uids = json_extract_nested_ids(metaobject, 'validationRules')
                 metadata_filters["validationRules"] = "id:in:[" + ','.join(validationRules_uids) + "]"
-                metadata_filters["validationNotificationTemplates"] = "validationRules.id:in:[" + ','.join(validationRules_uids) + "]"
+                metadata_filters["validationNotificationTemplates"] = "validationRules.id:in:[" + ','.join(
+                    validationRules_uids) + "]"
                 validationRuleGroups_uids = json_extract(metaobject, 'id')
             elif metadata_type == 'validationRules':
                 # Analyze hardcoded expressions
                 dataElements_uids['VR'] = get_hardcoded_values_in_fields(metaobject, 'dataElements_ind',
-                                                                        ['leftSide.expression', 'rightSide.expression'])
+                                                                         ['leftSide.expression',
+                                                                          'rightSide.expression'])
 
                 hardcoded_cocs = get_hardcoded_values_in_fields(metaobject, 'categoryOptionCombos',
-                                                                        ['leftSide.expression', 'rightSide.expression'])
+                                                                ['leftSide.expression', 'rightSide.expression'])
                 for coc in hardcoded_cocs:
                     if coc not in cat_uids['categoryOptionCombos']:
                         add_category_option_combo(coc, cat_uids)
@@ -2184,7 +2202,8 @@ def main():
                 cat_uids['categoryOptions'] += json_extract_nested_ids(metaobject, 'groupSets')
             elif metadata_type == "organisationUnitGroups":
                 organisationUnitGroupSets_uids = json_extract_nested_ids(metaobject, 'groupSets')
-                metadata_filters["organisationUnitGroupSets"] = "id:in:[" + ','.join(organisationUnitGroupSets_uids) + "]"
+                metadata_filters["organisationUnitGroupSets"] = "id:in:[" + ','.join(
+                    organisationUnitGroupSets_uids) + "]"
 
         # Release log handlers
         handlers = logger.handlers[:]
