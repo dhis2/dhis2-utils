@@ -905,8 +905,6 @@ def main():
                            help='the package prefix to look for in the metadata code')
     my_parser.add_argument('package_code', metavar='package_code', type=str,
                            help='the code corresponding to the package')
-    my_parser.add_argument('-v', '--version', action="store", dest="package_version", type=str,
-                           help='the package version to use')
     my_parser.add_argument('-i', '--instance', action="store", dest="instance", type=str,
                            help='instance to extract the package from (robot account is required!) - tracker_dev by default')
     my_parser.add_argument('-desc', '--description', action="store", dest="description", type=str,
@@ -1342,14 +1340,6 @@ def main():
 
     if len(program_uids) > 0 or len(dataset_uids) > 0 or len(dashboard_uids) or package_type_or_uid == 'GEN':
 
-        if args.package_version is not None:
-            package_version = args.package_version
-            if not match('^(\d+\.)?(\d+\.)?(\*|\d+)$', package_version):
-                logger.error("Version provided " + package_version + " does not match format X.Y.Z")
-                exit(1)
-        else:
-            package_version = "SNAPSHOT"
-
         if args.description is not None:
             package_description = args.description
         else:
@@ -1365,14 +1355,14 @@ def main():
                     package_type = package_type_or_uid
 
                 name_label = package_code + '_' + package_type + '_' + \
-                             package_version + '_DHIS' + api_source.version + '-' + locale
+                             '_DHIS' + api_source.version + '-' + locale
 
                 metadata["package"] = {
                     "name": name_label,
                     "code": package_code,
                     "description": package_description,
                     "type": package_type,
-                    "version": package_version,
+                    "version": "",
                     "lastUpdated": "",
                     "DHIS2Version": api_source.version,
                     "DHIS2Build": api_source.revision,
