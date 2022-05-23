@@ -16,8 +16,10 @@ def main() -> None:
 
     worksheet = spreadsheets.open_by_key(spreadsheet_id).worksheet(worksheet_name)
     
+    # get worksheet values as strings to avoid evaluating "boolean" values as floats
     dataframe = get_as_dataframe(worksheet, dtype=str)
 
+    # replace "string boolean" values with actual booleans
     dataframe[toggle_column] = dataframe[toggle_column].map({'True': True, 'TRUE': True, 'False': False, 'FALSE': False})
 
     result_dataframe = dataframe.loc[dataframe[toggle_column] == True]
