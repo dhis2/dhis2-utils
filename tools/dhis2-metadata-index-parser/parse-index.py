@@ -1,7 +1,6 @@
 import os
 import json
-import gspread 
-import pandas as pd
+import gspread
 from gspread_dataframe import get_as_dataframe
 
 
