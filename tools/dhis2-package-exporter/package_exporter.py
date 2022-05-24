@@ -422,7 +422,7 @@ def update_last_updated(metaobj, metadata_type):
             else:
                 code = ""
             # datetime.datetime.strptime(date_time_str, '%Y-%m-%d %H:%M:%S.%f')
-            if 'lastUpdatedBy' in item:
+            if 'lastUpdatedBy' in item and 'name' in item['lastUpdatedBy']:
                 last_updated_by = users[item['lastUpdatedBy']['id']]['name']
             else:
                 last_updated_by = 'NOT AVAILABLE'
@@ -1344,7 +1344,7 @@ def main():
                 else:
                     package_type = package_type_or_uid
 
-                name_label = package_code + '_' + package_type + '_' + \
+                name_label = package_code + '_' + package_type + \
                              '_DHIS' + api_source.version + '-' + locale
 
                 metadata["package"] = {
