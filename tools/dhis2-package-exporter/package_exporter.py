@@ -423,7 +423,7 @@ def update_last_updated(metaobj, metadata_type):
                 code = ""
             # datetime.datetime.strptime(date_time_str, '%Y-%m-%d %H:%M:%S.%f')
             if 'lastUpdatedBy' in item and 'name' in item['lastUpdatedBy']:
-                last_updated_by = users[item['lastUpdatedBy']['id']]['name']
+                last_updated_by = item['lastUpdatedBy']['name']
             else:
                 last_updated_by = 'NOT AVAILABLE'
             # Add to dataframe
