@@ -363,6 +363,21 @@ def main():
                 logger.error(message)
                 num_error += 1
 
+    # Custom forms in dataSets
+    if "dataSets" not in package:
+        package["dataSets"] = []
+    for ds in package["dataSets"]:
+        dataSet_uid = ds["id"]
+        dataSet_name = ds["name"]
+        if "dataEntryForm" in ds:
+            dataEntryForm_uid = ds["dataEntryForm"]["id"]
+            if myutils.is_field_in_resource(package, "dataEntryForms", dataEntryForm_uid, "htmlCode"):
+                message = f"DS-MQ-1 The dataSet '{dataSet_name}' ({dataSet_uid}) has a custom form"
+                logger.warning(message)
+            else:
+                message = f"DS-MQ-2 The dataSet '{dataSet_name}' ({dataSet_uid}) has an empty custom form"
+                logger.error(message)
+                num_error += 1
     logger.info('-------------------------------------Finished validation-------------------------------------')
 
     #  See https://stackoverflow.com/questions/15435652/python-does-not-release-filehandles-to-logfile
