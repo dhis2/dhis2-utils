@@ -7,6 +7,14 @@ def get_program_referenced_by_type_and_uid(package, resource_type, uid):
     return next((x for x in package[resource_type] if x["id"] == uid), None)["program"]["id"]
 
 
+def is_field_in_resource(package, resource_type, resource_uid, field):
+    resource = next((x for x in package[resource_type] if x["id"] == resource_uid), None)
+    if field in resource:
+        return True
+    else:
+        return False
+
+
 def json_extract_nested_ids(obj, key):
     """
     Recursively fetch ids for a given key in a nested JSON
