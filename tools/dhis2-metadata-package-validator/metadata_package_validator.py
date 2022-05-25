@@ -327,6 +327,42 @@ def main():
                 logger.error(f"ALL-MQ-20 From program '{myutils.get_name_by_type_and_uid(package, 'programs', program_uid)}' ({program_uid}), the PR '{myutils.get_name_by_type_and_uid(package, 'programRules', pr_uid)}' ({pr_uid}) contains 'program_stage_name' in a PRAction ({pra['id']}).")
                 num_error += 1
 
+    # -------------------------------------
+
+    # Custom forms in programStages
+    if "programStages" not in package:
+        package["programStages"] = []
+    if "dataEntryForms" not in package:
+        package["dataEntryForms"] = []
+    for ps in package["programStages"]:
+        program_uid = ps["program"]["id"]
+        program_name = myutils.get_name_by_type_and_uid(package, "programs", program_uid)
+        if "dataEntryForm" in ps:
+            dataEntryForm_uid = ps["dataEntryForm"]["id"]
+            if myutils.is_field_in_resource(package, "dataEntryForms", dataEntryForm_uid, "htmlCode"):
+                message = f"PS-MQ-1 In program '{program_name}' ({program_uid}), the program stage '{ps['name']}' ({ps['id']}) has a custom form"
+                logger.warning(message)
+            else:
+                message = f"PS-MQ-2 In program '{program_name}' ({program_uid}), the program stage '{ps['name']}' ({ps['id']}) has an empty custom form"
+                logger.error(message)
+                num_error += 1
+
+    # Custom forms in programs
+    if "programs" not in package:
+        package["programs"] = []
+    for p in package["programs"]:
+        program_uid = p["id"]
+        program_name = p["name"]
+        if "dataEntryForm" in p:
+            dataEntryForm_uid = p["dataEntryForm"]["id"]
+            if myutils.is_field_in_resource(package, "dataEntryForms", dataEntryForm_uid, "htmlCode"):
+                message = f"P-MQ-1 The program '{program_name}' ({program_uid}) has a custom form"
+                logger.warning(message)
+            else:
+                message = f"P-MQ-2 The program '{program_name}' ({program_uid}) has an empty custom form"
+                logger.error(message)
+                num_error += 1
+
     logger.info('-------------------------------------Finished validation-------------------------------------')
 
     #  See https://stackoverflow.com/questions/15435652/python-does-not-release-filehandles-to-logfile
