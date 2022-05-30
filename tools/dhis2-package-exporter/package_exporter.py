@@ -590,7 +590,7 @@ def check_and_replace_root_ou_assigned(metaobj):
                 logger.warning(
                     "The dashboard item with UID " + obj['id'] + " has organisation units assigned... Removing")
             # Remove and use a placeholder also for parentGraphMap
-            if obj['parentGraphMap'] and root_uid in obj['parentGraphMap']:
+            if 'parentGraphMap' in obj and obj['parentGraphMap'] and root_uid in obj['parentGraphMap']:
                 obj['parentGraphMap'][placeholder] = obj['parentGraphMap'][root_uid]
                 del obj['parentGraphMap'][root_uid]
                 root_uid_replaced = True
