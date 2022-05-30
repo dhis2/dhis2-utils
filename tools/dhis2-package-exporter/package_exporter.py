@@ -1099,7 +1099,7 @@ def main():
             'categoryOptions', 'categories', 'categoryCombos', 'categoryOptionCombos',
             'legendSets',  # used in indicators, optionGroups, programIndicators and trackedEntityAttributes
             'optionGroups', 'options', 'optionSets',
-            'constants', 'documents', 'attributes',
+            'sqlViews', 'reports', 'constants', 'documents', 'attributes',
             'dataEntryForms', 'sections', 'dataSets',  # Some programs, like HIV, have dataSets
             'dataElements', 'dataElementGroups',
             'validationNotificationTemplates', 'validationRules', 'validationRuleGroups',
@@ -1136,7 +1136,7 @@ def main():
             'categoryOptions', 'categories', 'categoryCombos', 'categoryOptionCombos',
             'legendSets',  # used in indicators, optionGroups, programIndicators and trackedEntityAttributes
             'optionGroups', 'options', 'optionSets',
-            'constants', 'documents', 'attributes',
+            'sqlViews', 'reports', 'constants', 'documents', 'attributes',
             'dataEntryForms',
             'dataElements', 'dataElementGroups',  # group first
             'validationNotificationTemplates', 'validationRules', 'validationRuleGroups',  # group first
@@ -1267,7 +1267,9 @@ def main():
         "organisationUnitGroupSets": "id:in:[" + ','.join(organisationUnitGroupSets_uids) + "]",
         "predictors": "id:in:[" + ','.join(predictor_uids) + "]",
         "predictorGroups": "code:$like:" + package_prefix,
+        "reports": "code:$like:" + package_prefix,
         "reportTables": "id:in:[" + ','.join(dashboard_items['reportTable']) + "]",
+        "sqlViews": "code:$like:" + package_prefix,
         "visualizations": "id:in:[" + ','.join(dashboard_items['visualization']) + "]",
         "userGroups": "code:$like:" + package_prefix,
         "users": "id:eq:" + WHOAdmin_uid
