@@ -9,7 +9,7 @@ def main() -> None:
     spreadsheet_id = os.getenv('GOOGLE_SPREADSHEET_ID')
     worksheet_name = os.getenv('GOOGLE_WORKSHEET_NAME', 'DHIS2 packages')
     toggle_column = os.getenv('PACKAGE_TOGGLE_COLUMN', 'Extraction Enabled')
-    input_columns = json.loads(os.getenv('PACKAGES_EXPORT_INPUT_COLUMNS', '["DHIS2 code for packaging", "Script parameter", "Component name"]'))
+    input_columns = json.loads(os.getenv('PACKAGES_EXPORT_INPUT_COLUMNS', '["DHIS2 code for packaging", "Source instance", "Script parameter", "Component name"]'))
 
     spreadsheets = gspread.service_account(filename=service_account)
 
