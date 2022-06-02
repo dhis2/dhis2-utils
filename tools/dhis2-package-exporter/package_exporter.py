@@ -1203,7 +1203,6 @@ def main():
     indicatorTypes_uids = list()
     legendSets_uids = list()
     organisationUnitGroups_uids = list()
-    organisationUnitGroupSets_uids = list()
     predictorGroups_uids = list()
     optionSets_uids = list()
     cat_uids = dict()  # Contains all non DEFAULT uids of categoryOption, categories, CCs and COCs
@@ -1264,7 +1263,7 @@ def main():
         "options": "optionSet.id:in:[" + ','.join(optionSets_uids) + "]",
         "optionSets": "id:in:[" + ','.join(optionSets_uids) + "]",
         "organisationUnitGroups": "id:in:[" + ','.join(organisationUnitGroups_uids) + "]",
-        "organisationUnitGroupSets": "id:in:[" + ','.join(organisationUnitGroupSets_uids) + "]",
+        "organisationUnitGroupSets": "organisationUnitGroups.id:in:[" + ','.join(organisationUnitGroups_uids) + "]",
         "predictors": "id:in:[" + ','.join(predictor_uids) + "]",
         "predictorGroups": "code:$like:" + package_prefix,
         "reports": "code:$like:" + package_prefix,
@@ -1991,7 +1990,7 @@ def main():
                 for cc in categoryCombos_uids:
                     cat_uids = get_category_elements(cc, cat_uids)
                 metadata_filters["dataEntryForms"] = "id:in:[" + ','.join(dataEntryForms_uids) + "]"
-                metadata_filters['sections'] = "id:in:[" + ','.join(sections_uids) + "]"
+                metadata_filters['sections'] = "dataSet.id:in:[" + ','.join(dataset_uids) + "]"
             elif metadata_type == "dataElements":
                 # Scan for optionSets used
                 optionSets_uids += json_extract_nested_ids(metaobject, 'optionSet')
@@ -2061,6 +2060,8 @@ def main():
                                                                               ['numerator', 'denominator'])
                 # We don't expect to find any more OUG references at this point, so we can add the filter already
                 if len(organisationUnitGroups_uids) > 0:
+                    # Make list of UIDs unique
+                    organisationUnitGroups_uids = list(dict.fromkeys(organisationUnitGroups_uids))
                     metadata_filters["organisationUnitGroups"] = "id:in:[" + ','.join(organisationUnitGroups_uids) + "]"
 
                 # Scan for indicatorTypes
@@ -2155,7 +2156,7 @@ def main():
                         add_category_option_combo(coc, cat_uids)
             elif metadata_type == "categoryOptions":
                 if package_type_or_uid != 'GEN':
-                    cat_uids['categoryOptionGroups'] += json_extract_nested_ids(metaobject, 'categoryOptionGroups')
+                    metadata_filters["categoryOptionGroups"] = "categoryOptions.id:in:[" + ','.join(cat_uids['categoryOptions']) + "]"
             elif metadata_type == "categoryOptionGroups":
                 # For the GEN package, the groups are going to give us the categoryOptions
                 if package_type_or_uid == 'GEN':
@@ -2163,11 +2164,13 @@ def main():
                     # There should be just one group
                     cat_uids['categoryOptionGroups'] = json_extract(metaobject, 'id')
                     metadata_filters["categoryOptions"] = "id:in:[" + ','.join(cat_uids['categoryOptions']) + "]"
-                cat_uids['categoryOptions'] += json_extract_nested_ids(metaobject, 'groupSets')
+                else:
+                    cat_uids['categoryOptionGroups'] = json_extract(metaobject, 'id')
+                    metadata_filters["categoryOptionGroupSets"] = "categoryOptionGroups.id:in:[" + ','.join(
+                        cat_uids['categoryOptionGroups']) + "]"
             elif metadata_type == "organisationUnitGroups":
-                organisationUnitGroupSets_uids = json_extract_nested_ids(metaobject, 'groupSets')
-                metadata_filters["organisationUnitGroupSets"] = "id:in:[" + ','.join(
-                    organisationUnitGroupSets_uids) + "]"
+                metadata_filters["organisationUnitGroupSets"] = "organisationUnitGroups.id:in:[" + ','.join(
+                    organisationUnitGroups_uids) + "]"
 
         # Release log handlers
         handlers = logger.handlers[:]
