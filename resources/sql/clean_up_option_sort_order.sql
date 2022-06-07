@@ -19,7 +19,9 @@ BEGIN
     ( SELECT optionvalueid, optionsetid, row_number() 
         OVER ( PARTITION BY optionsetid ORDER BY sort_order ) AS orderIndex
         FROM optionvalue ) temp
-    WHERE temp.optionvalueid = optionvalue.optionvalueid AND temp.optionsetid = optionvalue.optionsetid AND optionvalue.sort_order <> temp.orderIndex;
+    WHERE temp.optionvalueid = optionvalue.optionvalueid 
+        AND temp.optionsetid = optionvalue.optionsetid 
+        AND ( optionvalue.sort_order <> temp.orderIndex OR optionvalue.sort_order is null );
 
     GET DIAGNOSTICS rowCount = ROW_COUNT;
     RETURN 'Updated ' || rowCount || ' records';
