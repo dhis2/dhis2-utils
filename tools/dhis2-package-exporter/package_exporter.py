@@ -1381,13 +1381,6 @@ def main():
                     # Try with first to chars of the package_prefix
                     metaobject += get_metadata_element(metadata_type, 'code:$like:' + package_prefix[0:2])
 
-            if len(metaobject) > 0 and 'name' in metaobject[0]:
-                elements_no_delete = list()
-                for elem in metaobject:
-                    if 'DELETE' not in elem['name']:
-                        elements_no_delete.append(elem)
-                metaobject = elements_no_delete
-
             if metadata_type[:-1] in dashboard_items:
                 # Update data dimension items
                 dataDimension_uids = get_elements_in_data_dimension(metaobject, dataDimension_uids)
