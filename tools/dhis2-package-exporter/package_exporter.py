@@ -1433,21 +1433,47 @@ def main():
                                                       'id:in:[' + ','.join(cat_uids[metadata_type]) + ']')
 
                 if metadata_type == "categoryOptionGroups":
-                    new_metaobject = list()
-                    cat_opt_group_ids_to_keep = list()
-                    for catOptGroup in metaobject:
-                        valid_cat_opt_group = True
-                        for catOpt in catOptGroup['categoryOptions']:
-                            if catOpt['id'] not in cat_uids['categoryOptions']:
-                                valid_cat_opt_group = False
-                                logger.info("categoryOptionGroup " + catOptGroup[
-                                    'id'] + " contains categoryOptions which don't belong in the package.... Excluding")
-                                break
-                        if valid_cat_opt_group:
-                            new_metaobject.append(catOptGroup)
-                            cat_opt_group_ids_to_keep.append(catOptGroup['id'])
+                    # dhis2.py does not support multiple filters. We could use python request python to overcome this
+                    # but I found complicated to have two ways of getting to the API just because of this particular scenario
+                    # The issue is as follows: When using :owner, the api categoryOptions do not return the
+                    # categoryOptionGroups so instead we use a filter for categoryOptionGroups as follows:
+                    # filter=categoryOptions.id:in:[UID1,UID2...UIDn]
+                    # the problem is that before getting to this point we may have found categoryOptionGroups
+                    # used in one or more visualizations for this we would need a filter
+                    # filter=id:in:[ + ','.join(cat_uids['categoryOptionGroups']) + ] with rootJunction=OR
+                    # So now we know that we have the categoryOptionGroups that contain the categoryOptions
+                    # which were included and we proceed to add the categoryOptionGroups already recorded
+                    if len(cat_uids['categoryOptionGroups']) > 0:
+                        # Get the ids already fetched
+                        current_catOptGroup_uids = json_extract(metaobject, 'id')
+                        # Get the uids present in one list but not the other
+                        uid_list = list(set(cat_uids['categoryOptionGroups']) - set(current_catOptGroup_uids))
+                        if len(uid_list) > 0:
+                            metaobject += get_metadata_element('categoryOptionGroups', 'id:in"[' + ','.join(uid_list) + ']')
+                    # The following code removes categoryOptionGroups if they contain at least one categoryOption
+                    # which does not belong in the package. Since DSH package type does not include any categoryOption,
+                    # we skip this step
+                    if package_type_or_uid != 'DSH':
+                        new_metaobject = list()
+                        cat_opt_group_ids_to_keep = list()
+                        for catOptGroup in metaobject:
+                            valid_cat_opt_group = True
+                            # In previous version we removed categoryOptionGroups if they contained
+                            for catOpt in catOptGroup['categoryOptions']:
+                                if catOpt['id'] not in cat_uids['categoryOptions']:
+                                    valid_cat_opt_group = False
+                                    logger.info("categoryOptionGroup " + catOptGroup[
+                                        'id'] + " contains categoryOption " + catOpt['id'] +  " which don't belong in the package.... Excluding")
+                                    #break
+                            if valid_cat_opt_group:
+                                new_metaobject.append(catOptGroup)
+                                cat_opt_group_ids_to_keep.append(catOptGroup['id'])
 
-                    metaobject = new_metaobject
+                        metaobject = new_metaobject
+
+                    else:
+                        # Still update this for later, for categoryOptionGroupSets
+                        cat_opt_group_ids_to_keep = json_extract(metaobject, 'id')
 
                     # Remove categoryOption if it is a dashboard package
                     if package_type_or_uid == 'DSH' or args.only_dashboards:
