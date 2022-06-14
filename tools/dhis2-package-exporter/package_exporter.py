@@ -1964,10 +1964,10 @@ def main():
                     cat_uids = get_category_elements(program['categoryCombo']['id'], cat_uids)
             elif metadata_type == "dataSets":
                 ## Remove interpretations
-                interpretations = json_extract_nested_ids(metaobject, 'organisationUnits')
-                if len(interpretations) > 0:
-                    logger.warning('There are interpretations... Removing')
-                    metadata['dataSets'] = remove_subset_from_set(metadata['dataSets'], 'interpretations')
+                organisationUnits = json_extract_nested_ids(metaobject, 'organisationUnits')
+                if len(organisationUnits) > 0:
+                    logger.warning('There are organisationUnits assgined to the dataSet... Removing')
+                    metadata['dataSets'] = remove_subset_from_set(metadata['dataSets'], 'organisationUnits')
                 sections_uids = list()
                 categoryCombos_uids = list()
                 for ds in metaobject:
