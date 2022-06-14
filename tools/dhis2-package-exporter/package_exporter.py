@@ -450,6 +450,7 @@ def clean_metadata(metaobj):
     metaobj = remove_subset_from_set(metaobj, 'created')
     metaobj = remove_subset_from_set(metaobj, 'createdBy')
     metaobj = remove_subset_from_set(metaobj, 'interpretations')
+    metaobj = remove_subset_from_set(metaobj, 'favorites')
     if len(metaobj) > 0:
         for subtag in ['dashboardItems', 'analyticsPeriodBoundaries', 'mapViews', 'user', 'userGroupAccesses',
                        'programStageDataElements', 'programTrackedEntityAttributes',
