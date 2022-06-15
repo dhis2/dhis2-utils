@@ -1451,35 +1451,20 @@ def main():
                         uid_list = list(set(cat_uids['categoryOptionGroups']) - set(current_catOptGroup_uids))
                         if len(uid_list) > 0:
                             metaobject += get_metadata_element('categoryOptionGroups', 'id:in"[' + ','.join(uid_list) + ']')
-                    # The following code removes categoryOptionGroups if they contain at least one categoryOption
-                    # which does not belong in the package. Since DSH package type does not include any categoryOption,
-                    # we skip this step
-                    if package_type_or_uid != 'DSH':
-                        new_metaobject = list()
-                        cat_opt_group_ids_to_keep = list()
-                        for catOptGroup in metaobject:
-                            valid_cat_opt_group = True
-                            # In previous version we removed categoryOptionGroups if they contained
-                            for catOpt in catOptGroup['categoryOptions']:
-                                if catOpt['id'] not in cat_uids['categoryOptions']:
-                                    valid_cat_opt_group = False
-                                    logger.info("categoryOptionGroup " + catOptGroup[
-                                        'id'] + " contains categoryOption " + catOpt['id'] +  " which don't belong in the package.... Excluding")
-                                    #break
-                            if valid_cat_opt_group:
-                                new_metaobject.append(catOptGroup)
-                                cat_opt_group_ids_to_keep.append(catOptGroup['id'])
 
-                        metaobject = new_metaobject
-
-                    else:
-                        # Still update this for later, for categoryOptionGroupSets
-                        cat_opt_group_ids_to_keep = json_extract(metaobject, 'id')
+                    cat_opt_group_ids_to_keep = json_extract(metaobject, 'id')
 
                     # Remove categoryOption if it is a dashboard package
                     if package_type_or_uid == 'DSH' or args.only_dashboards:
                         metaobject = remove_subset_from_set(metaobject, 'categoryOptions')
                     else:
+                        # Remove category options which are not part of the package
+                        metaobject = remove_undesired_children(metaobject, cat_uids['categoryOptions'], 'categoryOptions')
+                        # Check if a category option group is empty
+                        for catOptGroup in metaobject:
+                            if len(catOptGroup['categoryOptions']) == 0:
+                                logger.warning('Category Option Group ' + catOptGroup['id'] + " is empty after trimming the category options which don't belong to the package")
+                        # Remove cat opt group references from category options which are not part of the package
                         metadata['categoryOptions'] = remove_undesired_children(metadata['categoryOptions'],
                                                                                 cat_opt_group_ids_to_keep,
                                                                                 'categoryOptionGroups')
