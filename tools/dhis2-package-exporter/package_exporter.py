@@ -1205,6 +1205,7 @@ def main():
     legendSets_uids = list()
     organisationUnitGroups_uids = list()
     predictorGroups_uids = list()
+    optionGroups_uids = list()
     optionSets_uids = list()
     cat_uids = dict()  # Contains all non DEFAULT uids of categoryOption, categories, CCs and COCs
     cat_uids['categoryOptions'] = list()
@@ -1393,6 +1394,23 @@ def main():
                 metaobject = remove_undesired_children(metaobject, indicatorGroups_uids, 'indicatorGroups')
 
             elif metadata_type == 'optionGroups':
+                # If there are other optionGroups referenced elsewhere, add them now
+                if len(optionGroups_uids) > 0:
+                    current_optionGroups_uids = json_extract(metaobject, 'id')
+                    # Get the new elements if any
+                    new_optionGroup_uids = list(set(optionGroups_uids) - set(current_optionGroups_uids))
+                    if len(new_optionGroup_uids) > 0:
+                        # Update the consolidated list of optionGroups
+                        optionGroups_uids = list(dict.fromkeys(optionGroups_uids + current_optionGroups_uids))
+                        other_optionGroups = get_metadata_element(metadata_type, 'id:in:[' + ','.join(new_optionGroup_uids) + ']')
+                        # Check for optionSets not included in the package
+                        for optGroup in other_optionGroups:
+                            if 'optionSet' in optGroup:
+                                if optGroup['optionSet']['id'] not in optionSets_uids:
+                                    logger.warning('Option Group ' + optGroup['id'] + ' references optionSet ' + optGroup['optionSet']['id'] + " which don't belong in the package")
+                        # Update the options too
+                        options_uids += json_extract_nested_ids(other_optionGroups, 'options')
+                        metaobject += other_optionGroups
                 metaobject = remove_undesired_children(metaobject, options_uids, 'options')
 
             elif metadata_type == "predictors":
@@ -1894,6 +1912,8 @@ def main():
             elif metadata_type == "programRuleActions":
                 # Scan for DE / TEA used in programRuleActions. We will check if they are assigned to the program
                 dataElements_uids['PR'] += json_extract_nested_ids(metaobject, 'dataElement')
+                # Scan for option groups
+                optionGroups_uids += json_extract_nested_ids(metaobject, 'optionGroup')
                 if package_type_or_uid == 'TRK':
                     trackedEntityAttributes_uids['PR'] += json_extract_nested_ids(metaobject, 'trackedEntityAttribute')
                 # There is a field templateUid which may not be null and might reference a programNotificationTemplate
