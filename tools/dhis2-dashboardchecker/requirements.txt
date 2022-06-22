@@ -4,7 +4,7 @@ colorama==0.4.4
 dhis2.py==2.3.0
 idna==3.2
 logzero==1.7.0
-numpy==1.21.2
+numpy==1.22.0
 pandas==1.3.3
 Pygments==2.10.0
 python-dateutil==2.8.2
