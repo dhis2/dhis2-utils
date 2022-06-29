@@ -11,7 +11,7 @@ from tools.json import reindex
 
 def get_metadata_element(metadata_type, filter=""):
     params = {"paging": "false",
-              "fields": ":owner"}
+              "fields": "*"}
     if filter != "":
         params["filter"] = filter
     try:
@@ -47,7 +47,7 @@ def get_metadata_element_with_fields(metadata_type, filter=""):
     # This function should be removed at some point. The whole purpose is to
     # to provide a workaround for when the API call using * does not work
     params = {"paging": "false",
-              "fields": ":owner"}
+              "fields": "*"}
     if filter != "":
         params["filter"] = filter
     try:
@@ -449,8 +449,17 @@ def clean_metadata(metaobj):
     metaobj = remove_subset_from_set(metaobj, 'lastUpdatedBy')
     metaobj = remove_subset_from_set(metaobj, 'created')
     metaobj = remove_subset_from_set(metaobj, 'createdBy')
-    metaobj = remove_subset_from_set(metaobj, 'interpretations')
+    metaobj = remove_subset_from_set(metaobj, 'href')
+    metaobj = remove_subset_from_set(metaobj, 'access')
     metaobj = remove_subset_from_set(metaobj, 'favorites')
+    metaobj = remove_subset_from_set(metaobj, 'allItems')
+    metaobj = remove_subset_from_set(metaobj, 'displayName')
+    metaobj = remove_subset_from_set(metaobj, 'displayFormName')
+    metaobj = remove_subset_from_set(metaobj, 'displayShortName')
+    metaobj = remove_subset_from_set(metaobj, 'displayDenominatorDescription')
+    metaobj = remove_subset_from_set(metaobj, 'displayNumeratorDescription')
+    metaobj = remove_subset_from_set(metaobj, 'displayDescription')
+    metaobj = remove_subset_from_set(metaobj, 'interpretations')
     if len(metaobj) > 0:
         for subtag in ['dashboardItems', 'analyticsPeriodBoundaries', 'mapViews', 'user', 'userGroupAccesses',
                        'programStageDataElements', 'programTrackedEntityAttributes',
@@ -1004,7 +1013,7 @@ def main():
             try:
                 dataSets = api_source.get('dataSets',
                                           params={"paging": "false",
-                                                  "fields": ":owner",
+                                                  "fields": "*",
                                                   "filter": "id:in:[" + package_type_or_uid + "]"}).json()['dataSets']
             except RequestException as e:
                 # if e.code == 404:
@@ -1029,7 +1038,7 @@ def main():
                     dataSets += api_source.get('dataSets',
                                                params={"paging": "false",
                                                        "filter": "code:$like:" + prefix,
-                                                       "fields": ":owner"}).json()['dataSets']
+                                                       "fields": "*"}).json()['dataSets']
 
             except RequestException as e:
                 pass
@@ -1044,7 +1053,7 @@ def main():
                     tmp_programs += api_source.get('programs',
                                                    params={"paging": "false",
                                                            "filter": "code:$like:" + prefix,
-                                                           "fields": ":owner"}).json()['programs']
+                                                           "fields": "*"}).json()['programs']
                 programs = list()
                 for program in tmp_programs:
                     # A tracker program has a 'trackedEntityType'
@@ -1066,7 +1075,7 @@ def main():
                     dashboards += api_source.get('dashboards',
                                                  params={"paging": "false",
                                                          "filter": "code:$like:" + prefix,
-                                                         "fields": ":owner"}).json()['dashboards']
+                                                         "fields": "*"}).json()['dashboards']
             except RequestException as e:
                 pass
             else:
