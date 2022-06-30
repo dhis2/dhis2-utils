@@ -93,7 +93,9 @@ def build_analytics_payload(json_object, verbose=False):
                                     'thisBimonth': 'THIS_BI_MONTH',
                                     'lastBimonth': 'LAST_BI_MONTH',
                                     'lastSixMonth': 'LAST_SIX_MONTH',
-                                    'thisBiWeek': 'THIS_BI_WEEK'}
+                                    'thisBiWeek': 'THIS_BI_WEEK',
+                                    'last10Years': 'LAST_10_YEARS',
+                                    'last10FinancialYears': 'LAST_10_FINANCIAL_YEARS'}
             for relative_period in json_object['relativePeriods']:
                 if relative_period in pe_global_selections:
                     if json_object['relativePeriods'][relative_period]:
@@ -342,6 +344,7 @@ def main():
         dashboards = api_source.get('dashboards', params=params).json()['dashboards']
 
         dashboard_item_with_issues_row = dict()
+
         for dashboard in dashboards:
             logger.info('Processing dashboard ' + dashboard['name'])
             dashboard_item_with_issues_row['dashboard_name'] = dashboard['name']
