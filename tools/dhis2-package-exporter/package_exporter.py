@@ -1170,10 +1170,12 @@ def main():
 
     # Starting from >=2.38, eventReports and eventCharts are called eventVisualisations
     if any(version in api_source.version for version in ['2.36', '2.37']):
-        metadata_import_order.remove('eventVisualisations')
+        if 'eventVisualisations' in metadata_import_order:
+            metadata_import_order.remove('eventVisualisations')
     else:
-        metadata_import_order.remove('eventReports')
-        metadata_import_order.remove('eventCharts')
+        if 'eventReports' in metadata_import_order and 'eventCharts' in metadata_import_order:
+            metadata_import_order.remove('eventReports')
+            metadata_import_order.remove('eventCharts')
 
     metadata = dict()
 
