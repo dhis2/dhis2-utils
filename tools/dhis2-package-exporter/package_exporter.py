@@ -246,12 +246,12 @@ def get_dashboard_elements(dashboard):
         items (dict): a dict with keys corresponding to every type of dashboard item: chart, reportTable, eventReport...
          containing a list of the UIDs for every elements used in the dashboard
     """
-    items = {"visualization": [], "chart": [], "reportTable": [], "eventVisualisation": [], "eventReport": [], "eventChart": [], "map": []}
+    items = {"visualization": [], "chart": [], "reportTable": [], "eventVisualization": [], "eventReport": [], "eventChart": [], "map": []}
     for dashboardItem in dashboard['dashboardItems']:
         if any(version in api_source.version for version in ['2.36', '2.37']):
-            items_list = ['visualization', 'eventVisualisation', 'eventReport', 'eventChart', 'map']
+            items_list = ['visualization', 'eventVisualization', 'eventReport', 'eventChart', 'map']
         else:
-            items_list = ['visualization', 'eventVisualisation', 'map']
+            items_list = ['visualization', 'eventVisualization', 'map']
         for dashboard_item in items_list:
             if dashboard_item in dashboardItem:
                 items[dashboard_item].append(dashboardItem[dashboard_item]['id'])
@@ -263,7 +263,7 @@ def get_elements_in_data_dimension(analytics_items, analytics_uids):
     Loop through all items in analytics_items and extract UIDs of dataElement, indicator and programIndicator
 
     Args:
-      analytics_items (list): list of maps, visualizations, eventCharts OR eventReports OR eventVisualisations
+      analytics_items (list): list of maps, visualizations, eventCharts OR eventReports OR eventVisualizations
 
     Returns:
         updated version of analytics_uids
@@ -1123,7 +1123,7 @@ def main():
             'organisationUnitGroupSets', 'organisationUnitGroups',  # Assuming this will only be found in indicators
             'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
             'programRuleVariables', 'programRuleActions', 'programRules',
-            'visualizations', 'maps', 'eventVisualisations', 'eventReports', 'eventCharts', 'dashboards',
+            'visualizations', 'maps', 'eventVisualizations', 'eventReports', 'eventCharts', 'dashboards',
             'package', 'users', 'userGroups']
         if package_type_or_uid == 'EVT':
             metadata_import_order.remove('trackedEntityAttributes')
@@ -1135,7 +1135,7 @@ def main():
             'categoryOptionGroupSets', 'categoryOptionGroups',
             'legendSets',
             'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
-            'visualizations', 'maps', 'eventVisualisations', 'eventReports', 'eventCharts', 'dashboards',
+            'visualizations', 'maps', 'eventVisualizations', 'eventReports', 'eventCharts', 'dashboards',
             'package', 'users', 'userGroups']
 
     # Dataset
@@ -1156,7 +1156,7 @@ def main():
             'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
             # groups first, to get indicator uids
             'sections', 'dataSets',
-            'visualizations', 'maps', 'eventVisualisations', 'eventReports', 'eventCharts', 'dashboards',
+            'visualizations', 'maps', 'eventVisualizations', 'eventReports', 'eventCharts', 'dashboards',
             'package', 'users', 'userGroups']
 
     elif package_type_or_uid == 'GEN':
@@ -1168,10 +1168,10 @@ def main():
             'trackedEntityAttributes', 'trackedEntityTypes',
             'package']
 
-    # Starting from >=2.38, eventReports and eventCharts are called eventVisualisations
+    # Starting from >=2.38, eventReports and eventCharts are called eventVisualizations
     if any(version in api_source.version for version in ['2.36', '2.37']):
-        if 'eventVisualisations' in metadata_import_order:
-            metadata_import_order.remove('eventVisualisations')
+        if 'eventVisualizations' in metadata_import_order:
+            metadata_import_order.remove('eventVisualizations')
     else:
         if 'eventReports' in metadata_import_order and 'eventCharts' in metadata_import_order:
             metadata_import_order.remove('eventReports')
@@ -1182,7 +1182,7 @@ def main():
     # todo: these could be part of a big dictionary instead of having individual keys
     userGroups_uids = list()
     dashboard_items = {"visualization": [], "eventReport": [], "eventChart": [],
-                       "eventVisualisation": [], "map": []}
+                       "eventVisualization": [], "map": []}
     attributes_uids = ['iehcXLBKVWM',  # Code (ICD-10)
                        'mpXON5igCG1',  # Code (Loinc)
                        'I6u65yRc0ct',  # Code SNOMED
@@ -1260,7 +1260,7 @@ def main():
         "documents": "code:$like:" + package_prefix,  # Might not be enough
         "eventCharts": "id:in:[" + ','.join(dashboard_items['eventChart']) + "]",
         "eventReports": "id:in:[" + ','.join(dashboard_items['eventReport']) + "]",
-        "eventVisualisations": "id:in:[" + ','.join(dashboard_items['eventVisualisation']) + "]",
+        "eventVisualizations": "id:in:[" + ','.join(dashboard_items['eventVisualization']) + "]",
         "indicatorGroupSets": "id:in:[" + ','.join(indicatorGroupSets_uids) + "]",
         "indicatorGroups": "code:$like:" + package_prefix,
         "indicators": "id:in:[" + ','.join(indicator_uids) + "]",
@@ -1551,14 +1551,14 @@ def main():
             ## Remove orgunits
             org_units_assigned = json_extract_nested_ids(metaobject, 'organisationUnits')
             if len(org_units_assigned) > 0:
-                if metadata_type in ['eventReports', 'eventCharts', 'eventVisualisations', 'visualizations']:
+                if metadata_type in ['eventReports', 'eventCharts', 'eventVisualizations', 'visualizations']:
                     metaobject = check_and_replace_root_ou_assigned(metaobject)
                 else:
                     logger.warning('There are org units assigned... Removing')
                     metaobject = remove_subset_from_set(metaobject, 'organisationUnits')
 
             ## Warn about relative Periods not being used
-            if metadata_type in ['eventReports', 'eventCharts', 'eventVisualisations', 'visualizations', 'maps']:
+            if metadata_type in ['eventReports', 'eventCharts', 'eventVisualizations', 'visualizations', 'maps']:
                 for dashboard_item in metaobject:
                     if 'relativePeriods' in dashboard_item:
                         at_least_one_relative_period = False
@@ -1581,12 +1581,12 @@ def main():
 
             ## Custom checks
             if package_type_or_uid in ['TRK', 'EVT']:
-                if metadata_type == "eventVisualisations":
-                    # Get number of eventVisualisations assigned to the program(s) and compare
-                    eventVisualisations = get_metadata_element(metadata_type, "program.id:in:[" + ','.join(program_uids) + "]")
-                    if len(eventVisualisations) != len(metaobject):
+                if metadata_type == "eventVisualizations":
+                    # Get number of eventVisualizations assigned to the program(s) and compare
+                    eventVisualizations = get_metadata_element(metadata_type, "program.id:in:[" + ','.join(program_uids) + "]")
+                    if len(eventVisualizations) != len(metaobject):
                         logger.warning(
-                            "The program has " + str(len(eventVisualisations)) + " eventVisualisations assigned to it, but only " +
+                            "The program has " + str(len(eventVisualizations)) + " eventVisualizations assigned to it, but only " +
                             str(len(metaobject)) + " were found in the dashboards belonging to the program")
                 elif metadata_type == "trackedEntityAttributes":
                     # Our reference for trackedEntityAttributes to use are those assigned to the Program
@@ -1904,13 +1904,13 @@ def main():
                 # for example, let's get all ids of all visualisations used in all dashboards of this package
                 for dashboard in metaobject:
                     items = get_dashboard_elements(dashboard)
-                    for elem in ['visualization', 'eventReport', 'eventChart', 'map', 'eventVisualisation']:
+                    for elem in ['visualization', 'eventReport', 'eventChart', 'map', 'eventVisualization']:
                         if elem in dashboard_items:
                             dashboard_items[elem] = dashboard_items[elem] + items[elem]
                             # Make sure the list of ID is unique
                             dashboard_items[elem] = list(dict.fromkeys(dashboard_items[elem]))
                 # Update the filters
-                for elem in ['visualization', 'eventReport', 'eventChart', 'map', 'eventVisualisation']:
+                for elem in ['visualization', 'eventReport', 'eventChart', 'map', 'eventVisualization']:
                     metadata_filters[elem + 's'] = "id:in:[" + ','.join(dashboard_items[elem]) + "]"
             elif metadata_type in ['visualizations', 'maps']:
                 # Add legendSets
