@@ -246,12 +246,12 @@ def get_dashboard_elements(dashboard):
         items (dict): a dict with keys corresponding to every type of dashboard item: chart, reportTable, eventReport...
          containing a list of the UIDs for every elements used in the dashboard
     """
-    items = {"visualization": [], "chart": [], "reportTable": [], "eventVisualisation": [], "eventReport": [], "eventChart": [], "map": []}
+    items = {"visualization": [], "chart": [], "reportTable": [], "eventVisualization": [], "eventReport": [], "eventChart": [], "map": []}
     for dashboardItem in dashboard['dashboardItems']:
         if any(version in api_source.version for version in ['2.36', '2.37']):
-            items_list = ['visualization', 'eventVisualisation', 'eventReport', 'eventChart', 'map']
+            items_list = ['visualization', 'eventVisualization', 'eventReport', 'eventChart', 'map']
         else:
-            items_list = ['visualization', 'eventVisualisation', 'map']
+            items_list = ['visualization', 'eventVisualization', 'map']
         for dashboard_item in items_list:
             if dashboard_item in dashboardItem:
                 items[dashboard_item].append(dashboardItem[dashboard_item]['id'])
@@ -263,7 +263,7 @@ def get_elements_in_data_dimension(analytics_items, analytics_uids):
     Loop through all items in analytics_items and extract UIDs of dataElement, indicator and programIndicator
 
     Args:
-      analytics_items (list): list of maps, visualizations, eventCharts OR eventReports OR eventVisualisations
+      analytics_items (list): list of maps, visualizations, eventCharts OR eventReports OR eventVisualizations
 
     Returns:
         updated version of analytics_uids
@@ -1130,7 +1130,7 @@ def main():
             'organisationUnitGroupSets', 'organisationUnitGroups',  # Assuming this will only be found in indicators
             'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
             'programRuleVariables', 'programRuleActions', 'programRules',
-            'visualizations', 'maps', 'eventVisualisations', 'eventReports', 'eventCharts', 'dashboards',
+            'visualizations', 'maps', 'eventVisualizations', 'eventReports', 'eventCharts', 'dashboards',
             'package', 'users', 'userGroups']
         if package_type_or_uid == 'EVT':
             metadata_import_order.remove('trackedEntityAttributes')
@@ -1142,7 +1142,7 @@ def main():
             'categoryOptionGroupSets', 'categoryOptionGroups',
             'legendSets',
             'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
-            'visualizations', 'maps', 'eventVisualisations', 'eventReports', 'eventCharts', 'dashboards',
+            'visualizations', 'maps', 'eventVisualizations', 'eventReports', 'eventCharts', 'dashboards',
             'package', 'users', 'userGroups']
 
     # Dataset
@@ -1163,7 +1163,7 @@ def main():
             'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
             # groups first, to get indicator uids
             'sections', 'dataSets',
-            'visualizations', 'maps', 'eventVisualisations', 'eventReports', 'eventCharts', 'dashboards',
+            'visualizations', 'maps', 'eventVisualizations', 'eventReports', 'eventCharts', 'dashboards',
             'package', 'users', 'userGroups']
 
     elif package_type_or_uid == 'GEN':
@@ -1175,19 +1175,21 @@ def main():
             'trackedEntityAttributes', 'trackedEntityTypes',
             'package']
 
-    # Starting from >=2.38, eventReports and eventCharts are called eventVisualisations
+    # Starting from >=2.38, eventReports and eventCharts are called eventVisualizations
     if any(version in api_source.version for version in ['2.36', '2.37']):
-        metadata_import_order.remove('eventVisualisations')
+        if 'eventVisualizations' in metadata_import_order:
+            metadata_import_order.remove('eventVisualizations')
     else:
-        metadata_import_order.remove('eventReports')
-        metadata_import_order.remove('eventCharts')
+        if 'eventReports' in metadata_import_order and 'eventCharts' in metadata_import_order:
+            metadata_import_order.remove('eventReports')
+            metadata_import_order.remove('eventCharts')
 
     metadata = dict()
 
     # todo: these could be part of a big dictionary instead of having individual keys
     userGroups_uids = list()
     dashboard_items = {"visualization": [], "eventReport": [], "eventChart": [],
-                       "eventVisualisation": [], "map": []}
+                       "eventVisualization": [], "map": []}
     attributes_uids = ['iehcXLBKVWM',  # Code (ICD-10)
                        'mpXON5igCG1',  # Code (Loinc)
                        'I6u65yRc0ct',  # Code SNOMED
@@ -1266,7 +1268,7 @@ def main():
         "documents": "code:$like:" + package_prefix,  # Might not be enough
         "eventCharts": "id:in:[" + ','.join(dashboard_items['eventChart']) + "]",
         "eventReports": "id:in:[" + ','.join(dashboard_items['eventReport']) + "]",
-        "eventVisualisations": "id:in:[" + ','.join(dashboard_items['eventVisualisation']) + "]",
+        "eventVisualizations": "id:in:[" + ','.join(dashboard_items['eventVisualization']) + "]",
         "indicatorGroupSets": "id:in:[" + ','.join(indicatorGroupSets_uids) + "]",
         "indicatorGroups": "code:$like:" + package_prefix,
         "indicators": "id:in:[" + ','.join(indicator_uids) + "]",
@@ -1557,14 +1559,14 @@ def main():
             ## Remove orgunits
             org_units_assigned = json_extract_nested_ids(metaobject, 'organisationUnits')
             if len(org_units_assigned) > 0:
-                if metadata_type in ['eventReports', 'eventCharts', 'eventVisualisations', 'visualizations']:
+                if metadata_type in ['eventReports', 'eventCharts', 'eventVisualizations', 'visualizations']:
                     metaobject = check_and_replace_root_ou_assigned(metaobject)
                 else:
                     logger.warning('There are org units assigned... Removing')
                     metaobject = remove_subset_from_set(metaobject, 'organisationUnits')
 
             ## Warn about relative Periods not being used
-            if metadata_type in ['eventReports', 'eventCharts', 'eventVisualisations', 'visualizations', 'maps']:
+            if metadata_type in ['eventReports', 'eventCharts', 'eventVisualizations', 'visualizations', 'maps']:
                 for dashboard_item in metaobject:
                     if 'relativePeriods' in dashboard_item:
                         at_least_one_relative_period = False
@@ -1586,37 +1588,84 @@ def main():
             #    metaobject = check_sharing(metaobject, ['userGroupAccesses'])
 
             ## Custom checks
-            if metadata_type == "eventVisualisations":
-                # Get number of eventVisualisations assigned to the program(s) and compare
-                eventVisualisations = get_metadata_element(metadata_type, "program.id:in:[" + ','.join(program_uids) + "]")
-                if len(eventVisualisations) != len(metaobject):
-                    logger.warning(
-                        "The program has " + str(len(eventVisualisations)) + " eventVisualisations assigned to it, but only " +
-                        str(len(metaobject)) + " were found in the dashboards belonging to the program")
-            elif metadata_type == "trackedEntityAttributes":
-                # Our reference for trackedEntityAttributes to use are those assigned to the Program
-                # Check TEAs used in program rules
-                diff = list(set(trackedEntityAttributes_uids['PR']).difference(trackedEntityAttributes_uids['P']))
-                if len(diff) > 0:
-                    logger.error("Program rules use trackedEntityAttributes not assigned to the program: "
-                                 + str(diff))
-                    total_errors += 1
-                    check_issues_with_program_rules(metadata, diff, "TEA")
-                # Check TEAs used in Program Indicators
-                diff = list(set(trackedEntityAttributes_uids['PI']).difference(trackedEntityAttributes_uids['P']))
-                if len(diff) > 0:
-                    logger.error("Program indicators use trackedEntityAttributes not included in the program: "
-                                 + str(diff))
-                    total_errors += 1
-                # Check TEAs used in Indicators
-                diff = list(set(trackedEntityAttributes_uids['I']).difference(trackedEntityAttributes_uids['P']))
-                if len(diff) > 0:
-                    logger.error("Indicators use trackedEntityAttributes not included in the program: "
-                                 + str(diff))
-                    total_errors += 1
-                # Note: including programSections (PS), we are assuming that the trackedEntityAttributes (TEAs)
-                # referenced by the PS(s) are part of the program TEAs. The tests carried out point in that
-                # direction so initially there is no need to check the programSections TEAs
+            if package_type_or_uid in ['TRK', 'EVT']:
+                if metadata_type == "eventVisualizations":
+                    # Get number of eventVisualizations assigned to the program(s) and compare
+                    eventVisualizations = get_metadata_element(metadata_type, "program.id:in:[" + ','.join(program_uids) + "]")
+                    if len(eventVisualizations) != len(metaobject):
+                        logger.warning(
+                            "The program has " + str(len(eventVisualizations)) + " eventVisualizations assigned to it, but only " +
+                            str(len(metaobject)) + " were found in the dashboards belonging to the program")
+                elif metadata_type == "trackedEntityAttributes":
+                    # Our reference for trackedEntityAttributes to use are those assigned to the Program
+                    # Check TEAs used in program rules
+                    diff = list(set(trackedEntityAttributes_uids['PR']).difference(trackedEntityAttributes_uids['P']))
+                    if len(diff) > 0:
+                        logger.error("Program rules use trackedEntityAttributes not assigned to the program: "
+                                     + str(diff))
+                        total_errors += 1
+                        check_issues_with_program_rules(metadata, diff, "TEA")
+                    # Check TEAs used in Program Indicators
+                    diff = list(set(trackedEntityAttributes_uids['PI']).difference(trackedEntityAttributes_uids['P']))
+                    if len(diff) > 0:
+                        logger.error("Program indicators use trackedEntityAttributes not included in the program: "
+                                     + str(diff))
+                        total_errors += 1
+                    # Check TEAs used in Indicators
+                    diff = list(set(trackedEntityAttributes_uids['I']).difference(trackedEntityAttributes_uids['P']))
+                    if len(diff) > 0:
+                        logger.error("Indicators use trackedEntityAttributes not included in the program: "
+                                     + str(diff))
+                        total_errors += 1
+                    # Note: including programSections (PS), we are assuming that the trackedEntityAttributes (TEAs)
+                    # referenced by the PS(s) are part of the program TEAs. The tests carried out point in that
+                    # direction so initially there is no need to check the programSections TEAs
+
+                    # Check TEAs used in Analytics
+                    diff_data_dimension = list(
+                        set(dataDimension_uids['attribute']).difference(trackedEntityAttributes_uids['P']))
+                    if len(diff_data_dimension) > 0:
+                        logger.warning("Data dimension in analytics use TEAs not included in the package: "
+                                       + str(diff_data_dimension) + "... Adding them")
+                        total_errors += 1
+                        trackedEntityAttributes_in_data_dimension = get_metadata_element(metadata_type, "id:in:[" + ','.join(
+                            diff_data_dimension) + "]")
+                        trackedEntityAttributes_in_data_dimension = check_sharing(trackedEntityAttributes_in_data_dimension)
+                        trackedEntityAttributes_in_data_dimension = clean_metadata(trackedEntityAttributes_in_data_dimension)
+                        metaobject += trackedEntityAttributes_in_data_dimension
+                        trackedEntityAttributes_uids['P'] += diff_data_dimension
+
+                elif metadata_type == "programIndicators":
+                    # Get UIDs to analyze PIs included in the Program (P) VS the ones used in num/den of indicators
+                    # And also use this list to cleanup the programIndicatorGroups
+                    for programIndicator in metaobject:
+                        programIndicators_uids['P'].append(programIndicator['id'])
+                    # Check PIs used in Indicators
+                    diff = list(set(programIndicators_uids['I']).difference(programIndicators_uids['P']))
+                    if len(diff) > 0:
+                        # Turning this error into a warning due to an issue with MAL FOCI and MAL CS
+                        logger.warning("Indicators use programIndicators not included in the program: "
+                                       + str(diff))
+                        # total_errors += 1
+                        for uid in diff:
+                            ind_num = api_source.get('indicators',
+                                                     params={"fields": "id,name",
+                                                             "filter": "numerator:like:" + uid}).json()['indicators']
+                            ind_den = api_source.get('indicators',
+                                                     params={"fields": "id,name",
+                                                             "filter": "denominator:like:" + uid}).json()['indicators']
+                            indicators = ind_num + ind_den
+                            if len(indicators) > 0:
+                                logger.info('! ' + ' programIndicator ' + uid + ' used in indicator ')
+                                for ind in indicators:
+                                    logger.info('   ' + ind['id'] + ' - ' + ind['name'])
+
+                    # Check PIs used in Predictors (we give less information because using predictors is rare)
+                    diff = list(set(programIndicators_uids['PRED']).difference(programIndicators_uids['P']))
+                    if len(diff) > 0:
+                        logger.error("Predictors use programIndicators not included in the program: "
+                                     + str(diff))
+                        total_errors += 1
 
                 # Check TEAs used in Analytics
                 diff_data_dimension = list(
@@ -1926,13 +1975,13 @@ def main():
                 # for example, let's get all ids of all visualisations used in all dashboards of this package
                 for dashboard in metaobject:
                     items = get_dashboard_elements(dashboard)
-                    for elem in ['visualization', 'eventReport', 'eventChart', 'map', 'eventVisualisation']:
+                    for elem in ['visualization', 'eventReport', 'eventChart', 'map', 'eventVisualization']:
                         if elem in dashboard_items:
                             dashboard_items[elem] = dashboard_items[elem] + items[elem]
                             # Make sure the list of ID is unique
                             dashboard_items[elem] = list(dict.fromkeys(dashboard_items[elem]))
                 # Update the filters
-                for elem in ['visualization', 'eventReport', 'eventChart', 'map', 'eventVisualisation']:
+                for elem in ['visualization', 'eventReport', 'eventChart', 'map', 'eventVisualization']:
                     metadata_filters[elem + 's'] = "id:in:[" + ','.join(dashboard_items[elem]) + "]"
             elif metadata_type in ['visualizations', 'maps']:
                 # Add legendSets
