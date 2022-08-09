@@ -487,7 +487,7 @@ def clean_metadata(metaobj):
 def check_sharing(json_object, omit=[], verbose=False):
     """
     Check publicAccess, user, users, userAccesses and userGroupAccesses for particular list of metadata objects
-    It also performs some corrections (for example, adding WHO Admin, removing some undesired User Groups in sharing..)
+    It also performs some corrections (for example, adding package_admin user, removing some undesired User Groups in sharing..)
     Args:
       json_object (list): metadata to process
       omit (list): can be used to omit certain keys
@@ -505,21 +505,21 @@ def check_sharing(json_object, omit=[], verbose=False):
                         logger.warning(
                             'Element ' + item["id"] + ' has write public access ' + item['publicAccess'][0:2])
             if 'user' in item and 'user' not in omit:
-                if item['user']['id'] != WHOAdmin_uid:
+                if item['user']['id'] != package_admin_uid:
                     if verbose:
                         logger.warning('Element ' + item["id"] + ' has wrong user: ' + item['user'][
-                            'id'] + '... Replacing with WHOAdmin')
-                    user_who = {'id': WHOAdmin_uid, 'name': 'Admin WHO', 'username': 'who'}
+                            'id'] + '... Replacing with package_admin')
+                    user_package_admin = {'id': package_admin_uid, 'name': 'package admin', 'username': 'package_admin'}
                     for key in list(item['user']):
-                        if key not in user_who:
+                        if key not in user_package_admin:
                             del item['user'][key]
                         else:
-                            item['user'][key] = user_who[key]
+                            item['user'][key] = user_package_admin[key]
             if 'users' in item and isinstance(item['users'], list) and 'users' not in omit:
                 users = item['users']
                 outsiders = list()
                 for user in users:
-                    if user['id'] != WHOAdmin_uid:
+                    if user['id'] != package_admin_uid:
                         outsiders.append(user["id"])
                 if len(outsiders) > 0:
                     if verbose:
@@ -551,7 +551,7 @@ def check_sharing(json_object, omit=[], verbose=False):
             # Starting in 2.36 a new sharing object was introduced
             if 'sharing' in item and 'sharing' not in omit:
                 if 'owner' in item['sharing']:
-                    item['sharing']['owner'] = WHOAdmin_uid
+                    item['sharing']['owner'] = package_admin_uid
                 # Clean users, we share always with userGroups
                 item['sharing']['users'] = {}
                 # Process userGroups in sharing
@@ -902,7 +902,7 @@ def main():
     global api_source
     global userGroups_uids
     global df_report_lastUpdated
-    global WHOAdmin_uid
+    global package_admin_uid
     global users
 
     my_parser = argparse.ArgumentParser(description='Export package')
@@ -1250,7 +1250,7 @@ def main():
     # programRuleActions -> data ????
     # programIndicators -> expression, filter
     constants_uids = list()
-    WHOAdmin_uid = 'vUeLeQMSwhN'
+    package_admin_uid = 'vUeLeQMSwhN'
 
     metadata_filters = {
         "attributes": "id:in:[" + ','.join(attributes_uids) + "]",
@@ -1287,7 +1287,7 @@ def main():
         "sqlViews": "code:$like:" + package_prefix,
         "visualizations": "id:in:[" + ','.join(dashboard_items['visualization']) + "]",
         "userGroups": "code:$like:" + package_prefix,
-        "users": "id:eq:" + WHOAdmin_uid
+        "users": "id:eq:" + package_admin_uid
     }
 
     if package_type_or_uid in ['TRK', 'EVT']:
