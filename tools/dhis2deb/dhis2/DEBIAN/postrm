@@ -1,0 +1,12 @@
+#!/bin/sh -e
+
+rm -f /var/lib/tomcat6/webapps/dhis.war
+rm -rf /var/lib/tomcat6/webapps/dhis
+
+# don't remove this yet - don't want to wipe the database
+# maybe on purge?
+# rm -rf /opt/dhis2
+
+echo restarting tomcat ...
+/etc/init.d/tomcat6 restart
+

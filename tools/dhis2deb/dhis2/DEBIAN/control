@@ -1,0 +1,11 @@
+Package: dhis2
+Architecture: all
+Version: 2.0.3_rc_trunk_1137
+Installed-Size: 120000
+Section: main
+Priority: extra
+Maintainer: DHIS2 Developer Community <http://launchpad.net/dhis2>
+Depends: tomcat6, zip
+Suggests: tomcat6-admin, lcab, cabextract
+Homepage: http://dhis2.org
+Description: District Health Information System. The DHIS 2 is a tool for collection, validation, analysis, and presentation of aggregate statistical data, tailored (but not limited) to integrated health information management activities. It is a generic tool rather than a pre-configured database application, with an open meta-data model and a flexible user interface that allows the user to design the contents of a specific information system without the need for programming. DHIS 2 and upwards is a modular web-based software package built with free and open source Java frameworks.

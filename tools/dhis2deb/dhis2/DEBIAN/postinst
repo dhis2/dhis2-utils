@@ -1,0 +1,66 @@
+#!/bin/bash
+
+version=2.0.3_rc_trunk_1137
+tomcathome=/usr/share/tomcat6
+tomcatwebapps=/var/lib/tomcat6/webapps
+tomcatstartup=/etc/init.d/tomcat6
+tomcatuser=tomcat6
+
+dhis2home=/opt/dhis2
+dhis2db=$dhis2home/database
+
+echo "Deploying the DHIS2 web application"
+
+if [ -d "$tomcathome" ]
+then
+ echo Using Tomcat installed in $tomcathome
+else
+ read -p "Where is the tomcat home directory (e.g. /usr/local/tomcat6)?: " tomcathome
+fi
+
+if [ -d "$tomcatwebapps" ]
+then
+ echo Using Tomcat webapps in $tomcatwebapps
+else
+ tomcatwebapps=$tomcathome/webapps
+ if [ -d "$tomcatwebapps" ]
+ then
+  echo Using Tomcat webapps in $tomcatwebapps
+ else
+  read -p "Where are the tomcat webapps located? (e.g. /usr/local/tomcat6/webapps)?: " tomcathome
+ fi
+fi 
+
+if [ -f "$tomcatwebapps/dhis.war" ]
+then
+ mv $tomcatwebapps/dhis.war $tomcatwebapps/dhis.war.pre$version
+fi
+cp /dhis.war $tomcatwebapps/
+
+echo "installing config files"
+if [ -d "$dhis2home" ]
+then
+  echo Using existing dhis2 conf at $dhis2home
+else
+  echo creating $dhis2home
+  mkdir $dhis2home
+  echo Copying conf files
+  cp -r /dhis2_home/* $dhis2home
+fi   
+
+if [ ! $(id -u $tomcatuser) ]
+then
+ echo "User '$tomcatuser' does not exist."
+ read -p "What is the username of the Tomcat user?" tomcatuser
+fi
+
+chown -R $tomcatuser $dhis2home
+
+echo "Restarting Tomcat"
+sed -i 's/TOMCAT6_SECURITY=yes/TOMCAT6_SECURITY=no/' $tomcatstartup
+$tomcatstartup restart
+
+wait
+
+echo "Congratulations!  You have deployed DHIS2!"
+echo "Go to http://localhost:8080/dhis2 and login as admin/district"
