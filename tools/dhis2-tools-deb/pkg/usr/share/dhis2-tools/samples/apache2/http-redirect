@@ -1,5 +1,0 @@
-<VirtualHost *:80>
-	ServerAdmin webmaster@localhost
-        ServerName SERVERNAME
-        Redirect permanent / https://SERVERNAME/
-</VirtualHost>

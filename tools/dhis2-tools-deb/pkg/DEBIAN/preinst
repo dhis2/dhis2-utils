@@ -1,6 +1,0 @@
-#!/bin/sh
-set -e
-
-echo "Some preinstallation tasks ..."
-
-exit 0

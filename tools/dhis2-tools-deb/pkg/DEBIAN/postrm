@@ -1,7 +1,0 @@
-#!/bin/sh
-
-set -e
-
-# remove dhis2 user groups
-delgroup dhis2 2>dev/null || { echo "dhis2 group doesn't exist"; } 
-delgroup dhis2admin 2>/dev/null || { echo "dhis2admin group doesn't exist"; } 
