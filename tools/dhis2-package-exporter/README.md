@@ -434,6 +434,7 @@ The difference between warnings and errors is that an error will either stop the
 |WARNING|There are interpretations|Remove|
 |WARNING|Tracked Entity Type has TEAs not used in the program:|Add te TEAs to the package|
 |WARNING|Option Group references optionSet which don't belong in the package||
+|WARNING|Orphan COCs are included in the package. Please run Maintenance in the instance||
 |ERROR|The parameters XX returned no result for programs / dataSets / dashboards|Parameters passed to the script are probably not correct, stop execution|
 |ERROR|Version provided XXX does not match format X.Y.Z|Stop execution|
 |ERROR|Program rules use trackedEntityAttributes not assigned to the program:|No package is generated|
