@@ -1,5 +1,5 @@
---generating  buffer periods from feature/current  year to be used as a buffering period 
---the buffering periods will be the same periodId for the feature/current year with an extra two digits from  the buffering year
+--generating  buffer periods from the future/current  year to be used as a buffering period 
+--the buffering periods will be the same periodId for the future/current year with an extra two digits from  the buffering year
 
 Drop  function if EXISTS generate_buffer_period_from_current_period( );
 create or replace function generate_buffer_period_from_current_period( )
@@ -54,7 +54,7 @@ select pp.periodid as pid,pp.startdate as Sdate,pp.enddate as Edate,pp.periodtyp
 pp.periodtypeid, pp.startdate,  concat(pp.periodid,pp.periodtypeid) as newpid
 from period pp
 INNER JOIN periodtype pt ON pp.periodtypeid = pt.periodtypeid
- where date_part('year',startDate)= date_part('year',now())--NULLIF(feature_year, 2025)
+ where date_part('year',startDate)= date_part('year',now())--NULLIF(future_year, 2025)
  order by pp.periodtypeid, pp.startdate
  
  ),

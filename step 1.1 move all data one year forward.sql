@@ -11,15 +11,11 @@ Drop function if EXISTS move_data_one_year_forward ( );
 create or replace function move_data_one_year_forward ( ) RETURNS VOID 
 LANGUAGE plpgsql
   AS
-
 $$
-
 declare
-
     f record;
-
+	TABLE_RECORD record;
 begin
-   
 --This part  is  a query to get the list of all years in the current DHIS2 instance, which have  data values  to be moved forward by one year
 FOR f IN select   DISTINCT date_part('year',startdate) as years from period
 order by years desc
@@ -54,6 +50,13 @@ update eventreport set enddate = (enddate + interval '1 year') where enddate is 
 
 update eventchart set startdate = (startdate + interval '1 year') where startdate is not null;
 update eventchart set enddate = (enddate + interval '1 year') where enddate is not null;
+
+-- Only required for Tracker: Update TEA values for enrollments
+  UPDATE trackedentityattributevalue teav
+     SET value = to_char((value::date + interval '1 year'), 'YYYY-MM-dd')
+		 where trackedentityattributeid in (
+  select trackedentityattributeid from trackedentityattribute where valuetype in ('DATE','DATETIME') 
+);
 
 -- (Write) Move date event values to next year
 update trackedentitydatavalueaudit set value = to_char((value::date + interval '1 year'), 'YYYY-MM-dd')
@@ -111,6 +114,32 @@ UPDATE period
 	SET enddate = (period.startdate + (interval '6 months') - (interval '1 day'))::date
 	FROM periodtype
  	WHERE period.periodtypeid = periodtype.periodtypeid AND periodtype.name LIKE ('SixMonthly%');
+-- uncomment the below section to Update event dates , the below part will take time 
+/*	
+FOR TABLE_RECORD IN SELECT
+psi.programstageinstanceid,
+( '{' || js.KEY || ',value}' ) :: TEXT [] AS PATH,
+('"'||TEXT(DATE(to_timestamp(replace(js_value.value::TEXT, '"', ''), 'YYYY-MM-DD')))||'"')::jsonb as old_date ,
+(
+	'"' || TEXT ( DATE ( to_timestamp( REPLACE ( js_value.VALUE :: TEXT, '"', '' ), 'YYYY-MM-DD' ) + ( '1 year' ) :: INTERVAL ) ) || '"' 
+) :: jsonb AS VALUE
+	
+FROM
+	programstageinstance psi,
+	jsonb_each ( eventdatavalues :: jsonb ) AS js,
+	jsonb_each ( js.VALUE ) AS js_value 
+WHERE
+	js.KEY IN ( SELECT uid FROM dataelement WHERE valuetype = 'DATE' ) 
+	AND js_value.KEY = 'value'
+
+	LOOP
+	UPDATE programstageinstance psi 
+	SET eventdatavalues = jsonb_set ( eventdatavalues, TABLE_RECORD.PATH, TABLE_RECORD.VALUE ) 
+WHERE	psi.programstageinstanceid = TABLE_RECORD.programstageinstanceid;
+END LOOP;	
+*/	
+	
+	
 	end;
 $$;
 
