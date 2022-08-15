@@ -30,7 +30,9 @@ Feature of the system:
 
     Execution example:
 
-​         **`select move_data_one_year_forward ( );`**
+```sql
+    select move_data_one_year_forward ( );
+```
 
 The below step is not necessary unless you need to rollback the move forward data
 
@@ -46,25 +48,25 @@ The below step is not necessary unless you need to rollback the move forward dat
 
 ## **Part 2** **: Generating buffer periods from the future/current year to be used as a buffering period**
 
-The buffering periods will be the same periodId for the future/current year with an extra two digits from the buffering year.
+The buffering periods will be the same **periodId** for the future/current year with an extra two digits from the buffering year.
 
-```
+```sql
 Example :
 
 Future year is : 2022
 
-Buffering year is : 20**10**
+Buffering year is : 2010
 
-periodid for month like October 2022 is : **6171618 **
+periodid for month like October 2022 is : 6171618
 
-the new buffering periodid October 2010 will be : **617161810
+the new buffering periodid October 2010 will be : 617161810
 ```
 
 
 
   - **Generate buffering periods ids **
 
-    Using function **generate_buffer_period_from_current_period( )** in the SQL file*: Step 2- generating   buffer  periods.sql**
+    Using function **generate_buffer_period_from_current_period( )** in the SQL file : **step 2- generating   buffer  periods.sql**
 
     ***Example:**
 
@@ -77,7 +79,7 @@ from generate_buffer_period_from_current_period();
 
     Using the below SQL will update all datavalues in by replace the** periodid form future year by periodid from buffering year .
 
-    By executing SQL script in file : **step 3-move all feature year to buffer year.sql;***by using function : **move_current_buffering ()** at the begging of the year
+    By executing SQL script in file : **step 3-move all feature year to buffer year.sql;**by using function : **move_current_buffering ()** at the begging of the year
 
     **Example :**
 
