@@ -22,7 +22,7 @@ Feature of the system:
 
 ## Part 1 : move moving data from one year to the next / back 
 
-**Moving data might be used at the begging of each year **
+##### **Moving data might be used at the begging of each year** 
 
   - Move data forward by using SQL file : ***step 1.1 move all data one year forward.sql***
 
@@ -64,7 +64,7 @@ the new buffering periodid October 2010 will be : 617161810
 
 
 
-  - **Generate buffering periods ids **
+  - **Generate buffering periods ids** 
 
     Using function **generate_buffer_period_from_current_period( )** in the SQL file : **step 2- generating   buffer  periods.sql**
 
@@ -87,7 +87,7 @@ from generate_buffer_period_from_current_period();
     select move_current_buffering ();
     ```
 
-  - **Move data back from buffering year to the current period **
+  - **Move data back from buffering year to the current period** 
 
     By executing SQL script in file : **step 4-move all buffer year to current year.sql ;**
 
