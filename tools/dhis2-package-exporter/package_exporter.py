@@ -508,8 +508,10 @@ def check_sharing(json_object, omit=[], verbose=False):
                 if item['user']['id'] != WHOAdmin_uid:
                     if verbose:
                         logger.warning('Element ' + item["id"] + ' has wrong user: ' + item['user'][
-                            'id'] + '... Replacing with WHOAdmin')
-                    user_who = {'id': WHOAdmin_uid, 'name': 'Admin WHO', 'username': 'who'}
+
+                            'id'] + '... Replacing with package_admin')
+                    user_package_admin = {'id': package_admin_uid, 'name': 'package admin', 'username': 'package_admin'}
+
                     for key in list(item['user']):
                         if key not in user_who:
                             del item['user'][key]
