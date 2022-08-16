@@ -1626,7 +1626,7 @@ def main():
                     if len(diff_data_dimension) > 0:
                         logger.warning("Data dimension in analytics use TEAs not included in the package: "
                                        + str(diff_data_dimension) + "... Adding them")
-                        total_errors += 1
+
                         trackedEntityAttributes_in_data_dimension = get_metadata_element(metadata_type, "id:in:[" + ','.join(
                             diff_data_dimension) + "]")
                         trackedEntityAttributes_in_data_dimension = check_sharing(trackedEntityAttributes_in_data_dimension)
