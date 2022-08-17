@@ -1126,7 +1126,7 @@ def main():
             'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
             'programRuleVariables', 'programRuleActions', 'programRules',
             'visualizations', 'maps', 'eventVisualizations', 'eventReports', 'eventCharts', 'dashboards',
-            'package', 'users', 'userGroups']
+            'package', 'users', 'userRoles', 'userGroups']
         if package_type_or_uid == 'EVT':
             metadata_import_order.remove('trackedEntityAttributes')
             metadata_import_order.remove('trackedEntityTypes')
@@ -1138,7 +1138,7 @@ def main():
             'legendSets',
             'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
             'visualizations', 'maps', 'eventVisualizations', 'eventReports', 'eventCharts', 'dashboards',
-            'package', 'users', 'userGroups']
+            'package', 'users', 'userRoles', 'userGroups']
 
     # Dataset
     elif package_type_or_uid == 'AGG':
@@ -1159,7 +1159,7 @@ def main():
             # groups first, to get indicator uids
             'sections', 'dataSets',
             'visualizations', 'maps', 'eventVisualizations', 'eventReports', 'eventCharts', 'dashboards',
-            'package', 'users', 'userGroups']
+            'package', 'users', 'userRoles', 'userGroups']
 
     elif package_type_or_uid == 'GEN':
         metadata_import_order = [
@@ -1168,7 +1168,7 @@ def main():
             'dataElements', 'dataElementGroups',
             'indicatorTypes', 'indicators', 'indicatorGroups',
             'trackedEntityAttributes', 'trackedEntityTypes',
-            'package', 'attributes', 'users']
+            'package', 'attributes', 'users', 'userRoles']
 
     # Starting from >=2.38, eventReports and eventCharts are called eventVisualizations
     if any(version in api_source.version for version in ['2.36', '2.37']):
@@ -1245,6 +1245,7 @@ def main():
     # programIndicators -> expression, filter
     constants_uids = list()
     package_admin_uid = 'vUeLeQMSwhN'
+    package_user_role_uid = 'nCNR71ZbTHK'
 
     metadata_filters = {
         "attributes": "id:in:[" + ','.join(attributes_uids) + "]",
@@ -1281,7 +1282,8 @@ def main():
         "sqlViews": "code:$like:" + package_prefix,
         "visualizations": "id:in:[" + ','.join(dashboard_items['visualization']) + "]",
         "userGroups": "code:$like:" + package_prefix,
-        "users": "id:eq:" + package_admin_uid
+        "users": "id:eq:" + package_admin_uid,
+        "userRoles": "id:eq:" + package_user_role_uid
     }
 
     if package_type_or_uid in ['TRK', 'EVT']:
@@ -1338,7 +1340,8 @@ def main():
             "optionSets": "id:in:[" + ','.join(optionSets_uids) + "]",
             "trackedEntityAttributes": "id:in:[" + ','.join(trackedEntityAttributes_uids['P']) + "]",
             "trackedEntityTypes": "code:$like:" + package_prefix,
-            "users": "id:eq:" + package_admin_uid
+            "users": "id:eq:" + package_admin_uid,
+            "userRoles": "id:eq:" + package_user_role_uid
         }
 
     if len(program_uids) > 0 or len(dataset_uids) > 0 or len(dashboard_uids) or package_type_or_uid == 'GEN':
