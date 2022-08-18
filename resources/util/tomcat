@@ -1,0 +1,45 @@
+#!/bin/sh
+
+TOMCAT_LOCAL=~/dev/lib/tomcat
+DHIS2_SOURCE_HOME=~/dev/src/dhis2-core
+
+if [ $# -eq 0 ]
+  then
+    echo "Usage: tomcat [option] [version]"
+fi
+
+case $1 in
+start)
+  ${TOMCAT_LOCAL}/bin/startup.sh
+  tail -f ${TOMCAT_LOCAL}/logs/catalina.out
+  ;;
+stop)
+  ${TOMCAT_LOCAL}/bin/shutdown.sh
+  ;;
+restart)
+  ${TOMCAT_LOCAL}/bin/shutdown.sh
+  ${TOMCAT_LOCAL}/bin/startup.sh
+  ;;
+log)
+  tail -f ${TOMCAT_LOCAL}/logs/catalina.out
+  ;;
+load)
+  ${TOMCAT_LOCAL}/bin/shutdown.sh
+  sudo rm -rf ${TOMCAT_LOCAL}/webapps/dhis
+  sudo rm ${TOMCAT_LOCAL}/webapps/dhis.war
+  sudo cp ${DHIS2_SOURCE_HOME}/dhis-2/dhis-web/dhis-web-portal/target/dhis.war ${TOMCAT_LOCAL}/webapps/
+  echo Tomcat updated with latest WAR from src code
+  tail -f ${TOMCAT_LOCAL}/logs/catalina.out
+  ;;
+clear)
+  sudo rm -rf ${TOMCAT_LOCAL}/webapps/*
+  echo Tomcat WAR cleared
+  ;;
+update)
+  sudo rm -rf ${TOMCAT_LOCAL}/webapps/dhis
+  sudo rm ${TOMCAT_LOCAL}/webapps/dhis.war
+  sudo cp ${DHIS2_SOURCE_HOME}/dhis-2/dhis-web/dhis-web-portal/target/dhis.war ${TOMCAT_LOCAL}/webapps/
+  echo Tomcat updated with latest WAR from src code
+  ;;
+esac
+exit 0

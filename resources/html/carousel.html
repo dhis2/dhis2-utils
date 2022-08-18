@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>DHIS Web Portal</title>
+
+<!-- Import ext js and carousel css and js -->
+
+<link rel="stylesheet" type="text/css" href="http://apps.dhis2.org/dev/dhis-web-commons/javascripts/ext-ux/carousel/css/carousel.css" />
+<script type="text/javascript" src="http://extjs-public.googlecode.com/svn/tags/extjs-4.0.7/release/ext-all.js"></script>
+<script type="text/javascript" src="http://apps.dhis2.org/dev/dhis-web-commons/javascripts/ext-ux/carousel/Carousel.js"></script>
+<script type="text/javascript" src="http://apps.dhis2.org/dev/dhis-web-commons/javascripts/plugin/chart.js"></script>
+
+<!-- Custom CSS -->
+
+<style type="text/css">
+
+body {
+  font-family: Georgia, sans-serif;
+  color: #3B3B3B;
+  line-height: 1.5;
+}
+
+h1 {
+  color: black;
+}
+
+h1, h3 {
+  font-weight: lighter;
+}
+
+.chart {
+  width: 900px;
+  height: 500px;
+  border: 1px solid #ddd;
+  margin-top: 21px;
+}
+
+#chartCarousel {
+  width: 902px;
+  height: 550px;
+  margin: 20px;
+}
+
+</style>
+
+<script type="text/javascript">
+var base = 'http://apps.dhis2.org/dev/';
+
+Ext.onReady( function() {
+   Ext.Ajax.request({ 
+    url: base + "dhis-web-commons-security/login.action",
+    method: 'POST',
+    params: { j_username: "admin", j_password: "district" },
+    success: setLinks
+  });
+});
+
+function setLinks() {
+  DHIS.getChart({ uid: 'R0DVGvXDUNP', el: 'chartA1', url: base });
+
+  DHIS.getChart({ uid: 'X0CPnV6uLjR', el: 'chartA2', url: base });
+
+  DHIS.getChart({ uid: 'j1gNXBgwKVm', el: 'chartA3', url: base });
+
+  DHIS.getChart({ uid: 'X7PqaXfevnL', el: 'chartA4', url: base });
+
+  new Ext.ux.carousel.Carousel( 'chartCarousel', {
+    autoPlay: true,
+    itemSelector: 'div.chart',
+    interval: 5,
+    showPlayButton: true
+  });
+}
+</script>
+
+</head>
+
+<body>
+
+<h1>Chart Carousel</h1>
+
+<p><a href="http://dhis2.org">Home</a> | <a href="index.html">Portal</a> | <a href="plugin.html">Plugin</a> | <a href="carousel.html">Carousel</a></p>
+
+<p>This page illustrates how the charts made by the Data Visualizer plugin can be placed inside a carousel widget in order to make an attractive front page.</p>
+
+<h3>Carousel widget</h3>
+
+<div id="chartCarousel">
+
+<div id="chartA1" class="chart"></div>
+<div id="chartA2" class="chart"></div>
+<div id="chartA3" class="chart"></div>
+<div id="chartA4" class="chart"></div>
+
+</div>
+
+</body>
+</html>

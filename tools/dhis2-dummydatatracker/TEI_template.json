@@ -1,0 +1,54 @@
+{
+    "trackedEntityInstance": "",
+    "trackedEntityType": "",
+    "orgUnit": "",
+    "inactive": false,
+    "deleted": false,
+    "featureType": "NONE",
+    "enrollments": [
+      {
+        "enrollment": "",
+        "trackedEntity": "",
+        "orgUnit": "",
+        "program": "",
+        "enrollmentDate": "",
+        "trackedEntityInstance": "",
+        "coordinate": {
+          "latitude": "",
+          "longitude": ""
+        },
+        "events": [
+          {
+            "program": "",
+            "event": "",
+            "programStage": "",
+            "orgUnit": "",
+            "trackedEntityInstance": "",
+            "enrollment": "",
+            "enrollmentStatus": "ACTIVE",
+            "status": "COMPLETED",
+            "orgUnitName": "",
+            "eventDate": "",
+            "attributeCategoryOptions": "",
+            "followup": false,
+            "deleted": false,
+            "attributeOptionCombo": "",
+            "dataValues": [
+              {
+                "dataElement": "",
+                "value": ""
+              }
+            ],
+            "notes": []
+          }
+        ]
+      }
+    ],
+    "relationships": [],
+    "attributes": [
+        {
+            "attribute": "",
+            "value": ""
+        }
+    ]
+}
