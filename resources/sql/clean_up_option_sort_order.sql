@@ -4,8 +4,9 @@
     After cleaning up, the correct sort_order list should be [1,2,3].
 
     Usage: 
-        1) Execute below query to create function clean_up_option_sort_order()
-        2) Call function by execute "select clean_up_option_sort_order()"
+        1) Execute below query to create function clean_up_option_sort_order().
+        2) Call function by execute "select clean_up_option_sort_order()".
+        3) Restart the server to make sure the application cache will be updated with all changes made by this script.
 **/
 CREATE OR REPLACE FUNCTION clean_up_option_sort_order()
 RETURNS text
