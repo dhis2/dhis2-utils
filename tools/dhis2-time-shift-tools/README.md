@@ -62,7 +62,7 @@ the new buffering periodid October 2010 will be : 617161810
 
     Using function **generate_buffer_period_from_current_period( )** in the SQL file : `2.0-generating-buffer-periods.sql`
 
-    ***Example:**
+    **Example:**
 
 ```sql
 INSERT into period select p_id, p_type,p_start,p_end
@@ -95,32 +95,31 @@ from generate_buffer_period_from_current_period();
     select move_buffering_to_current('monthly');
     ```
 
-    ------
 
-    ### Setting up a cron to keep your data up to date
+### Setting up a cron to keep your data up to date
 
-    An example below on how to make sure your data is updated when it corresponds by setting up a cronjob. We assume that you have data already in your system up to today's date. If that is not the case, you need to invoke the aforementioned functions to move it so it covers any date in the past until today.
+An example below on how to make sure your data is updated when it corresponds by setting up a cronjob. We assume that you have data already in your system up to today's date. If that is not the case, you need to invoke the aforementioned functions to move it so it covers any date in the past until today.
 
-    First thing is to edit your crontab for user postgres, which is the one who has access to the DB. You need to run the following as superuser:
+First thing is to edit your crontab for user postgres, which is the one who has access to the DB. You need to run the following as superuser:
 
-    ```shell
-    sudo crontab -e -u postgres
-    ```
+```shell
+sudo crontab -e -u postgres
+```
 
-    Add the following lines:
+Add the following lines:
 
-    ```shell
-    15 0 * * * psql -d covid-19 -c "SELECT move_buffering_to_current('Daily');" 2>&1 >/dev/null | ts >> ~/shift_dates.log
-    20 0 * * MON psql -d covid-19 -c "SELECT move_buffering_to_current('Weekly');" 2>&1 >/dev/null | ts >> ~/shift_dates.log
-    25 0 1 * * psql -d covid-19 -c "SELECT move_buffering_to_current('Monthly');" 2>&1 >/dev/null | ts >> ~/shift_dates.log
-    30 0 1 */3 * psql -d covid-19 -c "SELECT move_buffering_to_current('Quarterly');" 2>&1 >/dev/null | ts >> ~/shift_dates.log
-    ```
+```shell
+15 0 * * * psql -d covid-19 -c "SELECT move_buffering_to_current('Daily');" 2>&1 >/dev/null | ts >> ~/shift_dates.log
+20 0 * * MON psql -d covid-19 -c "SELECT move_buffering_to_current('Weekly');" 2>&1 >/dev/null | ts >> ~/shift_dates.log
+25 0 1 * * psql -d covid-19 -c "SELECT move_buffering_to_current('Monthly');" 2>&1 >/dev/null | ts >> ~/shift_dates.log
+30 0 1 */3 * psql -d covid-19 -c "SELECT move_buffering_to_current('Quarterly');" 2>&1 >/dev/null | ts >> ~/shift_dates.log
+```
 
-    Once your crontab is modified, please save and restart the service to make sure your changes take effect
+Once your crontab is modified, please save and restart the service to make sure your changes take effect
 
 
-    ```shell
-    sudo systemctl restart cron
-    ```
+```shell
+sudo systemctl restart cron
+```
 
-    Note: I have used ts to add a timestamp to the log. It can be installed by running "sudo apt install moreutils", but using it is optional. 2>&1 >/dev/null makes sure we only get the errors in the log, shift_dates.log which is saved in the home folder of user postgres
+Note: I have used ts to add a timestamp to the log. It can be installed by running "sudo apt install moreutils", but using it is optional. 2>&1 >/dev/null makes sure we only get the errors in the log, shift_dates.log which is saved in the home folder of user postgres
