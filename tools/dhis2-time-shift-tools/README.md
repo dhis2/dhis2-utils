@@ -14,6 +14,12 @@ Features of the system:
 
 ------
 
+**DB Time Shift Utilities -Work Flow** 
+
+![](./img/DHIS2_Shifting_tool_workflow.png)
+
+------
+
 ## Part 1 : move moving data from one year to the next / back
 
 ##### **Moving data might be used at the beginning of each year**
