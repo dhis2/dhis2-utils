@@ -160,12 +160,15 @@ def main():
             logger.error(f"PR-ST-3 Program Rule '{pr['name']}' ({pr['id']}) without Program Rule Action")
             num_error += 1
 
-    # PRV-MQ-1 More than one PRV with the same name
+    # PRV-MQ-1 More than one PRV with the same name for the same program
     if "programRuleVariables" not in package:
         package["programRuleVariables"] = []
-    prv_names = [prv["name"] for prv in package["programRuleVariables"]]
-    if len(prv_names) != len(set(prv_names)):
-        logger.error("PRV-MQ-1 - More than one PRV with the same name: "+str([item for item, count in collections.Counter(prv_names).items() if count > 1]))
+    # Get the list of programs that has at least one programRuleVariable
+    prv_programs = set([prv["program"]["id"] for prv in package["programRuleVariables"]])
+    for program in prv_programs:
+        prv_names = [prv["name"] for prv in package["programRuleVariables"] if prv["program"]["id"] == program]
+        if len(prv_names) != len(set(prv_names)):
+            logger.error(f"PRV-MQ-1 - In program '{myutils.get_name_by_type_and_uid(package, 'programs', program)}' ({program}), more than one PRV with the same name: {([item for item, count in collections.Counter(prv_names).items() if count > 1])}")
 
     forbidden = ["and", "or", "not"]  # (dhis version >= 2.34)
     for prv in package["programRuleVariables"]:
