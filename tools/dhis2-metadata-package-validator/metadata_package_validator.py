@@ -169,6 +169,7 @@ def main():
         prv_names = [prv["name"] for prv in package["programRuleVariables"] if prv["program"]["id"] == program]
         if len(prv_names) != len(set(prv_names)):
             logger.error(f"PRV-MQ-1 - In program '{myutils.get_name_by_type_and_uid(package, 'programs', program)}' ({program}), more than one PRV with the same name: {([item for item, count in collections.Counter(prv_names).items() if count > 1])}")
+            num_error += 1
 
     forbidden = ["and", "or", "not"]  # (dhis version >= 2.34)
     for prv in package["programRuleVariables"]:
