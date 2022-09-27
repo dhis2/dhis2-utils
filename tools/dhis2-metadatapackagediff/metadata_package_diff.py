@@ -10,6 +10,11 @@ from gspread_formatting import *
 from gspread.exceptions import APIError
 import time
 
+# api_source = Api('https://test.performance.dhis2.org/2.34', 'admin', 'district')
+#
+# setup_logger()
+
+
 def reindex(json_object, key):
     new_json = dict()
     for elem in json_object:
@@ -161,8 +166,6 @@ def append_row_element(metaobj, df, type, operation, update = []):
                 # No CREATED no DELETED, just at the end
                 insert_pos = df[type].shape[0]
 
-    print('metadata_type: ' + type + ' operation: ' + operation + ' position: ' + str(insert_pos))
-
     if operation != 'UPDATE' and len(update) == 0:
         df[type] = insert_row(insert_pos, df[type],
             {'uid': values['id'], 'name': values['name'], 'operation': operation,
@@ -209,8 +212,6 @@ def apply_conditional_format_to_ws(worksheet):
     rules.clear()
 
     for i in range(0,len(condition_range)):
-        print(condition_range[i] + str(number_of_rows+1))
-
         rule = ConditionalFormatRule(
             ranges=[GridRange.from_a1_range(condition_range[i]+str(number_of_rows+1), worksheet)],
             booleanRule=BooleanRule(
@@ -404,52 +405,46 @@ if __name__ == '__main__':
     for metadata_type in df:
         # if metadata_type not in ['optionSets', 'dataElements', 'visualizations']:
         #     continue
+        successful = False
+        while not successful:
+            print('Processing ' + metadata_type)
+            metadata_type_ws_exists = True
+            try:
+                gs.worksheet(metadata_type)
+            except gspread.WorksheetNotFound:
+                metadata_type_ws_exists = False
 
-        print(metadata_type)
-        metadata_type_ws_exists = True
-        try:
-            gs.worksheet(metadata_type)
-        except gspread.WorksheetNotFound:
-            metadata_type_ws_exists = False
+            try:
+                if mode == 'create' or not metadata_type_ws_exists:
+                    if sheet1_still_there:
+                        ws = gs.sheet1
+                        ws.update_title(metadata_type)
+                        sheet1_still_there = False
+                    else:
+                        ws = gs.add_worksheet(title=metadata_type, rows=df[metadata_type].shape[0], cols=df[metadata_type].shape[1])
+                else:
+                    ws = gs.worksheet(metadata_type)
 
-        if mode == 'create' or not metadata_type_ws_exists:
-            if sheet1_still_there:
-                ws = gs.sheet1
-                ws.update_title(metadata_type)
-                sheet1_still_there = False
+                ws.clear()
+                set_with_dataframe(worksheet=ws, dataframe=df[metadata_type], include_index=False,
+                                   include_column_header=True, resize=True)
+
+                ws.format('A1:H1', {'textFormat': {'bold': True}})
+                set_frozen(ws, rows=1)
+                apply_conditional_format_to_ws(ws)
+            except APIError as e:
+                # Temporary fix for write requests per minute per user per project 60
+                # This could be improved by using batch requests
+                result = e.args[0]
+                if result['code'] == 429:
+                    print('Quota exceeded, waiting 1min before retrying')
+                    time.sleep(60)
+                    pass
+                else:
+                    print('UNHANDLED ERROR IN THE API REQUEST: ' + e)
+                    exit()
             else:
-                ws = gs.add_worksheet(title=metadata_type, rows=df[metadata_type].shape[0], cols=df[metadata_type].shape[1])
-        else:
-            print('update')
-            ws = gs.worksheet(metadata_type)
-
-        ws.clear()
-        set_with_dataframe(worksheet=ws, dataframe=df[metadata_type], include_index=False,
-                           include_column_header=True, resize=True)
-
-        ws.format('A1:H1', {'textFormat': {'bold': True}})
-        set_frozen(ws, rows=1)
-        # ws.set_panes_frozen(True)  # frozen headings instead of split panes
-        # ws.set_horz_split_pos(1)  # in general, freeze after last heading
-        #
-        # batch = batch_updater(gc)
-        # reqs = {'requests': [
-        #     {'updateSheetProperties': {
-        #         'properties': {'gridProperties': {'frozenRowCount': 1}},
-        #         'fields': 'gridProperties.frozenRowCount',
-        #     }}
-        # ]}
-        # batch.execute()
-        #
-        # service.spreadsheets().batchUpdate(spreadsheetId=
-        #
-        # batch.execute()
-        #     spreadsheetId=SHEET_ID, body=reqs).execute()
-        apply_conditional_format_to_ws(ws)
-
-        time.sleep(2)
+                successful = True
 
     google_spreadsheet_url = "https://docs.google.com/spreadsheets/d/%s" % gs.id
     print('Google spreadsheet created/updated here: ' + google_spreadsheet_url)
-
-
