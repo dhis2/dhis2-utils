@@ -3,11 +3,12 @@ import chardet
 import sys
 import pandas as pd
 from datetime import datetime
-
-# api_source = Api('https://test.performance.dhis2.org/2.34', 'admin', 'district')
-#
-# setup_logger()
-
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+from gspread_dataframe import get_as_dataframe, set_with_dataframe
+from gspread_formatting import *
+from gspread.exceptions import APIError
+import time
 
 def reindex(json_object, key):
     new_json = dict()
@@ -106,38 +107,83 @@ def json_extract_nested_ids(obj, key):
     return values
 
 
+# Function to insert row in the dataframe
+def insert_row(row_number, df, row_value):
+    # Slice the upper half of the dataframe
+    df1 = df[0:row_number]
+
+    # Store the result of lower half of the dataframe
+    df2 = df[row_number:]
+
+    # Insert the row in the upper half dataframe
+    # df1.loc[row_number] = row_value
+    df1 = df1.append(row_value, ignore_index=True)
+
+    # Concat the two dataframes
+    df_result = pd.concat([df1, df2])
+
+    # Reassign the index labels
+    df_result.index = [*range(df_result.shape[0])]
+
+    # Return the updated dataframe
+    return df_result
+
+
 def append_row_element(metaobj, df, type, operation, update = []):
     cols_to_add = ['id', 'name', 'lastUpdated', 'lastUpdatedBy']
     values = dict()
+    if type not in df:
+        df[type] = pd.DataFrame({}, columns=['operation', 'uid', 'name',
+                                   'update_operation', 'update_key', 'update_diff', 'last_updated', 'updated_by'])
+
     for col in cols_to_add:
         if col in metaobj:
             values[col] = metaobj[col]
         else:
             values[col] = ""
+
+    # CREATED -> Insert it at the beginning
+    # DELETED -> Insert it at the end
+    # UPDATED -> After the last CREATED or the first DELETED
+    if operation == 'CREATED':
+        insert_pos = 0
+    elif operation == 'DELETED':
+        insert_pos = df[type].shape[0]
+    else:
+        created_indexes = df[type].index[df[type]['operation'] == 'CREATED'].tolist()
+        if len(created_indexes) > 0:
+            insert_pos = created_indexes[-1]+1
+        else:
+            deleted_indexes = df[type].index[df[type]['operation'] == 'DELETED'].tolist()
+            if len(deleted_indexes) > 0:
+                insert_pos = deleted_indexes[0]
+            else:
+                # No CREATED no DELETED, just at the end
+                insert_pos = df[type].shape[0]
+
+    print('metadata_type: ' + type + ' operation: ' + operation + ' position: ' + str(insert_pos))
+
     if operation != 'UPDATE' and len(update) == 0:
-        return df.append(
-            {'metadata_type': type, 'uid': values['id'], 'name': values['name'], 'operation': operation,
+        df[type] = insert_row(insert_pos, df[type],
+            {'uid': values['id'], 'name': values['name'], 'operation': operation,
              'update_operation': '', 'update_key': '', 'update_diff': '',
-             'last_updated': values['lastUpdated'], 'updated_by': values['lastUpdatedBy']}
-            , ignore_index=True)
+             'last_updated': values['lastUpdated'], 'updated_by': values['lastUpdatedBy']})
     else:
         if len(update) > 0:
-            first_row = True
+            pos_increment = 0
             for upd in update:
-                if first_row:
-                    df = df.append(
-                        {'metadata_type': type, 'uid': values['id'], 'name': values['name'], 'operation': operation,
+                if pos_increment == 0:
+                    df[type] = insert_row(insert_pos+pos_increment, df[type],
+                        {'uid': values['id'], 'name': values['name'], 'operation': operation,
                          'update_operation': upd['update_operation'], 'update_key': upd['update_key'], 'update_diff': upd['update_diff'],
-                         'last_updated': values['lastUpdated'], 'updated_by': values['lastUpdatedBy']}
-                        , ignore_index=True)
+                         'last_updated': values['lastUpdated'], 'updated_by': values['lastUpdatedBy']})
                 else:
-                    df = df.append(
-                        {'metadata_type': '', 'uid': '', 'name': '', 'operation': '',
+                    df[type] = insert_row(insert_pos+pos_increment, df[type],
+                        {'uid': '', 'name': '', 'operation': '',
                          'update_operation': upd['update_operation'], 'update_key': upd['update_key'], 'update_diff': upd['update_diff'],
-                         'last_updated': '', 'updated_by': ''}
-                        , ignore_index=True)
-                first_row = False
-            return df
+                         'last_updated': '', 'updated_by': ''})
+                pos_increment += 1
+    return df
 
 
 # Get element present in list2 but not in list1
@@ -149,14 +195,69 @@ def diff_list(list1, list2):
     return result
 
 
+def apply_conditional_format_to_ws(worksheet):
+
+    condition_range = ['A2:C', 'A2:C', 'A2:C', 'D2:F', 'D2:F', 'D2:F']
+    condition_color = [Color(0,1,0), Color(1,0,0), Color(0.11,0.56,1), Color(0,1,0), Color(1,0,0), Color(0.11,0.56,1)]
+    custom_formula = ['=$A2="CREATED"','=$A2="DELETED"','=$A2="UPDATED"','=$D2="CREATED"','=$D2="DELETED"','=$D2="UPDATED"']
+
+    # Get number of rows
+    number_of_rows = worksheet.row_count
+
+    # Get the rules list to append new ones
+    rules = get_conditional_format_rules(worksheet)
+    rules.clear()
+
+    for i in range(0,len(condition_range)):
+        print(condition_range[i] + str(number_of_rows+1))
+
+        rule = ConditionalFormatRule(
+            ranges=[GridRange.from_a1_range(condition_range[i]+str(number_of_rows+1), worksheet)],
+            booleanRule=BooleanRule(
+                condition=BooleanCondition('CUSTOM_FORMULA', [custom_formula[i]]),
+                format=CellFormat(backgroundColor=condition_color[i])
+            )
+        )
+
+        rules.append(rule)
+
+    rules.save()
+
+
 if __name__ == '__main__':
 
+    if len(sys.argv) != 4:
+        print('3 arguments required: 1. Previous json file 2. New json file 3. Spreadsheet title')
+        exit(1)
     package_file1 = sys.argv[1]
     package_file2 = sys.argv[2]
+    sh_name = sys.argv[3]
 
-    df = pd.DataFrame({}, columns=['metadata_type', 'operation', 'uid', 'name',
-                                   'update_operation', 'update_key', 'update_diff', 'last_updated', 'updated_by'])
+    scope = ['https://spreadsheets.google.com/feeds',
+             'https://www.googleapis.com/auth/drive']
+    google_spreadshseet_credentials = 'dummy-data-297922-97b90db83bdc.json'
+    try:
+        f = open(google_spreadshseet_credentials)
+    except IOError:
+        print("Please provide file with google spreadsheet credentials")
+        exit(1)
+    else:
+        credentials = ServiceAccountCredentials.from_json_keyfile_name(google_spreadshseet_credentials, scope)
 
+    gc = gspread.authorize(credentials)
+    mode='update'
+    sheet1_still_there = False
+    try:
+        gs = gc.open(sh_name)
+    except gspread.SpreadsheetNotFound:
+        mode='create'
+        sheet1_still_there = True
+        gs = gc.create(sh_name)
+        pass
+    gs.share('manuel@dhis2.org', perm_type='user', role='writer')
+
+
+    df = dict()
     delete_payload = dict()
 
     enc = chardet.detect(open(package_file1, 'rb').read())['encoding']
@@ -275,21 +376,80 @@ if __name__ == '__main__':
             # It is most likely the PACKAGE label
             else:
                 if metadata1[key] != metadata2[key]:
-                    df = df.append(
-                        {'metadata_type': key, 'uid': '', 'name': '', 'operation': 'UPDATED',
+                    if key not in df:
+                        df[key] = pd.DataFrame({})
+                    df[key] = insert_row(0, df[key],
+                        {'uid': '', 'name': '', 'operation': 'UPDATED',
                          'update_operation': 'UPDATED', 'update_key': '',
                          'update_diff': str(metadata1[key]) + " -> " + str(metadata2[key]),
-                         'last_updated': '', 'updated_by': ''}
-                        , ignore_index=True)
+                         'last_updated': '', 'updated_by': ''})
+                    # df[key] = pd.DataFrame(
+                    #     {'uid': '', 'name': '', 'operation': 'UPDATED',
+                    #      'update_operation': 'UPDATED', 'update_key': '',
+                    #      'update_diff': str(metadata1[key]) + " -> " + str(metadata2[key]),
+                    #      'last_updated': '', 'updated_by': ''})
 
 
-    dateTimeObj = datetime.now()
-    timestampStr = dateTimeObj.strftime("%d-%b-%Y_%H-%M-%S")
-    export_csv = df.to_csv(r'./comparison_' + timestampStr + '.csv', index=None, header=True)
+    # dateTimeObj = datetime.now()
+    # timestampStr = dateTimeObj.strftime("%d-%b-%Y_%H-%M-%S")
+    # export_csv = df.to_csv(r'./comparison_' + timestampStr + '.csv', index=None, header=True)
+
+    # Loop though every metadata type
 
     if delete_payload != {}:
         with open('package_diff_delete.json', 'w', encoding='utf8') as file:
             file.write(json.dumps(delete_payload, indent=4, sort_keys=True, ensure_ascii=False))
         file.close()
+
+    for metadata_type in df:
+        # if metadata_type not in ['optionSets', 'dataElements', 'visualizations']:
+        #     continue
+
+        print(metadata_type)
+        metadata_type_ws_exists = True
+        try:
+            gs.worksheet(metadata_type)
+        except gspread.WorksheetNotFound:
+            metadata_type_ws_exists = False
+
+        if mode == 'create' or not metadata_type_ws_exists:
+            if sheet1_still_there:
+                ws = gs.sheet1
+                ws.update_title(metadata_type)
+                sheet1_still_there = False
+            else:
+                ws = gs.add_worksheet(title=metadata_type, rows=df[metadata_type].shape[0], cols=df[metadata_type].shape[1])
+        else:
+            print('update')
+            ws = gs.worksheet(metadata_type)
+
+        ws.clear()
+        set_with_dataframe(worksheet=ws, dataframe=df[metadata_type], include_index=False,
+                           include_column_header=True, resize=True)
+
+        ws.format('A1:H1', {'textFormat': {'bold': True}})
+        set_frozen(ws, rows=1)
+        # ws.set_panes_frozen(True)  # frozen headings instead of split panes
+        # ws.set_horz_split_pos(1)  # in general, freeze after last heading
+        #
+        # batch = batch_updater(gc)
+        # reqs = {'requests': [
+        #     {'updateSheetProperties': {
+        #         'properties': {'gridProperties': {'frozenRowCount': 1}},
+        #         'fields': 'gridProperties.frozenRowCount',
+        #     }}
+        # ]}
+        # batch.execute()
+        #
+        # service.spreadsheets().batchUpdate(spreadsheetId=
+        #
+        # batch.execute()
+        #     spreadsheetId=SHEET_ID, body=reqs).execute()
+        apply_conditional_format_to_ws(ws)
+
+        time.sleep(2)
+
+    google_spreadsheet_url = "https://docs.google.com/spreadsheets/d/%s" % gs.id
+    print('Google spreadsheet created/updated here: ' + google_spreadsheet_url)
 
 
