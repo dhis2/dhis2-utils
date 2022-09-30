@@ -368,9 +368,16 @@ if __name__ == '__main__':
                                 else:
                                     if dict1[k] != dict2[k]:
                                         #update_list.append("UPDATED|" + k + "|" + str(dict1[k]) + " -> " + str(dict2[k]))
-                                        update_list.append({"update_operation": "UPDATED",
-                                                            "update_key": k,
-                                                            "update_diff": str(dict1[k]) + " -> " + str(dict2[k])})
+                                        # There is a restriction of 50000 maximum characters in a cell so we cannot do the update of
+                                        # things like htmlCode
+                                        if len(str(dict1[k]) + " -> " + str(dict2[k])) > 50000:
+                                            update_list.append({"update_operation": "UPDATED",
+                                                                "update_key": k,
+                                                                "update_diff": "LENGHT_OF_COMPARISON_IS_TOO_BIG_TO_BE_DISPLAYED"})
+                                        else:
+                                            update_list.append({"update_operation": "UPDATED",
+                                                                "update_key": k,
+                                                                "update_diff": str(dict1[k]) + " -> " + str(dict2[k])})
                         if len(update_list) > 0:
                             df = append_row_element(metaobj2[uid], df, key, 'UPDATED', update_list)
 
@@ -441,10 +448,12 @@ if __name__ == '__main__':
                     time.sleep(60)
                     pass
                 else:
-                    print('UNHANDLED ERROR IN THE API REQUEST: ' + e)
+                    print('UNHANDLED ERROR IN THE API REQUEST: ' + str(result))
                     exit()
             else:
                 successful = True
 
     google_spreadsheet_url = "https://docs.google.com/spreadsheets/d/%s" % gs.id
     print('Google spreadsheet created/updated here: ' + google_spreadsheet_url)
+
+
