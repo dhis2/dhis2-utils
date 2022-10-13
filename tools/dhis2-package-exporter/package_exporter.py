@@ -557,10 +557,11 @@ def check_sharing(json_object, omit=[], verbose=False):
                 # Clean users, we share always with userGroups
                 item['sharing']['users'] = {}
                 # Process userGroups in sharing
-                userGroupIds = list(item['sharing']['userGroups'].keys())
-                for userGroupId in userGroupIds:
-                    if userGroupId not in userGroups_uids:
-                        item['sharing']['userGroups'].pop(userGroupId, None)
+                if 'userGroups' in item['sharing']:
+                    userGroupIds = list(item['sharing']['userGroups'].keys())
+                    for userGroupId in userGroupIds:
+                        if userGroupId not in userGroups_uids:
+                            item['sharing']['userGroups'].pop(userGroupId, None)
 
     return json_object
 
