@@ -9,9 +9,9 @@ import argparse
 from tools.json import reindex, remove_duplicates_by_id
 
 
-def get_metadata_element(metadata_type, filter=""):
+def get_metadata_element(metadata_type, filter="", fields='*'):
     params = {"paging": "false",
-              "fields": "*"}
+              "fields": fields}
     if filter != "":
         params["filter"] = filter
     try:
@@ -836,10 +836,9 @@ def get_category_elements(cat_combo_uid, cat_uid_dict=None):
             dict.fromkeys(cat['categoryOptionCombos'] + json_extract_nested_ids(catCombo, 'categoryOptionCombos')))
 
         # Get the categoryOptions used in COCs
-        COCs = api_source.get('categoryOptionCombos', params={"fields": "id,name,categoryOptions", "paging": "false",
-                                                              "filter": "id:in:[" + ','.join(
-                                                                  cat['categoryOptionCombos']) + "]"}).json()[
-            'categoryOptionCombos']
+        COCs = get_metadata_element('categoryOptionCombos',
+                                    filter="id:in:[" + ','.join(cat['categoryOptionCombos']) + "]",
+                                    fields="id,name,categoryOptions")
         for coc in COCs:
             cat['categoryOptions'] = list(
                 dict.fromkeys(cat['categoryOptions'] + json_extract_nested_ids(coc, 'categoryOptions')))
