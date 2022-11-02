@@ -1353,6 +1353,8 @@ def main():
 
         for metadata_type in reversed(metadata_import_order):
             logger.info("------------ " + metadata_type + " ------------")
+            if metadata_type == 'categoryOptionGroupSets':
+                metadata_type = 'categoryOptionGroupSets'
             if metadata_type == "package":
                 locale = "en"
                 if args.only_dashboards:
@@ -1513,7 +1515,7 @@ def main():
                             if catOptGroup['id'] not in cat_uids['categoryOptionGroups']:
                                 valid_cat_opt_group_set = False
                                 break
-                        if valid_cat_opt_group_set:
+                        if valid_cat_opt_group_set and catOptGroupSet['id'] not in cat_opt_group_set_ids_to_keep:
                             new_metaobject.append(catOptGroupSet)
                             cat_opt_group_set_ids_to_keep.append(catOptGroupSet['id'])
                     metadata['categoryOptionGroups'] = remove_undesired_children(metadata['categoryOptionGroups'],
