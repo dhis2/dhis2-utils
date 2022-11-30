@@ -23,9 +23,9 @@ EXECUTE 'DELETE FROM minmaxdataelement WHERE sourceid = $1 ' USING organisationu
 EXECUTE 'DELETE FROM orgunitgroupmembers WHERE organisationunitid = $1 ' USING organisationunitid;
 
 --delete all data from programstageinstance and down based on first programstageinstance orgunit then programinstance orgunit and lastly trackedentityinstance orgunit
-EXECUTE 'DELETE FROM trackedentitydatavalue WHERE programstageinstanceid IN (SELECT programstageinstanceid FROM programstageinstance WHERE organisationunitid = $1 OR programinstanceid IN (SELECT programinstanceid FROM programinstance WHERE organisationunitid = $1 OR trackedentityinstanceid IN (SELECT trackedentityinstanceid FROM trackedentityinstance WHERE organisationunitid = $1))) '
+EXECUTE 'DELETE FROM trackedentityattributevalue WHERE trackedentityinstanceid IN (SELECT trackedentityinstanceid FROM trackedentityinstance WHERE organisationunitid = $1) '
 USING organisationunitid;
-EXECUTE 'DELETE FROM trackedentitydatavalueaudit WHERE programstageinstanceid IN (SELECT programstageinstanceid FROM programstageinstance WHERE organisationunitid = $1 OR programinstanceid IN (SELECT programinstanceid FROM programinstance WHERE organisationunitid = $1 OR trackedentityinstanceid IN (SELECT trackedentityinstanceid FROM trackedentityinstance WHERE organisationunitid = $1))) '
+EXECUTE 'DELETE FROM trackedentityattributevalueaudit WHERE trackedentityinstanceid IN (SELECT trackedentityinstanceid FROM trackedentityinstance WHERE organisationunitid = $1) '
 USING organisationunitid;
 EXECUTE 'DELETE FROM programstageinstancecomments WHERE programstageinstanceid IN (SELECT programstageinstanceid FROM programstageinstance WHERE organisationunitid = $1 OR programinstanceid IN (SELECT programinstanceid FROM programinstance WHERE organisationunitid = $1 OR trackedentityinstanceid IN (SELECT trackedentityinstanceid FROM trackedentityinstance WHERE organisationunitid = $1))) '
 USING organisationunitid;
@@ -120,8 +120,6 @@ where eventreport_organisationunits.organisationunitid = t.organisationunitid an
 EXECUTE 'update eventreport_organisationunits set sort_order = -(sort_order+1) where eventreportid=$1' USING resort_object.objectid ;
 END LOOP;
 EXECUTE 'TRUNCATE temp1';
-
-EXECUTE 'DELETE FROM organisationunittranslations WHERE organisationunitid = $1 ' USING organisationunitid;
 
 EXECUTE 'DELETE FROM organisationunit WHERE organisationunitid = $1 ' USING organisationunitid;
 
