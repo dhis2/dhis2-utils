@@ -32,7 +32,7 @@ file options:
  -o file            path for the output package file
 
  transifex config (required when interacting with Transifex):
- -o org             [TX_ORGANISATION] Transifex organisation
+ --org org          [TX_ORGANISATION] Transifex organisation
  -t token           [TX_TOKEN] Transifex token
  --project slug     [TRANSIFEX_PROJECT] Transifex project slug
  -r slug            [TRANSIFEX_RESOURCE] Transifex resource slug
