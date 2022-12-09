@@ -1,9 +1,9 @@
 # DHIS2 metadata localisation and translation tool
 
+Python script for managing translations for DHIS2 metadata and metadata packages.
 
 ## Usage
 
-Python script for managing translations for DHIS2 metadata and metadata packages.
 
 ```
 
