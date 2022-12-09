@@ -12,17 +12,17 @@ in place of some parameters.
 mode:
 --instance          manage translations in a DHIS2 instance (default if no mode option given)
 or
---file              translate a metadata package file
+--package              translate a metadata package file
 
 instance options:
- -f package-url     [PACKAGE_FILE] full url to the initial package file
+ -f package-url     [PACKAGE_FILE] full url to the initial package file (used to filter objects)
  -s server          [DHIS2_SERVER] full url to the DHIS2 instance
  -u user            [DHIS2_USER] DHIS2 user (should be a user with access to all objects)
  -p password        [DHIS2_PASSWORD] DHIS2 user password
  --push             push source strings to Transifex
  --pull             pull localised strings from Transifex
 
-file options:
+package options:
  -f package-url     [PACKAGE_FILE] full url to the initial package file
  -b old:new         change the base language from old language code to new language code
  -x list            exclude language in the comma-separated list of language codes
@@ -85,7 +85,7 @@ sequenceDiagram
 
 **You probably don't want to do this!**
 
-`python3 ./metatran.py --file -f <package url> --project <transifex-project> -r <transifex-resource> --push`
+`python3 ./metatran.py --package -f <package url> --project <transifex-project> -r <transifex-resource> --push`
 
 ```mermaid
 %%{init: {'mirrorActors': false } }%%
@@ -103,7 +103,7 @@ sequenceDiagram
 
 ## Pull translations for a package file (output to new file)
 
-`python3 ./metatran.py --file -f <package url> --project <transifex-project> -r <transifex-resource> --pull [-b <old>:<new>] [-x <list> | -i <list>] -o <file>`
+`python3 ./metatran.py --package -f <package url> --project <transifex-project> -r <transifex-resource> --pull [-b <old>:<new>] [-x <list> | -i <list>] -o <file>`
 
 ```mermaid
 %%{init: {'mirrorActors': false } }%%
@@ -130,7 +130,7 @@ sequenceDiagram
 
 ## Swap languages in package file (output to new file)
 
-`python3 ./metatran.py --file -f <package-url> [-b <old>:<new>] [-x <list> | -i <list>] -o <file>`
+`python3 ./metatran.py --package -f <package-url> [-b <old>:<new>] [-x <list> | -i <list>] -o <file>`
 
 ```mermaid
 %%{init: {'mirrorActors': false } }%%
