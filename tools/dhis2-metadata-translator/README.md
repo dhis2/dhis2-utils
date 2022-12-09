@@ -42,9 +42,7 @@ file options:
 ## Push translations from Instance into transifex
 
 
-```
-python3 ./metatran.py --instance -s <dhis2-instance> -u <dhis2-user> -p <dhis2-password> [--filter <package url>] --project <transifex-project> -r <transifex-resource> --push
-```
+`python3 ./metatran.py --instance -s <dhis2-instance> -u <dhis2-user> -p <dhis2-password> [--filter <package url>] --project <transifex-project> -r <transifex-resource> --push`
 
 ```mermaid
 
@@ -63,9 +61,7 @@ sequenceDiagram
 ```
 ## Pull translations from transifex into Instance
 
-```
-python3 ./metatran.py --instance -s <dhis2-instance> -u <dhis2-user> -p <dhis2-password> [-f <package url>] --project <transifex-project> -r <transifex-resource> --pull
-```
+`python3 ./metatran.py --instance -s <dhis2-instance> -u <dhis2-user> -p <dhis2-password> [-f <package url>] --project <transifex-project> -r <transifex-resource> --pull`
 
 ```mermaid
 
@@ -79,7 +75,7 @@ sequenceDiagram
     participant T as transifex
     D->>+M: Extract translations
     G-->>M: package file<br>(object filter)
-    T->>M: pull translation strings
+    T->>M: pull latest translation strings
     M->>+D: Import translations
 
 ```
@@ -89,9 +85,7 @@ sequenceDiagram
 
 **You probably don't want to do this!**
 
-```
-python3 ./metatran.py --file -f <package url> --project <transifex-project> -r <transifex-resource> --push
-```
+`python3 ./metatran.py --file -f <package url> --project <transifex-project> -r <transifex-resource> --push`
 
 ```mermaid
 %%{init: {'mirrorActors': false } }%%
@@ -109,10 +103,7 @@ sequenceDiagram
 
 ## Pull translations for a package file (output to new file)
 
-```
-python3 ./metatran.py --file -f <package url> --project <transifex-project> -r <transifex-resource> --pull [-b <old>:<new>] [-x <list> | -i <list>] -o <file>
-
-```
+`python3 ./metatran.py --file -f <package url> --project <transifex-project> -r <transifex-resource> --pull [-b <old>:<new>] [-x <list> | -i <list>] -o <file>`
 
 ```mermaid
 %%{init: {'mirrorActors': false } }%%
@@ -125,8 +116,7 @@ sequenceDiagram
     participant T as transifex
     participant F as filesystem<br><br>(path)
     G->>M: package file 
-    M-->>T: push source strings
-    T->>M: pull translation strings
+    T->>M: pull latest translation strings
     opt 
         note over M: swap base language
     end
@@ -140,11 +130,7 @@ sequenceDiagram
 
 ## Swap languages in package file (output to new file)
 
-```
-python3 ./metatran.py --file -f <package-url> [-b <old>:<new>] [-x <list> | -i <list>] -o <file>
-
-
-```
+`python3 ./metatran.py --file -f <package-url> [-b <old>:<new>] [-x <list> | -i <list>] -o <file>`
 
 ```mermaid
 %%{init: {'mirrorActors': false } }%%
