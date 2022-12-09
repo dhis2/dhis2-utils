@@ -39,7 +39,10 @@ package options:
 
 ```
 
-## Push translations from Instance into transifex
+
+## Use cases
+
+### Push translations from Instance into transifex
 
 
 `python3 ./metatran.py --instance -s <dhis2-instance> -u <dhis2-user> -p <dhis2-password> [--filter <package url>] --project <transifex-project> -r <transifex-resource> --push`
@@ -59,7 +62,9 @@ sequenceDiagram
     M->>T: push source strings
 
 ```
-## Pull translations from transifex into Instance
+---
+
+### Pull translations from transifex into Instance
 
 `python3 ./metatran.py --instance -s <dhis2-instance> -u <dhis2-user> -p <dhis2-password> [-f <package url>] --project <transifex-project> -r <transifex-resource> --pull`
 
@@ -80,8 +85,8 @@ sequenceDiagram
 
 ```
 
-
-## Push source strings for a package file to transifex
+---
+### Push source strings for a package file to transifex
 
 **You probably don't want to do this!**
 
@@ -100,8 +105,8 @@ sequenceDiagram
     M->>T: push source strings
 
 ```
-
-## Pull translations for a package file (output to new file)
+---
+### Pull translations for a package file (output to new file)
 
 `python3 ./metatran.py --package -f <package url> --project <transifex-project> -r <transifex-resource> --pull [-b <old>:<new>] [-x <list> | -i <list>] -o <file>`
 
@@ -127,8 +132,8 @@ sequenceDiagram
     M->>+F: New package file
 
 ```
-
-## Swap languages in package file (output to new file)
+---
+### Swap languages in package file (output to new file)
 
 `python3 ./metatran.py --package -f <package-url> [-b <old>:<new>] [-x <list> | -i <list>] -o <file>`
 
