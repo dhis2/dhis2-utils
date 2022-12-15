@@ -9,11 +9,9 @@ from gspread_dataframe import get_as_dataframe, set_with_dataframe
 from gspread_formatting import *
 from gspread.exceptions import APIError
 import time
-
-# api_source = Api('https://test.performance.dhis2.org/2.34', 'admin', 'district')
-#
-# setup_logger()
-
+import argparse
+import re
+import os
 
 def reindex(json_object, key):
     new_json = dict()
@@ -227,12 +225,36 @@ def apply_conditional_format_to_ws(worksheet):
 
 if __name__ == '__main__':
 
-    if len(sys.argv) != 4:
-        print('3 arguments required: 1. Previous json file 2. New json file 3. Spreadsheet title')
+
+    my_parser = argparse.ArgumentParser(prog='metadata_package_diff',
+                                        description='Compare to packages given by 2 json files and uploads the result to Google Spreadsheets',
+                                        epilog="python metadata_package_diff.py old_file.json new_file.json ""My comparison"" --share_with=johndoe@dhis2.org",
+                                        formatter_class=argparse.RawDescriptionHelpFormatter)
+    my_parser.add_argument('old_json', metavar='old_json', type=str,
+                           help='Previous json file')
+    my_parser.add_argument('new_json', metavar='new_json', type=str,
+                           help='New json file')
+    my_parser.add_argument('gsheet_name', metavar='gsheet_name', type=str,
+                           help='Title of the spreadsheet to use or create (if it exists in the workspace, it gets updated)')
+    my_parser.add_argument('-sw', '--share_with', action="append", metavar='email', nargs=1,
+                           help='email address to share the generated spreadsheet with as OWNER. '
+                                'Eg: --share_with=peter@dhis2.org')
+    args = my_parser.parse_args()
+    package_file1 = args.old_json
+    package_file2 = args.new_json
+    sh_name = args.gsheet_name
+
+    if not os.path.exists(package_file1):
+        print("The file " + package_file1 + " could not be found")
         exit(1)
-    package_file1 = sys.argv[1]
-    package_file2 = sys.argv[2]
-    sh_name = sys.argv[3]
+    if not os.path.exists(package_file2):
+        print("The file " + package_file2 + " could not be found")
+        exit(1)
+    if args.share_with is not None and len(args.share_with) > 0:
+        for param in args.share_with:
+            if not (re.search('^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$', param[0])):
+                print("The email address " + param[0] + " is not valid")
+                exit(1)
 
     scope = ['https://spreadsheets.google.com/feeds',
              'https://www.googleapis.com/auth/drive']
@@ -255,8 +277,6 @@ if __name__ == '__main__':
         sheet1_still_there = True
         gs = gc.create(sh_name)
         pass
-    gs.share('manuel@dhis2.org', perm_type='user', role='writer')
-
 
     df = dict()
     delete_payload = dict()
@@ -453,7 +473,10 @@ if __name__ == '__main__':
             else:
                 successful = True
 
+    gs.share('manuel@dhis2.org', perm_type='user', role='writer')
+    if args.share_with is not None:
+        for email in args.share_with:
+            gs.share(email[0], perm_type='user', role='writer')
+
     google_spreadsheet_url = "https://docs.google.com/spreadsheets/d/%s" % gs.id
     print('Google spreadsheet created/updated here: ' + google_spreadsheet_url)
-
-
