@@ -382,6 +382,27 @@ def main():
                 message = f"DS-MQ-2 The dataSet '{dataSet_name}' ({dataSet_uid}) has an empty custom form"
                 logger.error(message)
                 num_error += 1
+
+    # Review only Data Element, Indicator, Program Indicator, Categories, Category Options, Category Combos, Maps, Visualizations
+    resources_to_review_naming = ["dataElements", "indicators", "programIndicators", "categories", "categoryOptions", "categoryCombos", "maps", "visualizations"]
+    for resource_type in resources_to_review_naming:
+        if resource_type not in package:
+            continue
+        for resource in package[resource_type]:
+            keys_to_validate = ["name", "shortName"]
+            for n in keys_to_validate:
+                if n not in resource:
+                    continue
+                # ALL-MQ-9 validation. Name and shortName SHOULD NOT contain >,<, ≥, ≤.
+                if any(ch in resource[n] for ch in ('>', '<', '≤', '≥')):
+                    logger.warning(f"ALL-MQ-9 {resource_type} ({resource['id']}) contains any of this characters '>', '<', '≤', '≥' in {n}: '{resource[n]}'")
+
+                # ALL-MQ-10 validation. Name and shortName SHOULD NOT contain the pattern "digit - digit"
+                pattern = r"\d - \d"
+                result = sum(1 for _ in re.finditer(pattern, resource[n]))
+                if result:
+                    logger.warning(f"ALL-MQ-10 {resource_type} ({resource['id']}) contains the expression 'digit(0-9) - digit(0-9) in {n}: '{resource[n]}'")
+
     logger.info('-------------------------------------Finished validation-------------------------------------')
 
     #  See https://stackoverflow.com/questions/15435652/python-does-not-release-filehandles-to-logfile
