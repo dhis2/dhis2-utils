@@ -403,6 +403,17 @@ def main():
                 if result:
                     logger.warning(f"ALL-MQ-10 {resource_type} ({resource['id']}) contains the expression 'digit(0-9) - digit(0-9) in {n}: '{resource[n]}'")
 
+    # Check existence of a description
+    # Review only: programs, dataSets, dataElements, trackedEntityAttributes, trackedEntityTypes, indicators, programIndicators, validationRules, predictors, programRules, visualizations (event chart, event report, map, data visualizer), dashboards
+    resources_to_review_description = ["programs", "dataSets", "dataElements", "trackedEntityAttributes", "trackedEntityTypes", "indicators", "programIndicators", "validationRules", "predictors", "programRules", "visualizations", "dashboards"]
+    for resource_type in resources_to_review_description:
+        if resource_type not in package:
+            continue
+        for resource in package[resource_type]:
+            if "description" not in resource:
+                    logger.warning(f"ALL-MQ-8 No description in {resource_type} ({resource['id']})")
+
+
     logger.info('-------------------------------------Finished validation-------------------------------------')
 
     #  See https://stackoverflow.com/questions/15435652/python-does-not-release-filehandles-to-logfile
