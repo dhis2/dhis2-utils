@@ -2,6 +2,23 @@
 
 Python script for managing translations for DHIS2 metadata and metadata packages.
 
+
+## Setup
+
+Optionally, set up a python virtual environment:
+
+```
+python3 -m venv venv         
+source venv/bin/activate
+```
+
+Install the requirements:
+
+```
+pip install -r requirements.txt
+```
+
+
 ## Usage
 
 
@@ -44,6 +61,13 @@ package options:
 
 
 ## Use cases
+
+In the following use cases I ignore a couple of options for transifex, which are set up as environment variables:
+
+```
+export TX_TOKEN='<transifex-api-token>'
+export TX_ORGANISATION='hisp-uio' 
+```
 
 ### Push translations from Instance into transifex
 
