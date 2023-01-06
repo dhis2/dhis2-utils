@@ -35,7 +35,7 @@ or
 --package              translate a metadata package file
 
 instance options:
- -f package-url     [PACKAGE_FILE] full url to the initial package file (used to filter objects)
+ -f package-url     [PACKAGE_FILE] full url (or local path) to the initial package file (used to filter objects)
  -s server          [DHIS2_SERVER] full url to the DHIS2 instance
  -u user            [DHIS2_USER] DHIS2 user (should be a user with access to all objects)
  -p password        [DHIS2_PASSWORD] DHIS2 user password
@@ -43,7 +43,7 @@ instance options:
  --pull             pull localised strings from Transifex
 
 package options:
- -f package-url     [PACKAGE_FILE] full url to the initial package file
+ -f package-url     [PACKAGE_FILE] full url (or local path) to the initial package file
  -b old:new         change the base language from old language code to new language code
  -x list            exclude language in the comma-separated list of language codes
  -i list            include only languages in the comma-separated list of language codes
