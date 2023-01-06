@@ -34,7 +34,7 @@ mt_logger.addHandler(console)
 
 class d2t():
 
-    def __init__(self,server, user, password, project, resource, base):
+    def __init__(self,server, user, password, project, resource, base, tx_org='', tx_token=''):
 
         mt_logger.setLevel(20)
         # DHIS2 connection details
@@ -65,8 +65,6 @@ class d2t():
             self.tx_resource=resource
             
             #create an instance of a transifex organisation (pass organisation slug and transifex API token)
-            tx_org = os.getenv("TX_ORGANISATION")  # "hisp-uio"
-            tx_token = os.getenv("TX_TOKEN")
             self.tx = tx3.tx(tx_org,tx_token,log_level=10)
             self.txp = self.tx.project(self.tx_project)
 
@@ -726,8 +724,8 @@ class d2t():
 
 
 class f2t(d2t):
-    def __init__(self, project, resource, package_url, base='', include='', exclude=''):
-        d2t.__init__(self,"","","",project, resource, base)
+    def __init__(self, project, resource, package_url, base='', include='', exclude='', tx_org='', tx_token=''):
+        d2t.__init__(self,"","","",project, resource, base, tx_org=tx_org, tx_token=tx_token)
         self.package = {}
         self.set_package(package_url)
         if not self.__valid_package__():
@@ -1073,7 +1071,7 @@ if __name__ == "__main__":
     p.add('-s', '--server', required='--package' not in sys.argv, env_var='DHIS2_SERVER', help='Server URL: e.g. https://play.dhis2.org/2.39.0') 
     # file options
     p.add('-f', '--file', required='--package' in sys.argv, help='Package file (URL to metadata.json file)', env_var='PACKAGE_FILE') 
-    p.add('-b', '--basex', required=False, help='Swap base language') 
+    p.add('-b', '--basex', required=False, help='Swap base language. Format "<current_code>:<target_code>"') 
     p.add('-x', '--exclude', required=False, help='Comma-separated list of language codes to exclude') 
     p.add('-i', '--include', required=False, help='Comma-separated list of language codes to include') 
     p.add('-o', '--output', required='--basex' in sys.argv or '--include' in sys.argv or '--exclude' in sys.argv or '--pull' in sys.argv, help='Output file') 
@@ -1099,7 +1097,10 @@ if __name__ == "__main__":
                         package_url=options.file,
                         base=options.basex,
                         include=options.include,
-                        exclude=options.exclude)
+                        exclude=options.exclude,
+                        tx_org=options.org,
+                        tx_token=options.token
+                        )
             # if you supply the basex (or include/exclude) options without push or pull
             # we assume you just want to manipulate the locales without other changes
 
@@ -1108,24 +1109,34 @@ if __name__ == "__main__":
 
         else:
 
-            f2t = f2t(project=options.project,
-                        resource=options.resource,
-                        package_url=options.file,
-                        base=options.basex)
+            if options.output or options.push or options.pull:
+                f2t = f2t(project=options.project,
+                            resource=options.resource,
+                            package_url=options.file,
+                            base=options.basex,
+                            tx_org=options.org,
+                            tx_token=options.token
+                            )
 
-            # get the translations from the input package file
-            f2t.file_to_json()
+                # get the translations from the input package file
+                f2t.file_to_json()
 
-            if options.push:
-                # push source to transifex
-                f2t.json_to_transifex()
-            if options.pull:
-                # pull translations from transifex
-                f2t.transifex_to_json()
+                if options.push:
+                    # push source to transifex
+                    f2t.json_to_transifex()
+                if options.pull:
+                    # pull translations from transifex
+                    f2t.transifex_to_json()
 
-            # output the updated package file
-            if options.output:
-                f2t.json_to_file(options.output)
+                # output the updated package file
+                if options.output:
+                    f2t.json_to_file(options.output)
+
+            else:
+                print("No actions selected.")
+                print("----------")
+                print(p.format_help())
+                print("----------")
 
     else:
         # assume options.instance - instantiate the d2t class
@@ -1134,7 +1145,9 @@ if __name__ == "__main__":
                     password=options.password,
                     project=options.project,
                     resource=options.resource,
-                    base=options.basex
+                    base=options.basex,
+                    tx_org=options.org,
+                    tx_token=options.token
                 )
 
         if (options.file):
