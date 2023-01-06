@@ -90,6 +90,7 @@ class d2t():
 
         # self.localisation_dir =  tempfile.TemporaryDirectory(prefix="i18n")  # use this for cleanliness
         self.localisation_dir =  tmpdir()  # use this instead of above for debugging
+        os.makedirs(self.localisation_dir.name, exist_ok=True)
         self.locale_file_pattern = self.localisation_dir.name + "/{m}/{p}_{l}.json"
         self.locale_file_pattern_prefix = self.localisation_dir.name + "/{m}/{p}_"
         self.source_file_pattern = self.localisation_dir.name + "/{m}/{p}.json"
@@ -907,6 +908,8 @@ class f2t(d2t):
     def json_to_file(self, filename):
 
         print("Generating new file",filename,"...")
+        if os.path.dirname(filename):
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
 
         toFILE = self.resolve_updates()
         # start with a deep copy of the original package
@@ -929,7 +932,7 @@ class f2t(d2t):
         if self.target_lang:
             newPACK = self.__change_base_locale__(newPACK)
 
-        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        
         jsonfile= open(filename,'w', encoding='utf8')
         jsonfile.write(json.dumps(newPACK , indent=4, sort_keys=True, ensure_ascii=False))
         jsonfile.close()
@@ -938,6 +941,9 @@ class f2t(d2t):
         """
         Call this to only change the base locale (no other changes) for the input package
         """
+        if os.path.dirname(filename):
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
+
         # if we want to change the base language, do it here
         newPACK = self.package
         if self.target_lang:
@@ -946,7 +952,6 @@ class f2t(d2t):
         # If we want to filter locales
         newPACK = self.__filter_locales__(newPACK)
 
-        os.makedirs(os.path.dirname(filename), exist_ok=True)
         jsonfile= open(filename,'w', encoding='utf8')
         jsonfile.write(json.dumps(newPACK , indent=4, sort_keys=True, ensure_ascii=False))
         jsonfile.close()
@@ -1071,7 +1076,7 @@ if __name__ == "__main__":
     p.add('-b', '--basex', required=False, help='Swap base language') 
     p.add('-x', '--exclude', required=False, help='Comma-separated list of language codes to exclude') 
     p.add('-i', '--include', required=False, help='Comma-separated list of language codes to include') 
-    p.add('-o', '--output', required='--package' in sys.argv, help='Output file') 
+    p.add('-o', '--output', required='--basex' in sys.argv or '--include' in sys.argv or '--exclude' in sys.argv or '--pull' in sys.argv, help='Output file') 
     # Transifex options
     p.add('--push', required=False, help='push source to Transifex', action="store_true") 
     p.add('--pull', required=False, help='pull translations from Transifex', action="store_true") 
@@ -1098,7 +1103,8 @@ if __name__ == "__main__":
             # if you supply the basex (or include/exclude) options without push or pull
             # we assume you just want to manipulate the locales without other changes
 
-            f2t.modify_locales(options.output)
+            if options.output:
+                f2t.modify_locales(options.output)
 
         else:
 
@@ -1118,7 +1124,8 @@ if __name__ == "__main__":
                 f2t.transifex_to_json()
 
             # output the updated package file
-            f2t.json_to_file(options.output)
+            if options.output:
+                f2t.json_to_file(options.output)
 
     else:
         # assume options.instance - instantiate the d2t class
