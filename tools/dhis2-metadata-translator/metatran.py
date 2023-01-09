@@ -930,6 +930,9 @@ class f2t(d2t):
         if self.target_lang:
             newPACK = self.__change_base_locale__(newPACK)
 
+        # If we want to filter locales
+        newPACK = self.__filter_locales__(newPACK)
+
         
         jsonfile= open(filename,'w', encoding='utf8')
         jsonfile.write(json.dumps(newPACK , indent=4, sort_keys=True, ensure_ascii=False))
@@ -1114,6 +1117,8 @@ if __name__ == "__main__":
                             resource=options.resource,
                             package_url=options.file,
                             base=options.basex,
+                            include=options.include,
+                            exclude=options.exclude,
                             tx_org=options.org,
                             tx_token=options.token
                             )
@@ -1139,31 +1144,38 @@ if __name__ == "__main__":
                 print("----------")
 
     else:
-        # assume options.instance - instantiate the d2t class
-        d2t = d2t(  server=options.server, 
-                    user=options.user, 
-                    password=options.password,
-                    project=options.project,
-                    resource=options.resource,
-                    base=options.basex,
-                    tx_org=options.org,
-                    tx_token=options.token
-                )
+        if options.push or options.pull:
+            # assume options.instance - instantiate the d2t class
+            d2t = d2t(  server=options.server, 
+                        user=options.user, 
+                        password=options.password,
+                        project=options.project,
+                        resource=options.resource,
+                        base=options.basex,
+                        tx_org=options.org,
+                        tx_token=options.token
+                    )
 
-        if (options.file):
-            print("setting package file as object filter.")
-            d2t.set_filter(options.file)
+            if (options.file):
+                print("setting package file as object filter.")
+                d2t.set_filter(options.file)
 
-        # get the translations from DHIS2
-        d2t.dhis2_to_json()
+            # get the translations from DHIS2
+            d2t.dhis2_to_json()
 
-        if options.push:
-            # push source to transifex
-            d2t.json_to_transifex()
-        if options.pull:
-            # pull translations from transifex
-            d2t.transifex_to_json()
-            # only push back to DHIS2 if we have pulled new translations
-            d2t.json_to_dhis2()
+            if options.push:
+                # push source to transifex
+                d2t.json_to_transifex()
+            if options.pull:
+                # pull translations from transifex
+                d2t.transifex_to_json()
+                # only push back to DHIS2 if we have pulled new translations
+                d2t.json_to_dhis2()
 
+
+        else:
+            print("No actions selected.")
+            print("----------")
+            print(p.format_help())
+            print("----------")
 
