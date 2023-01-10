@@ -25,7 +25,7 @@ import re
 import copy
 from jinja2 import Template
 import logging
-import slugify as slugify
+from slugify import slugify
 
 console = logging.StreamHandler()
 mt_logger = logging.getLogger('mtran')
