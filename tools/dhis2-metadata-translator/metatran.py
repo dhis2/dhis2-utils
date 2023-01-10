@@ -25,6 +25,7 @@ import re
 import copy
 from jinja2 import Template
 import logging
+import slugify
 
 console = logging.StreamHandler()
 mt_logger = logging.getLogger('mtran')
@@ -62,7 +63,8 @@ class d2t():
         if project:
             # transifex details (if a transifex project is defined)
             self.tx_project=project
-            self.tx_resource=resource
+            self.tx_resource_name=resource
+            self.tx_resource=slugify(resource)
             
             #create an instance of a transifex organisation (pass organisation slug and transifex API token)
             self.tx = tx3.tx(tx_org,tx_token,log_level=10)
@@ -266,8 +268,7 @@ class d2t():
         path=self.source_file_pattern.format(m=self.mode, p=self.tx_resource)
                 
         if not self.txp.resource(self.tx_resource) or force_new:
-            name = self.tx_resource
-            self.txp.new_resource(name,self.tx_resource,'STRUCTURED_JSON',path)
+            self.txp.new_resource(self.tx_resource_name,self.tx_resource,'STRUCTURED_JSON',path)
         else:
             # push a resource (source)
             self.txp.resource(self.tx_resource).push(path)
