@@ -223,7 +223,9 @@ class d2t():
                             locales['source'][resource][element['id']] = {}
 
                         if self.tx_i18n_type == 'STRUCTURED_JSON':
-                            locales['source'][resource][element['id']][transFieldKey] = { "string":element[transField], "character_limit":char_limit}
+                            locales['source'][resource][element['id']][transFieldKey] = { "string":element[transField] }
+                            if char_limit < 2147483647:
+                                locales['source'][resource][el_id][transFieldKey]["character_limit"] = char_limit
                         else:
                             locales['source'][resource][element['id']][transFieldKey] = element[transField]
 
@@ -862,7 +864,9 @@ class f2t(d2t):
                                                 locales[m['locale']][resource][el_id] = {}
 
                                             if self.tx_i18n_type == 'STRUCTURED_JSON':
-                                                locales[m['locale']][resource][el_id][transFieldKey] = { "string":m['value'], "character_limit":translatable_max_chars[resource][transFieldKey] }
+                                                locales[m['locale']][resource][el_id][transFieldKey] = { "string":m['value'] }
+                                                if translatable_max_chars[resource][transFieldKey] < 2147483647:
+                                                    locales[m['locale']][resource][el_id][transFieldKey]["character_limit"] = translatable_max_chars[resource][transFieldKey]
                                             else:
                                                 locales[m['locale']][resource][el_id][transFieldKey] = m['value']
 
@@ -940,7 +944,9 @@ class f2t(d2t):
                                     locales['source'][resource][el_id] = {}
 
                                 if self.tx_i18n_type == 'STRUCTURED_JSON':
-                                    locales['source'][resource][el_id][transFieldKey] = { "string":element[transField], "character_limit":translatable_max_chars[resource][transFieldKey] }
+                                    locales['source'][resource][el_id][transFieldKey] = { "string":element[transField] }
+                                    if translatable_max_chars[resource][transFieldKey] < 2147483647:
+                                        locales['source'][resource][el_id][transFieldKey]["character_limit"] = translatable_max_chars[resource][transFieldKey]
                                 else:
                                     locales['source'][resource][el_id][transFieldKey] = element[transField]
 
@@ -954,7 +960,9 @@ class f2t(d2t):
                                             locales[m['locale']][resource][el_id] = {}
 
                                         if self.tx_i18n_type == 'STRUCTURED_JSON':
-                                            locales[m['locale']][resource][el_id][transFieldKey] = { "string":m['value'], "character_limit":translatable_max_chars[resource][transFieldKey] }
+                                            locales[m['locale']][resource][el_id][transFieldKey] = { "string":m['value'] }
+                                            if translatable_max_chars[resource][transFieldKey] < 2147483647:
+                                                locales[m['locale']][resource][el_id][transFieldKey]["character_limit"] = translatable_max_chars[resource][transFieldKey]
                                         else:
                                             locales[m['locale']][resource][el_id][transFieldKey] = m['value']
 
