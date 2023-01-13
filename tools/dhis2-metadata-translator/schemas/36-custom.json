@@ -1,0 +1,12 @@
+{
+  "translatable_fields": {
+    "dashboardItems": {
+      "text": "TEXT"
+    }
+   },
+  "translatable_max_chars": {
+    "dashboardItems": {
+      "TEXT": 2147483647
+    }
+  }
+}

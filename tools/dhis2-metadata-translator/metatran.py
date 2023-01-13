@@ -70,6 +70,9 @@ class d2t():
             self.tx = tx3.tx(tx_org,tx_token,log_level=10)
             self.txp = self.tx.project(self.tx_project)
 
+            if not self.txp:
+                sys.exit("Project "+self.tx_project+" not found in transifex! Aborting transifex synchronisation.")
+
             if self.txp.resource(self.tx_resource):
                 self.tx_i18n_type = self.txp.resource(self.tx_resource).attributes['i18n_type']
 
@@ -760,9 +763,15 @@ class f2t(d2t):
 
     def __set_schemas__(self):
 
-        s = open('schemas/'+self.DHIS2Major+'.json','r')
-        transfields = json.load(s)
-        s.close()
+        transfields = {}
+        for schemafile in glob.iglob('schemas/'+self.DHIS2Major+'*.json'):
+
+            sfile=open(schemafile,'r')
+            if transfields:
+                transfields = self.merge_translations(transfields, json.load(sfile))
+            else:
+                transfields = json.load(sfile)
+            sfile.close()
 
         self.translatable_fields = transfields['translatable_fields']
         self.translatable_max_chars = transfields['translatable_max_chars']
@@ -798,6 +807,74 @@ class f2t(d2t):
                     else:
                         print("Package file base locale is '"+self.package['package']['locale']+"', expected '"+self.base_lang+"'")
         return False
+
+    def __second_level_extraction__(self,parent_resource,package,locales,translatable_fields,translatable_max_chars):
+
+
+        for resource in package:
+            collection = package[resource]
+            if isinstance(collection, list):
+
+                for element in collection:
+
+                    if resource in translatable_fields:
+
+                        el_id = parent_resource + '/' + package['id'] + '/' + resource + '/' + element['id']
+                        try:
+                            translations= element["translations"]
+                            if translations != []:
+                                if resource not in self.fromDHIS2:
+                                    self.fromDHIS2[resource] = {}
+                                if el_id not in self.fromDHIS2[resource]:
+                                    self.fromDHIS2[resource][el_id] = {}
+                                    self.fromDHIS2[resource][el_id]['translations'] = translations
+                                else:
+                                    self.fromDHIS2[resource][el_id]['translations'] += translations
+
+                            for transField in translatable_fields[resource]:
+                                transFieldKey = translatable_fields[resource][transField]
+
+                                # we can only create translation strings in transifex when a source base field has a value
+                                if transField in element:
+                                    matching_translations=[m for m in translations if m['property'] == transFieldKey]
+                                    # print( transField, element[transField])
+                                    # char_limit = translatable_max_chars[transFieldKey]
+                                    if resource not in locales['source']:
+                                        locales['source'][resource] = {}
+                                    if el_id not in locales['source'][resource]:
+                                        locales['source'][resource][el_id] = {}
+
+                                    if self.tx_i18n_type == 'STRUCTURED_JSON':
+
+                                        locales['source'][resource][el_id][transFieldKey] = { "string":element[transField] }
+                                        if translatable_max_chars[resource][transFieldKey] < 2147483647:
+                                            locales['source'][resource][el_id][transFieldKey]["character_limit"] = translatable_max_chars[resource][transFieldKey]
+                                    else:
+                                        locales['source'][resource][el_id][transFieldKey] = element[transField]
+
+                                    for m in matching_translations:
+                                        if m['locale'] not in self.langmap.keys():
+                                            if m['locale'] not in locales:
+                                                locales[m['locale']]={}
+                                            if resource not in locales[m['locale']]:
+                                                locales[m['locale']][resource] = {}
+                                            if el_id not in locales[m['locale']][resource]:
+                                                locales[m['locale']][resource][el_id] = {}
+
+                                            if self.tx_i18n_type == 'STRUCTURED_JSON':
+                                                locales[m['locale']][resource][el_id][transFieldKey] = { "string":m['value'], "character_limit":translatable_max_chars[resource][transFieldKey] }
+                                            else:
+                                                locales[m['locale']][resource][el_id][transFieldKey] = m['value']
+
+                                else:
+                                    # check and warn if we have translations with no base string
+                                    matching_translations=[m for m in translations if m['property'] == transFieldKey]
+                                    for m in matching_translations:
+                                        print("WARNING: Translation without base string for",resource,">",el_id,":", m)
+                        
+                        except KeyError:
+                            pass
+
 
     def file_to_json(self):
         """
@@ -835,16 +912,18 @@ class f2t(d2t):
                     except KeyError:
                         pass
 
+                    self.__second_level_extraction__(resource,element,locales,translatable_fields,translatable_max_chars)
 
                     translations= element["translations"]
+                    el_id = element['id']
                     if translations != []:
                         if resource not in self.fromDHIS2:
                             self.fromDHIS2[resource] = {}
-                        if element['id'] not in self.fromDHIS2[resource]:
-                            self.fromDHIS2[resource][element['id']] = {}
-                            self.fromDHIS2[resource][element['id']]['translations'] = translations
+                        if el_id not in self.fromDHIS2[resource]:
+                            self.fromDHIS2[resource][el_id] = {}
+                            self.fromDHIS2[resource][el_id]['translations'] = translations
                         else:
-                            self.fromDHIS2[resource][element['id']]['translations'] += translations
+                            self.fromDHIS2[resource][el_id]['translations'] += translations
 
                     if resource in translatable_fields:
                         for transField in translatable_fields[resource]:
@@ -857,13 +936,13 @@ class f2t(d2t):
                                 # char_limit = translatable_max_chars[transFieldKey]
                                 if resource not in locales['source']:
                                     locales['source'][resource] = {}
-                                if element['id'] not in locales['source'][resource]:
-                                    locales['source'][resource][element['id']] = {}
+                                if el_id not in locales['source'][resource]:
+                                    locales['source'][resource][el_id] = {}
 
                                 if self.tx_i18n_type == 'STRUCTURED_JSON':
-                                    locales['source'][resource][element['id']][transFieldKey] = { "string":element[transField], "character_limit":translatable_max_chars[resource][transFieldKey] }
+                                    locales['source'][resource][el_id][transFieldKey] = { "string":element[transField], "character_limit":translatable_max_chars[resource][transFieldKey] }
                                 else:
-                                    locales['source'][resource][element['id']][transFieldKey] = element[transField]
+                                    locales['source'][resource][el_id][transFieldKey] = element[transField]
 
                                 for m in matching_translations:
                                     if m['locale'] not in self.langmap.keys():
@@ -871,24 +950,25 @@ class f2t(d2t):
                                             locales[m['locale']]={}
                                         if resource not in locales[m['locale']]:
                                             locales[m['locale']][resource] = {}
-                                        if element['id'] not in locales[m['locale']][resource]:
-                                            locales[m['locale']][resource][element['id']] = {}
+                                        if el_id not in locales[m['locale']][resource]:
+                                            locales[m['locale']][resource][el_id] = {}
 
                                         if self.tx_i18n_type == 'STRUCTURED_JSON':
-                                            locales[m['locale']][resource][element['id']][transFieldKey] = { "string":m['value'], "character_limit":translatable_max_chars[resource][transFieldKey] }
+                                            locales[m['locale']][resource][el_id][transFieldKey] = { "string":m['value'], "character_limit":translatable_max_chars[resource][transFieldKey] }
                                         else:
-                                            locales[m['locale']][resource][element['id']][transFieldKey] = m['value']
+                                            locales[m['locale']][resource][el_id][transFieldKey] = m['value']
 
                             else:
                                 # check and warn if we have translations with no base string
                                 matching_translations=[m for m in translations if m['property'] == transFieldKey]
                                 for m in matching_translations:
-                                    print("WARNING: Translation without base string for",resource,">",element['id'],":", m)
+                                    print("WARNING: Translation without base string for",resource,">",el_id,":", m)
 
         mfile=open(self.localisation_dir.name + "/" + "fromPACK.json",'w')
         mfile.write(json.dumps(self.fromDHIS2, sort_keys=True, indent=2, ensure_ascii=False, separators=(',', ': ')))
         mfile.close()
 
+        # Write out the json files in transifex format
         for locale in locales:
             locale_filename = self.locale_file_pattern.format(m=self.mode, p=self.tx_resource, l=locale)
             if locale == "source":
@@ -916,9 +996,30 @@ class f2t(d2t):
 
         for resource in toFILE:
             for id in toFILE[resource]:
-                for element in newPACK[resource]:
-                    if element['id'] == id:
-                        element['translations'] = toFILE[resource][id]['translations']
+                try:
+                    for element in newPACK[resource]:
+                        if element['id'] == id:
+                            element['translations'] = toFILE[resource][id]['translations']
+                except KeyError:
+                    pass
+
+        # deal with the second-level objects
+        for resource in toFILE:
+            for id in toFILE[resource]:
+                print(id)
+                if '/' in id:
+                    ids = id.split('/')
+                    resource = ids[0]
+                    res_id = ids[1]
+                    sub_object = ids[2]
+                    sub_id = ids[3]
+                    for element in newPACK[resource]:
+                        if element['id'] == res_id:
+                            for ob in element:
+                                if ob == sub_object:
+                                    for e in element[ob]:
+                                        if e['id'] == sub_id:
+                                            e['translations'] = toFILE[sub_object][id]['translations']
 
         for resource in newPACK:
             collection = newPACK[resource]
@@ -959,7 +1060,7 @@ class f2t(d2t):
         jsonfile.close()
 
 
-    def __change_base_locale__(self, current_package):
+    def __change_base_locale__(self, current_package, recurse=True):
         """
         Swap the base language of the metadata
         This requires that translations are available in the "target" base language.
@@ -968,92 +1069,121 @@ class f2t(d2t):
 
         previous_lang = self.base_lang
         target_lang = self.target_lang
-        print("Converting main locale from",previous_lang,"to",target_lang,"...")
+        if recurse:
+            print("Converting main locale from",previous_lang,"to",target_lang,"...")
 
         translatable_fields = self.translatable_fields
         translatable_max_chars= self.translatable_max_chars 
 
         # to change the normal object translations, we loop through
-        package = copy.deepcopy(current_package)
+        if recurse:
+            package = copy.deepcopy(current_package)
+        else:
+            # when we recurse we need to same object - it was (deep) copied at the top level
+            package = current_package
         for resource in package:
             # skip the object that contains the packages own metadata
             if resource != "package":
 
                 collection = package[resource]
-                for element in collection:
+                if isinstance(collection, list):
+                    for element in collection:
 
-                    # if we want to swap languages in custom forms
-                    self.swap_custom_form_translations(resource, element)
+                        # if we want to swap languages in custom forms
+                        self.swap_custom_form_translations(resource, element)
 
-                    translations= element["translations"]
+                        if isinstance(element,dict):
 
-                    if resource in translatable_fields:
-                        for transField in translatable_fields[resource]:
-                            transFieldKey = translatable_fields[resource][transField]
+                            if recurse:
+                                # perform the transformation recursively, once
+                                element = self.__change_base_locale__(element, recurse=False)
 
-                            # we can only create translation strings in transifex when a source base field has a value
-                            # if transField in element:
-                            matching_translations=[m for m in translations if m['property'] == transFieldKey]
+                            try:
+                                translations= element["translations"]
 
-                            for m in matching_translations:
-                                if m['locale'] == target_lang:
+                                if resource in translatable_fields:
+                                    for transField in translatable_fields[resource]:
+                                        transFieldKey = translatable_fields[resource][transField]
 
-                                    target_string = m['value']
+                                        # we can only create translation strings in transifex when a source base field has a value
+                                        # if transField in element:
+                                        matching_translations=[m for m in translations if m['property'] == transFieldKey]
 
-                                    if transField in element:
-                                        m['value'] = element[transField]
-                                        m['locale'] = previous_lang
-                                    else:
-                                        m['remove'] = True
+                                        for m in matching_translations:
+                                            if m['locale'] == target_lang:
+
+                                                target_string = m['value']
+
+                                                if transField in element:
+                                                    m['value'] = element[transField]
+                                                    m['locale'] = previous_lang
+                                                else:
+                                                    m['remove'] = True
+                                                    
+                                                # make sure the string doesn't exceed the max characters
+                                                element[transField] = target_string[0:translatable_max_chars[resource][transFieldKey]]
                                         
-                                    # make sure the string doesn't exceed the max characters
-                                    element[transField] = target_string[0:translatable_max_chars[resource][transFieldKey]]
-                            
-                    # remove any translations that should be removed
-                    element["translations"] = [m for m in translations if 'remove' not in m]
+                                # remove any translations that should be removed
+                                element["translations"] = [m for m in translations if 'remove' not in m]
+
+                            except KeyError:
+                                pass
             else:
                 # modify the package metadata accordingly
                 package[resource]['locale'] = target_lang
                 package[resource]['name'] = package[resource]['name'].replace('-'+previous_lang,'-'+target_lang)
-                                
+
         return package
 
 
 
-    def __filter_locales__(self, current_package):
+    def __filter_locales__(self, current_package, recurse=True):
         """
         exclude or include specific locales
         Include is exclusive and implies exclude of the others
         Include trumps exclude if both are defined (i.e. exclude list is ignored if there is an include list)
         """        
         if self.include_locales or self.exclude_locales:
-            if self.include_locales:
-                print("Including only the following locales:",self.include_locales,"...")
-            else:
-                print("Excluding the following locales:",self.exclude_locales,"...")
+            if recurse:
+                if self.include_locales:
+                    print("Including only the following locales:",self.include_locales,"...")
+                else:
+                    print("Excluding the following locales:",self.exclude_locales,"...")
 
 
             # to change the normal object translations, we loop through
-            package = copy.deepcopy(current_package)
+            if recurse:
+                package = copy.deepcopy(current_package)
+            else:
+                # when we recurse we need to same object - it was (deep) copied at the top level
+                package = current_package
             for resource in package:
                 # skip the object that contains the packages own metadata
                 if resource != "package":
 
                     collection = package[resource]
-                    for element in collection:
+                    if isinstance(collection, list):
+                        for element in collection:
 
-                        # if we want to swap languages in custom forms
-                        self.exclude_custom_form_translations(resource, element)
+                            # if we want to swap languages in custom forms
+                            self.exclude_custom_form_translations(resource, element)
 
-                        translations= element["translations"]
-                        
-                        # remove any translations that should be removed
-                        if self.include_locales:
-                            element["translations"] = [m for m in translations if m['locale'] in self.include_locales]
-                        else:
-                            element["translations"] = [m for m in translations if m['locale'] not in self.exclude_locales]
+                            if isinstance(element,dict):
+                                if recurse:
+                                    # perform the transformation recursively, once
+                                    element = self.__filter_locales__(element, recurse=False)
 
-                                
+                                try:
+                                    translations= element["translations"]
+                                    
+                                    # remove any translations that should be removed
+                                    if self.include_locales:
+                                        element["translations"] = [m for m in translations if m['locale'] in self.include_locales]
+                                    else:
+                                        element["translations"] = [m for m in translations if m['locale'] not in self.exclude_locales]
+
+                                except KeyError:
+                                    pass
             return package
         else:
             return current_package
