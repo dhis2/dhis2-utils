@@ -225,7 +225,7 @@ class d2t():
                         if self.tx_i18n_type == 'STRUCTURED_JSON':
                             locales['source'][resource][element['id']][transFieldKey] = { "string":element[transField] }
                             if char_limit < 2147483647:
-                                locales['source'][resource][el_id][transFieldKey]["character_limit"] = char_limit
+                                locales['source'][resource][element['id']][transFieldKey]["character_limit"] = char_limit
                         else:
                             locales['source'][resource][element['id']][transFieldKey] = element[transField]
 
