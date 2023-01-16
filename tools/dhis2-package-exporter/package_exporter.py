@@ -1353,8 +1353,6 @@ def main():
 
         for metadata_type in reversed(metadata_import_order):
             logger.info("------------ " + metadata_type + " ------------")
-            if metadata_type == 'categoryOptionGroupSets':
-                metadata_type = 'categoryOptionGroupSets'
             if metadata_type == "package":
                 locale = "en"
                 if args.only_dashboards:
@@ -1932,6 +1930,7 @@ def main():
                 cat_uids['categoryOptionGroups'] += json_extract_nested_ids(metaobject, 'categoryOptionGroups')
                 cat_uids['categoryOptionGroupSets'] += json_extract_nested_ids(metaobject, 'categoryOptionGroupSet')
                 organisationUnitGroups_uids += json_extract_nested_ids(metaobject, 'itemOrganisationUnitGroups')
+                organisationUnitGroups_uids += json_extract_nested_ids(metaobject, 'organisationUnitGroups')
                 if len(organisationUnitGroups_uids) > 0:
                     metadata_filters["organisationUnitGroups"] = "id:in:[" + ','.join(organisationUnitGroups_uids) + "]"
 
