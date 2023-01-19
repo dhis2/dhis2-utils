@@ -821,63 +821,64 @@ class f2t(d2t):
 
                     if resource in translatable_fields:
 
-                        el_id = parent_resource + '/' + package['id'] + '/' + resource + '/' + element['id']
-                        try:
-                            translations= element["translations"]
-                            if translations != []:
-                                if resource not in self.fromDHIS2:
-                                    self.fromDHIS2[resource] = {}
-                                if el_id not in self.fromDHIS2[resource]:
-                                    self.fromDHIS2[resource][el_id] = {}
-                                    self.fromDHIS2[resource][el_id]['translations'] = translations
-                                else:
-                                    self.fromDHIS2[resource][el_id]['translations'] += translations
-
-                            for transField in translatable_fields[resource]:
-                                transFieldKey = translatable_fields[resource][transField]
-
-                                # we can only create translation strings in transifex when a source base field has a value
-                                if transField in element:
-                                    matching_translations=[m for m in translations if m['property'] == transFieldKey]
-                                    # print( transField, element[transField])
-                                    # char_limit = translatable_max_chars[transFieldKey]
-                                    if resource not in locales['source']:
-                                        locales['source'][resource] = {}
-                                    if el_id not in locales['source'][resource]:
-                                        locales['source'][resource][el_id] = {}
-
-                                    if self.tx_i18n_type == 'STRUCTURED_JSON':
-
-                                        locales['source'][resource][el_id][transFieldKey] = { "string":element[transField] }
-                                        if translatable_max_chars[resource][transFieldKey] < 2147483647:
-                                            locales['source'][resource][el_id][transFieldKey]["character_limit"] = translatable_max_chars[resource][transFieldKey]
+                        if isinstance(element,dict):
+                            el_id = parent_resource + '/' + package['id'] + '/' + resource + '/' + element['id']
+                            try:
+                                translations= element["translations"]
+                                if translations != []:
+                                    if resource not in self.fromDHIS2:
+                                        self.fromDHIS2[resource] = {}
+                                    if el_id not in self.fromDHIS2[resource]:
+                                        self.fromDHIS2[resource][el_id] = {}
+                                        self.fromDHIS2[resource][el_id]['translations'] = translations
                                     else:
-                                        locales['source'][resource][el_id][transFieldKey] = element[transField]
+                                        self.fromDHIS2[resource][el_id]['translations'] += translations
 
-                                    for m in matching_translations:
-                                        if m['locale'] not in self.langmap.keys():
-                                            if m['locale'] not in locales:
-                                                locales[m['locale']]={}
-                                            if resource not in locales[m['locale']]:
-                                                locales[m['locale']][resource] = {}
-                                            if el_id not in locales[m['locale']][resource]:
-                                                locales[m['locale']][resource][el_id] = {}
+                                for transField in translatable_fields[resource]:
+                                    transFieldKey = translatable_fields[resource][transField]
 
-                                            if self.tx_i18n_type == 'STRUCTURED_JSON':
-                                                locales[m['locale']][resource][el_id][transFieldKey] = { "string":m['value'] }
-                                                if translatable_max_chars[resource][transFieldKey] < 2147483647:
-                                                    locales[m['locale']][resource][el_id][transFieldKey]["character_limit"] = translatable_max_chars[resource][transFieldKey]
-                                            else:
-                                                locales[m['locale']][resource][el_id][transFieldKey] = m['value']
+                                    # we can only create translation strings in transifex when a source base field has a value
+                                    if transField in element:
+                                        matching_translations=[m for m in translations if m['property'] == transFieldKey]
+                                        # print( transField, element[transField])
+                                        # char_limit = translatable_max_chars[transFieldKey]
+                                        if resource not in locales['source']:
+                                            locales['source'][resource] = {}
+                                        if el_id not in locales['source'][resource]:
+                                            locales['source'][resource][el_id] = {}
 
-                                else:
-                                    # check and warn if we have translations with no base string
-                                    matching_translations=[m for m in translations if m['property'] == transFieldKey]
-                                    for m in matching_translations:
-                                        print("WARNING: Translation without base string for",resource,">",el_id,":", m)
-                        
-                        except KeyError:
-                            pass
+                                        if self.tx_i18n_type == 'STRUCTURED_JSON':
+
+                                            locales['source'][resource][el_id][transFieldKey] = { "string":element[transField] }
+                                            if translatable_max_chars[resource][transFieldKey] < 2147483647:
+                                                locales['source'][resource][el_id][transFieldKey]["character_limit"] = translatable_max_chars[resource][transFieldKey]
+                                        else:
+                                            locales['source'][resource][el_id][transFieldKey] = element[transField]
+
+                                        for m in matching_translations:
+                                            if m['locale'] not in self.langmap.keys():
+                                                if m['locale'] not in locales:
+                                                    locales[m['locale']]={}
+                                                if resource not in locales[m['locale']]:
+                                                    locales[m['locale']][resource] = {}
+                                                if el_id not in locales[m['locale']][resource]:
+                                                    locales[m['locale']][resource][el_id] = {}
+
+                                                if self.tx_i18n_type == 'STRUCTURED_JSON':
+                                                    locales[m['locale']][resource][el_id][transFieldKey] = { "string":m['value'] }
+                                                    if translatable_max_chars[resource][transFieldKey] < 2147483647:
+                                                        locales[m['locale']][resource][el_id][transFieldKey]["character_limit"] = translatable_max_chars[resource][transFieldKey]
+                                                else:
+                                                    locales[m['locale']][resource][el_id][transFieldKey] = m['value']
+
+                                    else:
+                                        # check and warn if we have translations with no base string
+                                        matching_translations=[m for m in translations if m['property'] == transFieldKey]
+                                        for m in matching_translations:
+                                            print("WARNING: Translation without base string for",resource,">",el_id,":", m)
+                            
+                            except KeyError:
+                                pass
 
 
     def file_to_json(self):
@@ -1026,8 +1027,9 @@ class f2t(d2t):
                             for ob in element:
                                 if ob == sub_object:
                                     for e in element[ob]:
-                                        if e['id'] == sub_id:
-                                            e['translations'] = toFILE[sub_object][id]['translations']
+                                        if isinstance(e,dict):
+                                            if e['id'] == sub_id:
+                                                e['translations'] = toFILE[sub_object][id]['translations']
 
         for resource in newPACK:
             collection = newPACK[resource]
