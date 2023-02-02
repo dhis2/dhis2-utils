@@ -155,7 +155,16 @@ def json_extract_nested_ids(obj, key):
                     # the key points to another dictionary eg, key is 'dataElement':
                     # "dataElement" : { "id": UID }
                     elif isinstance(v, dict):
-                        arr.append(v["id"])
+                        if key == 'legend' or key == 'set':
+                            print(str(v))
+                        if 'id' in v:
+                            arr.append(v["id"])
+                        # It is a dictionary but not containing the id
+                        # Fetch the key and keep on looking
+                        else:
+                            for _key in list(v.keys()):
+                                if isinstance(v[_key], dict):
+                                    extract(v, arr, _key)
                     # if it is not a list or a dict, we simply take the value eg, key is organisationUnit
                     # "organisationUnit" : UID
                     else:
@@ -1929,6 +1938,7 @@ def main():
                 # Add legendSets
                 legendSets_uids += json_extract_nested_ids(metaobject, 'legendSets')
                 legendSets_uids += json_extract_nested_ids(metaobject, 'legendSet')
+                legendSets_uids += json_extract_nested_ids(metaobject, 'legend')
                 # See if there is a reference to a categoryOption Group and/or Set
                 cat_uids['categoryOptionGroups'] += json_extract_nested_ids(metaobject, 'categoryOptionGroups')
                 cat_uids['categoryOptionGroupSets'] += json_extract_nested_ids(metaobject, 'categoryOptionGroupSet')
