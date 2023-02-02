@@ -155,8 +155,6 @@ def json_extract_nested_ids(obj, key):
                     # the key points to another dictionary eg, key is 'dataElement':
                     # "dataElement" : { "id": UID }
                     elif isinstance(v, dict):
-                        if key == 'legend' or key == 'set':
-                            print(str(v))
                         if 'id' in v:
                             arr.append(v["id"])
                         # It is a dictionary but not containing the id
