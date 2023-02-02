@@ -1137,6 +1137,7 @@ def main():
     elif package_type_or_uid == 'DSH' or args.only_dashboards:
         metadata_import_order = [
             'categoryOptionGroupSets', 'categoryOptionGroups',
+            'organisationUnitGroupSets', 'organisationUnitGroups',
             'legendSets',
             'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
             'visualizations', 'maps', 'eventVisualizations', 'eventReports', 'eventCharts', 'dashboards',
