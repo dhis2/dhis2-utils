@@ -1218,7 +1218,7 @@ if __name__ == "__main__":
     p.add('-b', '--basex', required=False, help='Swap base language. Format "<current_code>:<target_code>"') 
     p.add('-x', '--exclude', required=False, help='Comma-separated list of language codes to exclude') 
     p.add('-i', '--include', required=False, help='Comma-separated list of language codes to include') 
-    p.add('-o', '--output', required='--basex' in sys.argv or '--include' in sys.argv or '--exclude' in sys.argv or '--pull' in sys.argv, help='Output file') 
+    p.add('-o', '--output', required='--basex' in sys.argv or '--include' in sys.argv or '--exclude' in sys.argv, help='Output file') 
     # Transifex options
     p.add('--push', required=False, help='push source to Transifex', action="store_true") 
     p.add('--pull', required=False, help='pull translations from Transifex', action="store_true") 
