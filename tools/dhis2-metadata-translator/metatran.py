@@ -391,7 +391,7 @@ class d2t():
 
         for resource in toDHIS2:
             for id in toDHIS2[resource]:
-                payload = json.dumps(toDHIS2[resource][id], sort_keys=True, indent=2, ensure_ascii=False, separators=(',', ': '))
+                payload = json.dumps(toDHIS2[resource][id], sort_keys=True, indent=2, ensure_ascii=True, separators=(',', ': '))
                 url = self.dhis2_server+"/api/"+resource+"/"+id+"/translations"
                 # print("PUT ",url)
                 r = requests.put(url, data=payload,auth=self.dhis2_AUTH)
