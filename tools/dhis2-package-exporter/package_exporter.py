@@ -2002,8 +2002,6 @@ def main():
                     metadata_filters["trackedEntityTypes"] = "id:in:[" + ','.join(trackedEntityTypes_uids) + "]"
                     metadata_filters["trackedEntityAttributes"] = "id:in:[" + ','.join(
                         trackedEntityAttributes_uids['P']) + "]"
-                # At this point we have collected all possible references to constants, so update that filter too
-                metadata_filters["constants"] = "id:in:[" + ','.join(list(dict.fromkeys(constants_uids))) + "]"
                 programNotificationTemplates_uids += json_extract_nested_ids(metaobject, 'notificationTemplates')
                 metadata_filters['programNotificationTemplates'] = "id:in:[" + ','.join(
                     programNotificationTemplates_uids) + "]"
@@ -2073,6 +2071,10 @@ def main():
                         # GEN PACKAGE
                         # metadata_filters["categoryCombos"] = "id:in:[" + ','.join(
                         #     cat_uids['categoryCombos']) + "]"
+
+                # At this point we have collected all possible references to constants, so update that filter too
+                metadata_filters["constants"] = "id:in:[" + ','.join(list(dict.fromkeys(constants_uids))) + "]"
+
 
             elif metadata_type == "trackedEntityTypes":
                 # Scan for trackedEntityAttributes used
@@ -2217,6 +2219,8 @@ def main():
                                                                           'rightSide.expression'])
 
                 hardcoded_cocs = get_hardcoded_values_in_fields(metaobject, 'categoryOptionCombos',
+                                                                ['leftSide.expression', 'rightSide.expression'])
+                constants_uids += get_hardcoded_values_in_fields(metaobject, 'constants',
                                                                 ['leftSide.expression', 'rightSide.expression'])
                 for coc in hardcoded_cocs:
                     if coc not in cat_uids['categoryOptionCombos']:
