@@ -260,9 +260,13 @@ where ura.authority = 'ALL';
 
 update users set password='48e8f1207baef1ef7fe478a57d19f2e5', disabled = false where username='admin';
 
--- (Write) Bcrypt set password to "district" for admin user
+-- (Write) Bcrypt set password to "district" for admin user up to 2.37
 
 update users set password='$2a$10$wjLPViry3bkYEcjwGRqnYO1bT2Kl.ZY0kO.fwFDfMX53hitfx5.3C', disabled = false where username='admin';
+
+-- (Write) Bcrypt set password to "district" for admin user after 2.37
+
+update userinfo set password='$2a$10$wjLPViry3bkYEcjwGRqnYO1bT2Kl.ZY0kO.fwFDfMX53hitfx5.3C', disabled = false where username='admin';
 
 -- (Write) Add user to first user role with ALl authority 
 
