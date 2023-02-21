@@ -841,13 +841,14 @@ def get_category_elements(cat_combo_uid, cat_uid_dict=None):
     if 'code' not in catCombo or catCombo['code'].lower() != 'default':
         cat['categoryCombos'] = list(dict.fromkeys(cat['categoryCombos'] + [cat_combo_uid]))
         cat['categories'] = list(dict.fromkeys(cat['categories'] + json_extract_nested_ids(catCombo, 'categories')))
+        # Get COCs referenced by this Cat Combo
+        COCs = get_metadata_element('categoryOptionCombos',
+                                    filter="categoryCombo.id:eq:" + cat_combo_uid,
+                                    fields="id,name,categoryOptions")
         cat['categoryOptionCombos'] = list(
-            dict.fromkeys(cat['categoryOptionCombos'] + json_extract_nested_ids(catCombo, 'categoryOptionCombos')))
+            dict.fromkeys(cat['categoryOptionCombos'] + json_extract(COCs, 'id')))
 
         # Get the categoryOptions used in COCs
-        COCs = get_metadata_element('categoryOptionCombos',
-                                    filter="id:in:[" + ','.join(cat['categoryOptionCombos']) + "]",
-                                    fields="id,name,categoryOptions")
         for coc in COCs:
             cat['categoryOptions'] = list(
                 dict.fromkeys(cat['categoryOptions'] + json_extract_nested_ids(coc, 'categoryOptions')))
@@ -2002,8 +2003,6 @@ def main():
                     metadata_filters["trackedEntityTypes"] = "id:in:[" + ','.join(trackedEntityTypes_uids) + "]"
                     metadata_filters["trackedEntityAttributes"] = "id:in:[" + ','.join(
                         trackedEntityAttributes_uids['P']) + "]"
-                # At this point we have collected all possible references to constants, so update that filter too
-                metadata_filters["constants"] = "id:in:[" + ','.join(list(dict.fromkeys(constants_uids))) + "]"
                 programNotificationTemplates_uids += json_extract_nested_ids(metaobject, 'notificationTemplates')
                 metadata_filters['programNotificationTemplates'] = "id:in:[" + ','.join(
                     programNotificationTemplates_uids) + "]"
@@ -2073,6 +2072,10 @@ def main():
                         # GEN PACKAGE
                         # metadata_filters["categoryCombos"] = "id:in:[" + ','.join(
                         #     cat_uids['categoryCombos']) + "]"
+
+                # At this point we have collected all possible references to constants, so update that filter too
+                metadata_filters["constants"] = "id:in:[" + ','.join(list(dict.fromkeys(constants_uids))) + "]"
+
 
             elif metadata_type == "trackedEntityTypes":
                 # Scan for trackedEntityAttributes used
@@ -2217,6 +2220,8 @@ def main():
                                                                           'rightSide.expression'])
 
                 hardcoded_cocs = get_hardcoded_values_in_fields(metaobject, 'categoryOptionCombos',
+                                                                ['leftSide.expression', 'rightSide.expression'])
+                constants_uids += get_hardcoded_values_in_fields(metaobject, 'constants',
                                                                 ['leftSide.expression', 'rightSide.expression'])
                 for coc in hardcoded_cocs:
                     if coc not in cat_uids['categoryOptionCombos']:
