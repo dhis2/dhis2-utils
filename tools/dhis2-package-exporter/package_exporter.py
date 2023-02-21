@@ -841,13 +841,14 @@ def get_category_elements(cat_combo_uid, cat_uid_dict=None):
     if 'code' not in catCombo or catCombo['code'].lower() != 'default':
         cat['categoryCombos'] = list(dict.fromkeys(cat['categoryCombos'] + [cat_combo_uid]))
         cat['categories'] = list(dict.fromkeys(cat['categories'] + json_extract_nested_ids(catCombo, 'categories')))
+        # Get COCs referenced by this Cat Combo
+        COCs = get_metadata_element('categoryOptionCombos',
+                                    filter="categoryCombo.id:eq:" + cat_combo_uid,
+                                    fields="id,name,categoryOptions")
         cat['categoryOptionCombos'] = list(
-            dict.fromkeys(cat['categoryOptionCombos'] + json_extract_nested_ids(catCombo, 'categoryOptionCombos')))
+            dict.fromkeys(cat['categoryOptionCombos'] + json_extract(COCs, 'id')))
 
         # Get the categoryOptions used in COCs
-        COCs = get_metadata_element('categoryOptionCombos',
-                                    filter="id:in:[" + ','.join(cat['categoryOptionCombos']) + "]",
-                                    fields="id,name,categoryOptions")
         for coc in COCs:
             cat['categoryOptions'] = list(
                 dict.fromkeys(cat['categoryOptions'] + json_extract_nested_ids(coc, 'categoryOptions')))
