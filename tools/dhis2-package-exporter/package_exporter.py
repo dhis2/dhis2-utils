@@ -925,8 +925,8 @@ def main():
     my_parser.set_defaults(verbose=False)
     my_parser.add_argument('-od', '--only_dashboards', dest='only_dashboards', action='store_true')
     my_parser.set_defaults(only_dashboards=False)
-    my_parser.add_argument('-efo', '--export_for_oslo', dest='export_for_oslo', action='store_true')
-    my_parser.set_defaults(export_for_oslo=False)
+    my_parser.add_argument('-efo', '--export_full_objects', dest='export_full_objects', action='store_true')
+    my_parser.set_defaults(export_full_objects=False)
 
     args = my_parser.parse_args()
 
@@ -1194,7 +1194,7 @@ def main():
 
     # If we are exporting for internal use of UiO, there is no need to include OUG or OUGS since
     # they should be present in our instance
-    if args.export_for_oslo:
+    if args.export_full_objects:
         if 'organisationUnitGroups' in metadata_import_order:
             metadata_import_order.remove('organisationUnitGroups')
         if 'organisationUnitGroupSets' in metadata_import_order:
@@ -1452,7 +1452,7 @@ def main():
 
             elif metadata_type == "predictors":
                 # Replace hardcoded UIDs for organisation Unit Levels with a placeholder
-                if not args.export_for_oslo:
+                if not args.export_full_objects:
                     metaobject = replace_organisation_level_with_placeholder(metaobject)
                 # Remove predictorGroups in predictors which do not belong to the package
                 metaobject = remove_undesired_children(metaobject, predictorGroups_uids, 'predictorGroups')
@@ -1584,7 +1584,7 @@ def main():
             org_units_assigned = json_extract_nested_ids(metaobject, 'organisationUnits')
             if len(org_units_assigned) > 0:
                 if metadata_type in ['eventReports', 'eventCharts', 'eventVisualizations', 'visualizations'] and \
-                        not args.export_for_oslo:
+                        not args.export_full_objects:
                     metaobject = check_and_replace_root_ou_assigned(metaobject)
                 else:
                     logger.warning('There are org units assigned... Removing')
