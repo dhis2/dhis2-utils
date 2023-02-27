@@ -351,6 +351,7 @@ def get_hardcoded_values_in_fields(metaobj, metadata_type, fields):
     Returns:
         result (list): a list of unique UIDs found
     """
+
     result = list()
     if not isinstance(fields, list):
         fields = [fields]
@@ -365,6 +366,8 @@ def get_hardcoded_values_in_fields(metaobj, metadata_type, fields):
     if isinstance(metaobj, list):
         for element in metaobj:
             for key in element:
+                if key in fields and second_level != "" and 'orgUnit.group' in element[key][second_level]:
+                    z = None
                 if key in fields:
                     if metadata_type == 'dataElements_ind' or metadata_type == 'categoryOptionCombos':
                         pattern = compile(r'#\{([a-zA-Z0-9]{11})\.*([a-zA-Z0-9]{11})*\}')
@@ -377,7 +380,9 @@ def get_hardcoded_values_in_fields(metaobj, metadata_type, fields):
                     elif metadata_type == 'constants':
                         pattern = compile(r'C\{([a-zA-Z0-9]{11})\}')
                     elif metadata_type == 'organisationUnitGroups':
-                        pattern = compile(r'OUG\{([a-zA-Z0-9]{11})\}')
+                        # In predictors it goes like this: orgUnit.group(JCgLXxVGcRS)
+                        # but in indicators it is OUG{JCgLXxVGcRS}
+                        pattern = compile(r'(orgUnit\.group|OUG)\{?\(?([a-zA-Z0-9]{11})\}?\)?')
                     else:
                         logger.error('Error in function get_hardcoded_values_in_fields: unknown type ' + metadata_type)
                     if second_level != "":
@@ -392,6 +397,8 @@ def get_hardcoded_values_in_fields(metaobj, metadata_type, fields):
                                 if metadata_type == 'dataElements_ind':
                                     uid = z_match[0]
                                 elif metadata_type == 'categoryOptionCombos':
+                                    uid = z_match[1]
+                                elif metadata_type == 'organisationUnitGroups':
                                     uid = z_match[1]
                             else:
                                 uid = z_match
@@ -1119,6 +1126,7 @@ def main():
         # Iteration over this list happens in reversed order
         # Altering the order can cause the script to stop working
         metadata_import_order = [
+            'organisationUnitGroupSets', 'organisationUnitGroups',
             'categoryOptionGroupSets', 'categoryOptionGroups',
             'categoryOptions', 'categories', 'categoryCombos', 'categoryOptionCombos',
             'legendSets',  # used in indicators, optionGroups, programIndicators and trackedEntityAttributes
@@ -1134,7 +1142,6 @@ def main():
             'programs', 'programSections',
             'programStageSections', 'programStages',
             'programIndicatorGroups', 'programIndicators',
-            'organisationUnitGroupSets', 'organisationUnitGroups',  # Assuming this will only be found in indicators
             'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
             'programRuleVariables', 'programRuleActions', 'programRules',
             'visualizations', 'maps', 'eventVisualizations', 'eventReports', 'eventCharts', 'dashboards',
@@ -1157,6 +1164,7 @@ def main():
     elif package_type_or_uid == 'AGG':
         # This list is looped backwards
         metadata_import_order = [
+            'organisationUnitGroupSets', 'organisationUnitGroups',
             'categoryOptionGroupSets', 'categoryOptionGroups',
             'categoryOptions', 'categories', 'categoryCombos', 'categoryOptionCombos',
             'legendSets',  # used in indicators, optionGroups, programIndicators and trackedEntityAttributes
@@ -1167,7 +1175,6 @@ def main():
             'validationNotificationTemplates', 'validationRules', 'validationRuleGroups',  # group first
             'jobConfigurations',
             'predictors', 'predictorGroups',  # group first
-            'organisationUnitGroupSets', 'organisationUnitGroups',  # Assuming this will only be found in indicators
             'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
             # groups first, to get indicator uids
             'sections', 'dataSets',
@@ -2211,6 +2218,15 @@ def main():
                 for coc in hardcoded_cocs:
                     if coc not in cat_uids['categoryOptionCombos']:
                         add_category_option_combo(coc, cat_uids)
+                constants_uids += get_hardcoded_values_in_fields(metaobject, 'constants',
+                                                                'generator.expression')
+                organisationUnitGroups_uids += get_hardcoded_values_in_fields(metaobject, 'organisationUnitGroups',
+                                                                'generator.expression')
+                if len(organisationUnitGroups_uids) > 0:
+                    # Make list of UIDs unique
+                    organisationUnitGroups_uids = list(dict.fromkeys(organisationUnitGroups_uids))
+                    metadata_filters["organisationUnitGroups"] = "id:in:[" + ','.join(organisationUnitGroups_uids) + "]"
+
             elif metadata_type == "predictorGroups":
                 # Get predictor uids
                 predictor_uids = json_extract_nested_ids(metaobject, 'predictors')
