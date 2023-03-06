@@ -351,6 +351,7 @@ def get_hardcoded_values_in_fields(metaobj, metadata_type, fields):
     Returns:
         result (list): a list of unique UIDs found
     """
+
     result = list()
     if not isinstance(fields, list):
         fields = [fields]
@@ -365,6 +366,8 @@ def get_hardcoded_values_in_fields(metaobj, metadata_type, fields):
     if isinstance(metaobj, list):
         for element in metaobj:
             for key in element:
+                if key in fields and second_level != "" and 'orgUnit.group' in element[key][second_level]:
+                    z = None
                 if key in fields:
                     if metadata_type == 'dataElements_ind' or metadata_type == 'categoryOptionCombos':
                         pattern = compile(r'#\{([a-zA-Z0-9]{11})\.*([a-zA-Z0-9]{11})*\}')
@@ -377,7 +380,9 @@ def get_hardcoded_values_in_fields(metaobj, metadata_type, fields):
                     elif metadata_type == 'constants':
                         pattern = compile(r'C\{([a-zA-Z0-9]{11})\}')
                     elif metadata_type == 'organisationUnitGroups':
-                        pattern = compile(r'OUG\{([a-zA-Z0-9]{11})\}')
+                        # In predictors it goes like this: orgUnit.group(JCgLXxVGcRS)
+                        # but in indicators it is OUG{JCgLXxVGcRS}
+                        pattern = compile(r'(orgUnit\.group|OUG)\{?\(?([a-zA-Z0-9]{11})\}?\)?')
                     else:
                         logger.error('Error in function get_hardcoded_values_in_fields: unknown type ' + metadata_type)
                     if second_level != "":
@@ -392,6 +397,8 @@ def get_hardcoded_values_in_fields(metaobj, metadata_type, fields):
                                 if metadata_type == 'dataElements_ind':
                                     uid = z_match[0]
                                 elif metadata_type == 'categoryOptionCombos':
+                                    uid = z_match[1]
+                                elif metadata_type == 'organisationUnitGroups':
                                     uid = z_match[1]
                             else:
                                 uid = z_match
@@ -841,13 +848,14 @@ def get_category_elements(cat_combo_uid, cat_uid_dict=None):
     if 'code' not in catCombo or catCombo['code'].lower() != 'default':
         cat['categoryCombos'] = list(dict.fromkeys(cat['categoryCombos'] + [cat_combo_uid]))
         cat['categories'] = list(dict.fromkeys(cat['categories'] + json_extract_nested_ids(catCombo, 'categories')))
+        # Get COCs referenced by this Cat Combo
+        COCs = get_metadata_element('categoryOptionCombos',
+                                    filter="categoryCombo.id:eq:" + cat_combo_uid,
+                                    fields="id,name,categoryOptions")
         cat['categoryOptionCombos'] = list(
-            dict.fromkeys(cat['categoryOptionCombos'] + json_extract_nested_ids(catCombo, 'categoryOptionCombos')))
+            dict.fromkeys(cat['categoryOptionCombos'] + json_extract(COCs, 'id')))
 
         # Get the categoryOptions used in COCs
-        COCs = get_metadata_element('categoryOptionCombos',
-                                    filter="id:in:[" + ','.join(cat['categoryOptionCombos']) + "]",
-                                    fields="id,name,categoryOptions")
         for coc in COCs:
             cat['categoryOptions'] = list(
                 dict.fromkeys(cat['categoryOptions'] + json_extract_nested_ids(coc, 'categoryOptions')))
@@ -924,6 +932,8 @@ def main():
     my_parser.set_defaults(verbose=False)
     my_parser.add_argument('-od', '--only_dashboards', dest='only_dashboards', action='store_true')
     my_parser.set_defaults(only_dashboards=False)
+    my_parser.add_argument('-efo', '--export_full_objects', dest='export_full_objects', action='store_true')
+    my_parser.set_defaults(export_full_objects=False)
 
     args = my_parser.parse_args()
 
@@ -1116,6 +1126,7 @@ def main():
         # Iteration over this list happens in reversed order
         # Altering the order can cause the script to stop working
         metadata_import_order = [
+            'organisationUnitGroupSets', 'organisationUnitGroups',
             'categoryOptionGroupSets', 'categoryOptionGroups',
             'categoryOptions', 'categories', 'categoryCombos', 'categoryOptionCombos',
             'legendSets',  # used in indicators, optionGroups, programIndicators and trackedEntityAttributes
@@ -1131,7 +1142,6 @@ def main():
             'programs', 'programSections',
             'programStageSections', 'programStages',
             'programIndicatorGroups', 'programIndicators',
-            'organisationUnitGroupSets', 'organisationUnitGroups',  # Assuming this will only be found in indicators
             'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
             'programRuleVariables', 'programRuleActions', 'programRules',
             'visualizations', 'maps', 'eventVisualizations', 'eventReports', 'eventCharts', 'dashboards',
@@ -1154,6 +1164,7 @@ def main():
     elif package_type_or_uid == 'AGG':
         # This list is looped backwards
         metadata_import_order = [
+            'organisationUnitGroupSets', 'organisationUnitGroups',
             'categoryOptionGroupSets', 'categoryOptionGroups',
             'categoryOptions', 'categories', 'categoryCombos', 'categoryOptionCombos',
             'legendSets',  # used in indicators, optionGroups, programIndicators and trackedEntityAttributes
@@ -1164,7 +1175,6 @@ def main():
             'validationNotificationTemplates', 'validationRules', 'validationRuleGroups',  # group first
             'jobConfigurations',
             'predictors', 'predictorGroups',  # group first
-            'organisationUnitGroupSets', 'organisationUnitGroups',  # Assuming this will only be found in indicators
             'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
             # groups first, to get indicator uids
             'sections', 'dataSets',
@@ -1188,6 +1198,14 @@ def main():
         if 'eventReports' in metadata_import_order and 'eventCharts' in metadata_import_order:
             metadata_import_order.remove('eventReports')
             metadata_import_order.remove('eventCharts')
+
+    # If we are exporting for internal use of UiO, there is no need to include OUG or OUGS since
+    # they should be present in our instance
+    if args.export_full_objects:
+        if 'organisationUnitGroups' in metadata_import_order:
+            metadata_import_order.remove('organisationUnitGroups')
+        if 'organisationUnitGroupSets' in metadata_import_order:
+            metadata_import_order.remove('organisationUnitGroupSets')
 
     metadata = dict()
 
@@ -1441,7 +1459,8 @@ def main():
 
             elif metadata_type == "predictors":
                 # Replace hardcoded UIDs for organisation Unit Levels with a placeholder
-                metaobject = replace_organisation_level_with_placeholder(metaobject)
+                if not args.export_full_objects:
+                    metaobject = replace_organisation_level_with_placeholder(metaobject)
                 # Remove predictorGroups in predictors which do not belong to the package
                 metaobject = remove_undesired_children(metaobject, predictorGroups_uids, 'predictorGroups')
 
@@ -1571,7 +1590,8 @@ def main():
             ## Remove orgunits
             org_units_assigned = json_extract_nested_ids(metaobject, 'organisationUnits')
             if len(org_units_assigned) > 0:
-                if metadata_type in ['eventReports', 'eventCharts', 'eventVisualizations', 'visualizations']:
+                if metadata_type in ['eventReports', 'eventCharts', 'eventVisualizations', 'visualizations'] and \
+                        not args.export_full_objects:
                     metaobject = check_and_replace_root_ou_assigned(metaobject)
                 else:
                     logger.warning('There are org units assigned... Removing')
@@ -2002,8 +2022,6 @@ def main():
                     metadata_filters["trackedEntityTypes"] = "id:in:[" + ','.join(trackedEntityTypes_uids) + "]"
                     metadata_filters["trackedEntityAttributes"] = "id:in:[" + ','.join(
                         trackedEntityAttributes_uids['P']) + "]"
-                # At this point we have collected all possible references to constants, so update that filter too
-                metadata_filters["constants"] = "id:in:[" + ','.join(list(dict.fromkeys(constants_uids))) + "]"
                 programNotificationTemplates_uids += json_extract_nested_ids(metaobject, 'notificationTemplates')
                 metadata_filters['programNotificationTemplates'] = "id:in:[" + ','.join(
                     programNotificationTemplates_uids) + "]"
@@ -2073,6 +2091,10 @@ def main():
                         # GEN PACKAGE
                         # metadata_filters["categoryCombos"] = "id:in:[" + ','.join(
                         #     cat_uids['categoryCombos']) + "]"
+
+                # At this point we have collected all possible references to constants, so update that filter too
+                metadata_filters["constants"] = "id:in:[" + ','.join(list(dict.fromkeys(constants_uids))) + "]"
+
 
             elif metadata_type == "trackedEntityTypes":
                 # Scan for trackedEntityAttributes used
@@ -2196,6 +2218,15 @@ def main():
                 for coc in hardcoded_cocs:
                     if coc not in cat_uids['categoryOptionCombos']:
                         add_category_option_combo(coc, cat_uids)
+                constants_uids += get_hardcoded_values_in_fields(metaobject, 'constants',
+                                                                'generator.expression')
+                organisationUnitGroups_uids += get_hardcoded_values_in_fields(metaobject, 'organisationUnitGroups',
+                                                                'generator.expression')
+                if len(organisationUnitGroups_uids) > 0:
+                    # Make list of UIDs unique
+                    organisationUnitGroups_uids = list(dict.fromkeys(organisationUnitGroups_uids))
+                    metadata_filters["organisationUnitGroups"] = "id:in:[" + ','.join(organisationUnitGroups_uids) + "]"
+
             elif metadata_type == "predictorGroups":
                 # Get predictor uids
                 predictor_uids = json_extract_nested_ids(metaobject, 'predictors')
@@ -2217,6 +2248,8 @@ def main():
                                                                           'rightSide.expression'])
 
                 hardcoded_cocs = get_hardcoded_values_in_fields(metaobject, 'categoryOptionCombos',
+                                                                ['leftSide.expression', 'rightSide.expression'])
+                constants_uids += get_hardcoded_values_in_fields(metaobject, 'constants',
                                                                 ['leftSide.expression', 'rightSide.expression'])
                 for coc in hardcoded_cocs:
                     if coc not in cat_uids['categoryOptionCombos']:
