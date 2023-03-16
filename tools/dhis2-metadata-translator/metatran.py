@@ -157,6 +157,8 @@ class d2t():
                 mapped_fields={}
                 max_chars={}
                 for f in fields:
+                    if 'length' not in f:
+                        f['length'] = 2147483647
                     mapped_fields[f['fieldName']]=f['translationKey']
                     max_chars[f['translationKey']]=f['length']
                     tflds[f['fieldName']]=f['translationKey']
