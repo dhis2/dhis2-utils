@@ -1062,12 +1062,22 @@ def main():
         if param == "metadata_version":
             if row['VALUE'] != "" and isinstance(row['VALUE'], str) and row['VALUE'].isnumeric():
                 program_metadata_version = int(row['VALUE'])
-        if param == "chunk_size":
+        elif param == "chunk_size":
             if row['VALUE'] != "" and isinstance(row['VALUE'], str) and row['VALUE'].isnumeric():
                 chunk_size = int(row['VALUE'])
         elif param == 'orgUnit_uid':
-            if row['VALUE'] != "" and is_valid_uid(row['VALUE']):
+            if row['VALUE'] != "":
                 custom_orgunits = row['VALUE'].split(',')
+                the_good_OU_UIDs = list()
+                for OU in custom_orgunits:
+                    if not is_valid_uid(OU):
+                        logger.error("orgUnit UID " + OU + " is not valid... Omitting")
+                    else:
+                        the_good_OU_UIDs.append(OU)
+                if len(the_good_OU_UIDs) == 0:
+                    custom_orgunits = None
+                else:
+                    custom_orgunits = the_good_OU_UIDs
         elif param == 'orgUnit_level' and row['VALUE'].isnumeric():
             orgUnit_level = int(row['VALUE'])
         elif param == 'descendants':
