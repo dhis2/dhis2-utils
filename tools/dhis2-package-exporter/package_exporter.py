@@ -500,10 +500,15 @@ def clean_metadata(metaobj):
     return metaobj
 
 
-def check_sharing(json_object, omit=[], verbose=False):
+def check_and_apply_sharing(json_object, metadata_type=None, omit=[], verbose=False):
     """
-    Check publicAccess, user, users, userAccesses and userGroupAccesses for particular list of metadata objects
-    It also performs some corrections (for example, adding WHO Admin, removing some undesired User Groups in sharing..)
+    Check the object sharing
+       public -> Makes sure the sharing is the correct one depending on the metadata type
+       owner -> Makes sure only package_admin user owns the metadata
+       users -> Makes sure the object is not shared with any user
+       userGroups -> Verify that the object is not shared with a userGroup which does not belong in the package
+                  -> For some specific metadata, verify and correct the sharing with the standard userGroups CAPTURE, ACCESS, ADMIN
+                  -> and the other optional user groups in the package e.g. LAB ACCESS, LAB DATA CAPTURE
     Args:
       json_object (list): metadata to process
       omit (list): can be used to omit certain keys
@@ -512,72 +517,112 @@ def check_sharing(json_object, omit=[], verbose=False):
     Returns:
         metaobj (list): same metadata after cleaning
     """
+    # Build the userGroups sharing object to apply to (mostly) all metadata
+    userGroup_sharing_object = dict()
+    for ug_uid in userGroups_uids:
+        if userGroups_codes[ug_uid] in metadata_default_user_group_sharing:
+            userGroup_sharing_object[ug_uid] = {
+                "access": metadata_default_user_group_sharing[userGroups_codes[ug_uid]],
+                "id": ug_uid
+            }
+
+    # Public Access for this metadata_type
+    publicAccess = 'r-------' # default
+    if metadata_type == 'categoryOptions':
+        publicAccess = 'r-rw----'
+    elif metadata_type == 'dataSets':
+        publicAccess = 'r-r-----'
+    elif metadata_type == 'dashboards':
+        publicAccess = '--------'
+
     if isinstance(json_object, list):
-        for item in json_object:
-            # Check public access
-            if 'publicAccess' in item and 'publicAccess' not in omit:
-                if item['publicAccess'][1:2] == 'w':
-                    if verbose:
-                        logger.warning(
-                            'Element ' + item["id"] + ' has write public access ' + item['publicAccess'][0:2])
-            if 'user' in item and 'user' not in omit:
-                if item['user']['id'] != package_admin_uid:
-                    if verbose:
-                        logger.warning('Element ' + item["id"] + ' has wrong user: ' + item['user'][
+        for i in range(0, len(json_object)):
+            item = json_object[i]
+            if 'name' in item:
+                name = item['name']
+            else:
+                name = ""
+            uid = item['id']
+            # Remove publicAccess, it is just an old placeholder, this goes now in sharing
+            if 'publicAccess' in item:
+                item.pop('publicAccess', None)
+            # Remove users
+            if 'user' in item:
+                item.pop('user', None)
+            # Remove users from userGroups
+            if 'users' in item:
+                item['users'] = []
+            # Remove userGroupAccesses, this goes now in sharing
+            if 'userGroupAccesses' in item:
+                item['userGroupAccesses'] = []
 
-                            'id'] + '... Replacing with package_admin')
-                    user_package_admin = {'id': package_admin_uid, 'name': 'package admin', 'username': 'package_admin'}
-
-                    for key in list(item['user']):
-                        if key not in user_package_admin:
-                            del item['user'][key]
-                        else:
-                            item['user'][key] = user_package_admin[key]
-            if 'users' in item and isinstance(item['users'], list) and 'users' not in omit:
-                users = item['users']
-                outsiders = list()
-                for user in users:
-                    if user['id'] != package_admin_uid:
-                        outsiders.append(user["id"])
-                if len(outsiders) > 0:
-                    if verbose:
-                        logger.warning('Element ' + item["id"] + ' is shared with wrong users : ' + str(
-                            outsiders) + '... Correcting')
-                    item['users'] = []
-            if 'userAccesses' in item and len(item['userAccesses']) > 0:
-                if verbose:
-                    logger.warning('Element ' + item["id"] + ' is shared with specific users... Removing')
-                item['userAccesses'] = []
-            if 'userGroupAccesses' in item and 'userGroupAccesses' not in omit:
-                correct_user_groups = list()
-                outsider_user_groups = list()
-                for uga in item['userGroupAccesses']:
-                    if uga['id'] not in userGroups_uids:
-                        message = ""
-                        message += uga['id']
-                        if 'name' in uga:
-                            message += ' - ' + uga['name']
-                        outsider_user_groups.append(message)
-                    else:
-                        correct_user_groups.append(uga)
-                item['userGroupAccesses'] = correct_user_groups
-                if len(outsider_user_groups) > 0:
-                    if verbose:
-                        logger.warning(
-                            'Element ' + item["id"] + ' is shared with a User Group(s) outside the package: ' +
-                            ', '.join(outsider_user_groups) + '... Deleted')
-            # Starting in 2.36 a new sharing object was introduced
             if 'sharing' in item and 'sharing' not in omit:
+                # all aggregate metadata should be shared with public read access, with these exceptions
+                #  Dashboards: metadata read
+                #  Category options: metadata read; data readwrite
+                # all tracker packages should have no public access
+                if 'public' not in item['sharing']:
+                    item['sharing']['public'] = ""
+                item['sharing']['public'] = publicAccess
+                # Make sure package admin is the owner
                 if 'owner' in item['sharing']:
                     item['sharing']['owner'] = package_admin_uid
                 # Clean users, we share always with userGroups
                 item['sharing']['users'] = {}
                 # Process userGroups in sharing
+                # Remove userGroups which are not part of the package
                 if 'userGroups' in item['sharing']:
                     userGroupIds = list(item['sharing']['userGroups'].keys())
+                    # The metadata must be shared with the default user groups in the standard way
+                    # If it is shared with a UG of the package which is not default we will try to figure out if it
+                    # belongs to ACCESS, CAPTURE or ADMIN and check that the sharing is correct
+                    # A UG sharing which does not belong to the package is removed
                     for userGroupId in userGroupIds:
                         if userGroupId not in userGroups_uids:
+                            logger.warning('Removing incorrect user group ' + userGroupId + ' sharing in object ' + uid + " " + name)
                             item['sharing']['userGroups'].pop(userGroupId, None)
+                        else:
+                            if userGroupId in userGroup_sharing_object:
+                                source_sharing = item['sharing']['userGroups'][userGroupId]['access']
+                                target_sharing = userGroup_sharing_object[userGroupId]['access']
+                                # print(metadata_type)
+                                # print(source_sharing)
+                                # print(target_sharing)
+                                if source_sharing != target_sharing:
+                                    logger.warning(uid + " " + name + " shared with user group " +
+                                                   userGroups_codes[userGroupId] + " with wrong access: " +
+                                                   source_sharing + " (Expected " + target_sharing + ") ... Correcting")
+                                    item['sharing']['userGroups'][userGroupId]['access'] = target_sharing
+                            # Not a default sharing but still belongs to the package
+                            else:
+                                # Get the code
+                                current_ug_code = userGroups_codes[userGroupId]
+                                # metadata_default_user_group_sharing
+                                default_found = ""
+                                for ug_sharing_default in ['ADMIN', 'ACCESS', 'DATA_CAPTURE']:
+                                    if ug_sharing_default in current_ug_code:
+                                        default_found = ug_sharing_default
+                                        break
+                                # Thanks to a previous check when exporting UGs, we should always find any of the 3
+                                target_sharing = ""
+                                for ug_sharing_default in metadata_default_user_group_sharing:
+                                    if default_found in ug_sharing_default:
+                                        target_sharing = metadata_default_user_group_sharing[ug_sharing_default]
+                                # Now let's check if it the expected access
+                                source_sharing = item['sharing']['userGroups'][userGroupId]['access']
+                                if source_sharing != target_sharing:
+                                    logger.warning(uid + " " + name + " shared with user group " +
+                                                   userGroups_codes[userGroupId] + " with wrong access: " +
+                                                   source_sharing + " (Expected " + target_sharing + ") ... Correcting")
+                                    item['sharing']['userGroups'][userGroupId]['access'] = target_sharing
+                # Add the default sharing
+                # Exception: default (cat option, category, catcombo)
+                if name.lower() != 'default':
+                    if 'userGroups' not in item['sharing']:
+                        item['sharing']['userGroups'] = dict()
+                    for key, value in userGroup_sharing_object.items():
+                        item['sharing']['userGroups'][key] = value
+
 
     return json_object
 
@@ -913,6 +958,8 @@ def add_metadata_object_list_with_merge(current_metadata_obj, new_metadata_obj, 
 def main():
     global api_source
     global userGroups_uids
+    global userGroups_codes
+    global metadata_default_user_group_sharing
     global df_report_lastUpdated
     global package_admin_uid
     global users
@@ -1211,6 +1258,7 @@ def main():
 
     # todo: these could be part of a big dictionary instead of having individual keys
     userGroups_uids = list()
+    userGroups_codes = dict()
     dashboard_items = {"visualization": [], "eventReport": [], "eventChart": [],
                        "eventVisualization": [], "map": []}
     attributes_uids = ['iehcXLBKVWM',  # Code (ICD-10)
@@ -1274,6 +1322,15 @@ def main():
     constants_uids = list()
     package_admin_uid = 'vUeLeQMSwhN'
     package_user_role_uid = 'nCNR71ZbTHK'
+
+    # Default access - all metadata should be shared with 3 groups per toolkit/pkg:
+    metadata_default_user_group_sharing = {
+        package_prefix + "_ADMIN": "rw------",
+        package_prefix + "_ACCESS": "r-------",
+        package_prefix + "_DATA_CAPTURE": "r-------"
+    }
+    # Metadata for which ACCESS will have read permissions and DATA_CAPTURE read/write permissions
+    metadata_types_supporting_data_capture = ['dataSets', 'programs', 'programStages', 'trackedEntityTypes', 'categoryOptions']
 
     metadata_filters = {
         "attributes": "id:in:[" + ','.join(attributes_uids) + "]",
@@ -1403,6 +1460,14 @@ def main():
                     "locale": locale
                 }
                 continue
+
+            # Adjust sharing
+            if metadata_type in metadata_types_supporting_data_capture:
+                metadata_default_user_group_sharing[package_prefix + "_ACCESS"] = "r-r-----"
+                metadata_default_user_group_sharing[package_prefix + "_DATA_CAPTURE"] = "r-rw----"
+            else:
+                metadata_default_user_group_sharing[package_prefix + "_ACCESS"] = "r-------"
+                metadata_default_user_group_sharing[package_prefix + "_DATA_CAPTURE"] = "r-------"
 
             # --- Get the stuff -------------------------------------------------------------
             if 'code:$like' in metadata_filters[metadata_type]:
@@ -1615,9 +1680,7 @@ def main():
             ## Check sharing
             ### With userGroups
             if metadata_type != 'userGroups':  # userGroups are processed in post-processing
-                metaobject = check_sharing(metaobject)
-            # else:
-            #    metaobject = check_sharing(metaobject, ['userGroupAccesses'])
+                metaobject = check_and_apply_sharing(metaobject, metadata_type)
 
             ## Custom checks
             if package_type_or_uid in ['TRK', 'EVT']:
@@ -1662,7 +1725,7 @@ def main():
 
                         trackedEntityAttributes_in_data_dimension = get_metadata_element(metadata_type, "id:in:[" + ','.join(
                             diff_data_dimension) + "]")
-                        trackedEntityAttributes_in_data_dimension = check_sharing(trackedEntityAttributes_in_data_dimension)
+                        trackedEntityAttributes_in_data_dimension = check_and_apply_sharing(trackedEntityAttributes_in_data_dimension, metadata_type)
                         trackedEntityAttributes_in_data_dimension = clean_metadata(trackedEntityAttributes_in_data_dimension)
                         metaobject += trackedEntityAttributes_in_data_dimension
                         trackedEntityAttributes_uids['P'] += diff_data_dimension
@@ -1708,7 +1771,7 @@ def main():
                         total_errors += 1
                         programIndicators_in_data_dimension = get_metadata_element(metadata_type, "id:in:[" + ','.join(
                             diff_data_dimension) + "]")
-                        programIndicators_in_data_dimension = check_sharing(programIndicators_in_data_dimension)
+                        programIndicators_in_data_dimension = check_and_apply_sharing(programIndicators_in_data_dimension, metadata_type)
                         programIndicators_in_data_dimension = clean_metadata(programIndicators_in_data_dimension)
                         metaobject += programIndicators_in_data_dimension
                         programIndicators_uids['P'] += diff_data_dimension
@@ -1749,9 +1812,9 @@ def main():
                         new_userGroups = remove_subset_from_set(new_userGroups, 'users')
                         # Add userGroups and check sharing
                         metadata['userGroups'] += new_userGroups
-                        # Before calling check_sharing, update the userGroup uids global variable
+                        # Before calling check_and_apply_sharing, update the userGroup uids global variable
                         userGroups_uids += new_userGroups_uids
-                        metadata['userGroups'] = check_sharing(metadata['userGroups'])
+                        metadata['userGroups'] = check_and_apply_sharing(metadata['userGroups'], metadata_type)
 
             elif metadata_type == "validationNotificationTemplates":
                 # Check for userGroups used which are not included in the package
@@ -1773,9 +1836,9 @@ def main():
                     new_userGroups = remove_subset_from_set(new_userGroups, 'users')
                     # Add userGroups and check sharing
                     metadata['userGroups'] += new_userGroups
-                    # Before calling check_sharing, update the userGroup uids global variable
+                    # Before calling check_and_apply_sharing, update the userGroup uids global variable
                     userGroups_uids += new_userGroups_uids
-                    metadata['userGroups'] = check_sharing(metadata['userGroups'])
+                    metadata['userGroups'] = check_and_apply_sharing(metadata['userGroups'], metadata_type)
 
             if metadata_type == "dataEntryForms":
                 for custom_form in metaobject:
@@ -1869,7 +1932,7 @@ def main():
                 diff = list(dict.fromkeys(diff_ps + diff_ds + diff_ind + diff_pred))
                 if len(diff) > 0:
                     dataElements_in_indicators = get_metadata_element(metadata_type, "id:in:[" + ','.join(diff) + "]")
-                    dataElements_in_indicators = check_sharing(dataElements_in_indicators)
+                    dataElements_in_indicators = check_and_apply_sharing(dataElements_in_indicators, metadata_type)
                     dataElements_in_indicators = clean_metadata(dataElements_in_indicators)
                     metaobject += dataElements_in_indicators
 
@@ -1882,7 +1945,7 @@ def main():
                                    + str(diff_data_dimension) + "... Adding them")
                     dataElements_in_data_dimension = get_metadata_element(metadata_type, "id:in:[" + ','.join(
                         diff_data_dimension) + "]")
-                    dataElements_in_data_dimension = check_sharing(dataElements_in_data_dimension)
+                    dataElements_in_data_dimension = check_and_apply_sharing(dataElements_in_data_dimension, metadata_type)
                     dataElements_in_data_dimension = clean_metadata(dataElements_in_data_dimension)
                     metaobject += dataElements_in_data_dimension
                     dataElements_in_package += diff_data_dimension
@@ -1907,7 +1970,7 @@ def main():
                                    + str(diff_data_dimension) + "... Adding them")
                     indicators_in_data_dimension = get_metadata_element(metadata_type,
                                                                         "id:in:[" + ','.join(diff_data_dimension) + "]")
-                    indicators_in_data_dimension = check_sharing(indicators_in_data_dimension)
+                    indicators_in_data_dimension = check_and_apply_sharing(indicators_in_data_dimension, metadata_type)
                     indicators_in_data_dimension = clean_metadata(indicators_in_data_dimension)
                     metaobject += indicators_in_data_dimension
                     indicator_uids += diff_data_dimension
@@ -1918,7 +1981,7 @@ def main():
                                    + str(diff_data_set) + "... Adding them")
                     indicators_in_dataset = get_metadata_element(metadata_type,
                                                                  "id:in:[" + ','.join(diff_data_set) + "]")
-                    indicators_in_dataset = check_sharing(indicators_in_dataset)
+                    indicators_in_dataset = check_and_apply_sharing(indicators_in_dataset, metadata_type)
                     indicators_in_dataset = clean_metadata(indicators_in_dataset)
                     metaobject += indicators_in_dataset
                     indicator_uids += diff_data_dimension
@@ -1932,13 +1995,32 @@ def main():
 
             # --- Post processing ---------------------------------------------------------
             if metadata_type == "userGroups":
+                missing_user_groups = 0
                 # Store the ids
                 ug_names = list()
+                found_default_user_groups = list()
+                wrong_ug_codes = list()
                 for ug in metadata[metadata_type]:
                     userGroups_uids.append(ug['id'])
+                    userGroups_codes[ug['id']] = ug['code']
                     ug_names.append(ug['name'])
+                    if ug['code'] in metadata_default_user_group_sharing:
+                        found_default_user_groups.append(ug['code'])
+                    else:
+                        if "ADMIN" not in ug['code'] and "ACCESS" not in ug['code'] and "DATA_CAPTURE" not in ug['code']:
+                            wrong_ug_codes.append(ug['code'])
+
+                if len(found_default_user_groups) != 3:
+                    for ug_default_code in metadata_default_user_group_sharing:
+                        if ug_default_code not in found_default_user_groups:
+                            logger.error("Default user group " + ug_default_code + " is missing in the package... Aborting")
+                    exit(1)
+                if len(wrong_ug_codes) > 0:
+                    for ug_wrong_code in wrong_ug_codes:
+                        logger.error("User Group " + ug_wrong_code + " belongs to the package but needs to be of type ADMIN, ACCESS or DATA_CAPTURE... Aborting")
+                    exit(1)
                 logger.info(', '.join(ug_names))
-                metadata[metadata_type] = check_sharing(metadata[metadata_type])
+                metadata[metadata_type] = check_and_apply_sharing(metadata[metadata_type], metadata_type)
             elif metadata_type == "dashboards":
                 # The following loop compiles all ids by type of dashboard items
                 # for example, let's get all ids of all visualisations used in all dashboards of this package
@@ -2061,9 +2143,9 @@ def main():
                         new_userGroup = remove_subset_from_set(new_userGroup, 'users')
                         # Add userGroups and check sharing
                         metadata['userGroups'] += new_userGroup
-                        # Before calling check_sharing, update the userGroup uids global variable
+                        # Before calling check_and_apply_sharing, update the userGroup uids global variable
                         userGroups_uids += new_userGroup[0]['id']
-                        metadata['userGroups'] = check_sharing(metadata['userGroups'])
+                        metadata['userGroups'] = check_and_apply_sharing(metadata['userGroups'], metadata_type)
                     if 'compulsoryDataElementOperands' in ds:
                         # Search for categoryOptionCombo, legendSets
                         for operand in ds['compulsoryDataElementOperands']:
