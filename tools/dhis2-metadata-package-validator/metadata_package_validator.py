@@ -121,7 +121,7 @@ def main():
                     logger.error(f"ALL-MQ-19. Translation duplicated. Translation property={dup.split('|')[1]} locale={dup.split('|')[0]} values={translation_values}")
 
     for resource_type, resource_list in package.items():
-        if resource_type == "package":
+        if resource_type in ["package", "system"]:  # "package" and "system" are dictionaries, not lists.
             continue
         for resource in resource_list:
             # Review translations of the package that are placed under the 2 hierarchy level (not directly under package).
