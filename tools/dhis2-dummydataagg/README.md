@@ -40,7 +40,8 @@ Create/modify auth.json file containing the credentials of the default server to
 	      type=uid_children  uses the children OUs of OU specified by a list of parent UIDs separated by commas
 	      type=name          uses the OU given by a list of names separated by commas
 	      type=ilike         uses a keyword to search for OUs by name (not case sensitive)
-	      type=code          a list of OU codes to use separated by commas
+	      type=code          a list of one or more OU codes to use separated by commas
+		  type=group         uses all OU in an OU group identied by UID. If providing a list of OU group UIDs (separated by comma), then uses OUs within any of those groups.
 	      type=level         all OUs in a specific OU level
 	  -cf [FILE_NAME]        create a flat file with DEs and COCs to allow specifying value ranges.The file name can be specified as parameter. This operation won't create any dummy data
 	  -uf FILE_NAME          uses a previously created (using cf) spreadsheet with value ranges to generate the dummy data
