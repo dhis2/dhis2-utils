@@ -975,6 +975,10 @@ def main():
                            help='instance to extract the package from (robot account is required!) - tracker_dev by default')
     my_parser.add_argument('-desc', '--description', action="store", dest="description", type=str,
                            help='Description of the package or any comments you want to add')
+    my_parser.add_argument('-han', '--health_area_name', action="store", dest="health_area_name", type=str,
+                           help='Name of the Health area of the package')
+    my_parser.add_argument('-hac', '--health_area_code', action="store", dest="health_area_code", type=str,
+                           help='Code of the Health area of the package')
     my_parser.add_argument('-vb', '--verbose', dest='verbose', action='store_true')
     my_parser.set_defaults(verbose=False)
     my_parser.add_argument('-od', '--only_dashboards', dest='only_dashboards', action='store_true')
@@ -1453,6 +1457,8 @@ def main():
                     "code": package_code,
                     "description": package_description,
                     "type": package_type,
+                    "healthAreaName": args.health_area_name,
+                    "healthAreaCode": args.health_area_code,
                     "version": "",
                     "lastUpdated": "",
                     "DHIS2Version": api_source.version,
