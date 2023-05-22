@@ -348,7 +348,7 @@ class d2t():
 
                             # form text translations are written directly into the custom form
                             property_value = locale[resource][id][property]["string"]
-                            if self.form_text_prefix in property:
+                            if self.form_text_prefix in property and resource in self.customForms:
                                 if locale_name not in self.customForms[resource][id]['form_dict']:
                                     self.customForms[resource][id]['form_dict'][locale_name] = {}
                                 self.customForms[resource][id]['form_dict'][locale_name][property] = property_value
@@ -498,7 +498,7 @@ class d2t():
     def set_custom_form_translations(self, resource, element):
 
 
-        if 'htmlCode' in element and element['id'] in self.customForms[resource] and 'htmlCode_new' in self.customForms[resource][element['id']]:
+        if isinstance(element,dict) and 'htmlCode' in element and element['id'] in self.customForms[resource] and 'htmlCode_new' in self.customForms[resource][element['id']]:
             
             html_code = self.customForms[resource][element['id']]['htmlCode_new']
             soup = BeautifulSoup(html_code, "html.parser")
@@ -548,7 +548,7 @@ class d2t():
         form_trans = []
         old_to_new = {}
         form_dict = {}
-        if 'htmlCode' in element:
+        if isinstance(element,dict) and 'htmlCode' in element:
             # print('HTML:',resource, element['id'])
             html_code = element['htmlCode']
             soup = BeautifulSoup(html_code, "html.parser")
@@ -644,7 +644,7 @@ class d2t():
     def swap_custom_form_translations(self, resource, element):
 
         form_dict = {}
-        if 'htmlCode' in element:
+        if isinstance(element,dict) and 'htmlCode' in element:
             # print('HTML:',resource, element['id'])
             html_code = element['htmlCode']
             soup = BeautifulSoup(html_code, "html.parser")
@@ -677,7 +677,7 @@ class d2t():
     def exclude_custom_form_translations(self, resource, element):
 
         form_dict = {}
-        if 'htmlCode' in element:
+        if isinstance(element,dict) and 'htmlCode' in element:
             # print('HTML:',resource, element['id'])
             html_code = element['htmlCode']
             soup = BeautifulSoup(html_code, "html.parser")
@@ -824,8 +824,8 @@ class f2t(d2t):
                     if resource in translatable_fields:
 
                         if isinstance(element,dict):
-                            el_id = parent_resource + '/' + package['id'] + '/' + resource + '/' + element['id']
                             try:
+                                el_id = parent_resource + '/' + package['id'] + '/' + resource + '/' + element['id']
                                 translations= element["translations"]
                                 if translations != []:
                                     if resource not in self.fromDHIS2:
@@ -921,16 +921,17 @@ class f2t(d2t):
 
                     self.__second_level_extraction__(resource,element,locales,translatable_fields,translatable_max_chars)
 
-                    translations= element["translations"]
-                    el_id = element['id']
-                    if translations != []:
-                        if resource not in self.fromDHIS2:
-                            self.fromDHIS2[resource] = {}
-                        if el_id not in self.fromDHIS2[resource]:
-                            self.fromDHIS2[resource][el_id] = {}
-                            self.fromDHIS2[resource][el_id]['translations'] = translations
-                        else:
-                            self.fromDHIS2[resource][el_id]['translations'] += translations
+                    if 'translations' in element:
+                        translations= element["translations"]
+                        el_id = element['id']
+                        if translations != []:
+                            if resource not in self.fromDHIS2:
+                                self.fromDHIS2[resource] = {}
+                            if el_id not in self.fromDHIS2[resource]:
+                                self.fromDHIS2[resource][el_id] = {}
+                                self.fromDHIS2[resource][el_id]['translations'] = translations
+                            else:
+                                self.fromDHIS2[resource][el_id]['translations'] += translations
 
                     if resource in translatable_fields:
                         for transField in translatable_fields[resource]:
