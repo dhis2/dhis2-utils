@@ -32,7 +32,7 @@ in place of some parameters.
 mode:
 --instance          manage translations in a DHIS2 instance (default if no mode option given)
 or
---package              translate a metadata package file
+--package           translate a metadata package file
 
 instance options:
  -f package-url     [PACKAGE_FILE] full url (or local path) to the initial package file (used to filter objects)
@@ -185,4 +185,28 @@ sequenceDiagram
 
 ```
 
+
+## NOTE: update schemas
+
+When translations are performed against package files, without connection to a DHIS2 instance, we rely on some stored data about the translatable objects from the DHIS2 schema. These are maintained under the `./schemas/` folder.
+When a new version of DHIS2 is released, we need to create the necessary schema files for that version. This can be done by running a command against an instance based on that version:
+
+`python3 ./metatran.py --instance -s <dhis2-instance> -u <dhis2-user> -p <dhis2-password> --schema`
+
+```mermaid
+
+%%{init: {'mirrorActors': false } }%%
+sequenceDiagram
+
+    autonumber
+    participant D as DHIS2 Instance
+    participant M as metatran
+    participant F as local filesystem
+    D->>+M: Extract translations
+    M->>F: create schema.json
+
+```
+
+This will create a file called `schema.json` in the current directory, which can be moved to `./schemas/<version>.json`
+You should also copy the `./schemas/<version>-custom.json` file from the previous version.
 
