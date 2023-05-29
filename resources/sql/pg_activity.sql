@@ -38,6 +38,13 @@ select count(*)
 from pg_catalog.pg_stat_activity 
 where query not ilike '%pg_stat_activity%';
 
+-- Idle queries
+
+select pid, datname, usename, query_start, now() - pg_stat_activity.query_start as duration, state, query
+from pg_catalog.pg_stat_activity 
+where state ilike '%idle%'
+and query not ilike '%pg_stat_activity%';
+
 -- Queries running for more than 10 seconds
 
 select pid, datname, usename, query_start, now() - pg_stat_activity.query_start as duration, state, query 
