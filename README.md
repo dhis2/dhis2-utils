@@ -13,3 +13,9 @@ Resources, tools and utils for DHIS 2
 | [DHIS2 User Populator](tools/dhis2-user-populator) | A command line tool to populate dummy users. _This application creates users in bulk, given user details in a CSV file._ | | | | |
 | [DHIS2 Data Time Shifter](tools/dhis2-data-time-shifter) | Two SQL functions to shift in time Tracker/Event and Aggregate data. Useful for demo instances or training DBs  
 | [DHIS2 Time Shift Tools](tools/dhis2-time-shift-tools) | A suite of tools for keeping test and demo databases up to date. |[x]|[x]|[]|[]|
+
+## Tools for metadata packages
+
+| Tool | Summary |
+| :---------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Metadata Package Validator](tools/dhis2-metadata-package-validator) | A command line tool to validate a metadata package.|
