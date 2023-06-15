@@ -1813,8 +1813,11 @@ def main():
                         # Add userGroups and check sharing
                         metadata['userGroups'] += new_userGroups
                         # Before calling check_and_apply_sharing, update the userGroup uids global variable
-                        userGroups_uids += new_userGroups_uids
-                        metadata['userGroups'] = check_and_apply_sharing(metadata['userGroups'], metadata_type)
+                        # userGroups_uids += new_userGroups_uids
+                        # for new_userGroup in new_userGroups:
+                        #     if new_userGroup['id'] not in userGroups_codes:
+                        #         userGroups_codes[new_userGroup['id']] = new_userGroup['code']
+                        # metadata['userGroups'] = check_and_apply_sharing(metadata['userGroups'], metadata_type)
 
             elif metadata_type == "validationNotificationTemplates":
                 # Check for userGroups used which are not included in the package
