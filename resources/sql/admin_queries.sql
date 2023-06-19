@@ -516,6 +516,17 @@ where psi.deleted = false
 group by p.uid, p.name
 order by p.name;
 
+-- Get count of event audit values per program (deleted false)
+
+select p.uid as program_uid, p.name as program_name, count(*) as audit_value_count
+from trackedentitydatavalueaudit tedva
+inner join programstageinstance psi on tedva.programstageinstanceid = psi.programstageinstanceid 
+inner join programinstance pi on psi.programinstanceid = pi.programinstanceid 
+inner join program p on pi.programid = p.programid
+where psi.deleted = false
+group by p.uid, p.name
+order by p.name;
+
 -- (Write) Generate random coordinates based on org unit location for events
 
 update programstageinstance psi
