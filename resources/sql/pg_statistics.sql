@@ -43,7 +43,7 @@ order by relname;
 
 -- Approximate count of rows for all relations by schema
 
-select ns.nspname as schema_name, rl.relname as table_name, rl.oid as object_id, reltuples::bigint as approximate_row_count 
+select ns.nspname as schema_name, rl.relname as table_name, rl.oid as object_id, rl.reltuples::bigint as approximate_row_count 
 from pg_catalog.pg_class rl
 inner join pg_catalog.pg_namespace ns on rl.relnamespace = ns.oid
 where ns.nspname not in ('information_schema', 'pg_catalog', 'pg_toast')
