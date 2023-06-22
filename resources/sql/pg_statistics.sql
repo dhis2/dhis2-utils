@@ -38,8 +38,15 @@ where relname = 'datavalue';
 
 select relname, reltuples::bigint as approximate_row_count 
 from pg_class 
-where relname in ('trackedentityinstance', 'trackedentityattributevalue', 'programinstance', 'programstageinstance')
-order by relname;
+where relname in ('trackedentityinstance', 'trackedentityattributevalue', 'programinstance', 'programstageinstance');
+
+-- Approximate count of rows for large tables
+
+select relname as table_name, reltuples::bigint as approximate_row_count 
+from pg_class 
+where relname in ('completedatasetregistration', 'dataset', 'datavalue', 'datavalueaudit',
+  'program', 'programinstance', 'programstageinstance'
+	'trackedentityinstance', 'trackedentityattributevalue', 'trackedentitydatavalueaudit');
 
 -- Approximate count of rows for all relations by schema
 
