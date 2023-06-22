@@ -1604,21 +1604,42 @@ def main():
                                                                                 'categoryOptionGroups')
 
                 elif metadata_type == "categoryOptionGroupSets":
-                    # We need to remove the categoryOptionGroupSets which contain categoryOptionGroups not belonging to the package
+                    # Remove the categoryOptionGroupSet if none of its COGs is included in the package
+                    # If some COGs are included in the package, simply blank the ones which belong to it but are not included
                     new_metaobject = list()
                     cat_opt_group_set_ids_to_keep = list()
+                    placeholder_category_option_groups_to_add = list()
                     for catOptGroupSet in metaobject:
                         valid_cat_opt_group_set = True
+                        number_of_valid_cat_opt_grp = 0
+                        category_option_groups_to_add = list()
                         for catOptGroup in catOptGroupSet['categoryOptionGroups']:
-                            if catOptGroup['id'] not in cat_uids['categoryOptionGroups']:
-                                valid_cat_opt_group_set = False
-                                break
+                            if catOptGroup['id'] in cat_uids['categoryOptionGroups']:
+                                number_of_valid_cat_opt_grp += 1
+                            else:
+                                category_option_groups_to_add.append(catOptGroup['id'])
+                        # Here is where we check the logic If none of the COG made it, then remove the COGS
+                        if number_of_valid_cat_opt_grp == 0:
+                            valid_cat_opt_group_set = False
+                        # In this case, we keep the COGS but we need to add the COG as the placeholder list
+                        elif number_of_valid_cat_opt_grp != len(catOptGroupSet['categoryOptionGroups']):
+                            placeholder_category_option_groups_to_add = \
+                                list(dict.fromkeys(placeholder_category_option_groups_to_add + category_option_groups_to_add))
+
                         if valid_cat_opt_group_set and catOptGroupSet['id'] not in cat_opt_group_set_ids_to_keep:
                             new_metaobject.append(catOptGroupSet)
                             cat_opt_group_set_ids_to_keep.append(catOptGroupSet['id'])
+
                     metadata['categoryOptionGroups'] = remove_undesired_children(metadata['categoryOptionGroups'],
                                                                                  cat_opt_group_set_ids_to_keep,
                                                                                  'groupSets')
+                    # Add the placeholders
+                    metadata['categoryOptionGroups'] += get_metadata_element('categoryOptionGroups', 'id:in:['+','.join(placeholder_category_option_groups_to_add)+']', ':owner')
+                    metadata['categoryOptionGroups'] = clean_metadata(metadata['categoryOptionGroups'])
+                    metadata['categoryOptionGroups'] = check_sharing(metadata['categoryOptionGroups'])
+                    for index in range(0, len(metadata['categoryOptionGroups'])):
+                        if metadata['categoryOptionGroups'][index]['id'] in placeholder_category_option_groups_to_add:
+                            metadata['categoryOptionGroups'][index].pop('categoryOptions')
                     metaobject = new_metaobject
 
                     # categoryOptionGroups and categoryOptionGroupSets reference each other, so also do this clean up
