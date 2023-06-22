@@ -10,7 +10,7 @@ def main() -> None:
     worksheet_name = os.getenv('GOOGLE_WORKSHEET_NAME', 'DHIS2 packages')
     toggle_column = os.getenv('PACKAGE_TOGGLE_COLUMN', 'Extraction Enabled')
     readiness_column = os.getenv('PACKAGE_READINESS_COLUMN', 'Ready for Export')
-    input_columns = json.loads(os.getenv('PACKAGES_EXPORT_INPUT_COLUMNS', '["Extraction code", "Source instance", "Script parameter", "Component name", "DHIS2 versions to export from"]'))
+    input_columns = json.loads(os.getenv('PACKAGES_EXPORT_INPUT_COLUMNS', '["Extraction code", "Source instance", "Script parameter", "Component name", "DHIS2 versions to export from", "Health area", "Health area prefix"]'))
 
     spreadsheets = gspread.service_account(filename=service_account)
 
