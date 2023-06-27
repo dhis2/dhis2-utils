@@ -107,6 +107,14 @@ group by cocco.categoryoptionid, co.name
 order by count(categoryoptioncomboid) desc 
 limit 100;
 
+-- Category option combo count per category combo
+
+select cc.name as cat_combo_name, count(ccoc.categoryoptioncomboid) as cat_option_combo_count
+from categorycombo cc
+inner join categorycombos_optioncombos ccoc on cc.categorycomboid = ccoc.categorycomboid
+group by cc.name
+order by cat_option_combo_count desc;
+
 -- Exploded _datasetorganisationunitcategory view
 
 select ds.uid as ds_uid, ds.name as ds_name, ou.uid as ou_uid, ou.name as ou_name, oulev2.name as oulev2_name, oulev3.name as oulev3_name, 
