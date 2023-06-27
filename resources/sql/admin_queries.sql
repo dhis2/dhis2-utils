@@ -112,8 +112,16 @@ limit 100;
 select cc.name as cat_combo_name, count(ccoc.categoryoptioncomboid) as cat_option_combo_count
 from categorycombo cc
 inner join categorycombos_optioncombos ccoc on cc.categorycomboid = ccoc.categorycomboid
-group by cc.name
+group by cat_combo_name
 order by cat_option_combo_count desc;
+
+-- Category option count per category
+
+select c.name as cat_name, count(cco.categoryoptionid) as cat_option_count
+from dataelementcategory c
+inner join categories_categoryoptions cco on c.categoryid = cco.categoryid 
+group by cat_name
+order by cat_option_count desc;
 
 -- Exploded _datasetorganisationunitcategory view
 
