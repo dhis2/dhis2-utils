@@ -1636,7 +1636,7 @@ def main():
                     # Add the placeholders
                     metadata['categoryOptionGroups'] += get_metadata_element('categoryOptionGroups', 'id:in:['+','.join(placeholder_category_option_groups_to_add)+']', ':owner')
                     metadata['categoryOptionGroups'] = clean_metadata(metadata['categoryOptionGroups'])
-                    metadata['categoryOptionGroups'] = check_sharing(metadata['categoryOptionGroups'])
+                    metadata['categoryOptionGroups'] = check_and_apply_sharing(metadata['categoryOptionGroups'])
                     for index in range(0, len(metadata['categoryOptionGroups'])):
                         if metadata['categoryOptionGroups'][index]['id'] in placeholder_category_option_groups_to_add:
                             metadata['categoryOptionGroups'][index].pop('categoryOptions')
