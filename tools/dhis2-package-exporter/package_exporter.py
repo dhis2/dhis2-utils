@@ -2036,18 +2036,11 @@ def main():
                     ug_names.append(ug['name'])
                     if ug['code'] in metadata_default_user_group_sharing:
                         found_default_user_groups.append(ug['code'])
-                    else:
-                        if "ADMIN" not in ug['code'] and "ACCESS" not in ug['code'] and "DATA_CAPTURE" not in ug['code']:
-                            wrong_ug_codes.append(ug['code'])
 
                 if len(found_default_user_groups) != 3:
                     for ug_default_code in metadata_default_user_group_sharing:
                         if ug_default_code not in found_default_user_groups:
                             logger.error("Default user group " + ug_default_code + " is missing in the package... Aborting")
-                    exit(1)
-                if len(wrong_ug_codes) > 0:
-                    for ug_wrong_code in wrong_ug_codes:
-                        logger.error("User Group " + ug_wrong_code + " belongs to the package but needs to be of type ADMIN, ACCESS or DATA_CAPTURE... Aborting")
                     exit(1)
                 logger.info(', '.join(ug_names))
                 metadata[metadata_type] = check_and_apply_sharing(metadata[metadata_type], metadata_type)
@@ -2424,4 +2417,3 @@ if __name__ == "__main__":
     # if the number of errors > 0, exit with code -1
     if package_file is None:
         sys.exit(1)
-
