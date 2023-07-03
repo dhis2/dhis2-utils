@@ -2029,19 +2029,25 @@ def main():
                 # Store the ids
                 ug_names = list()
                 found_default_user_groups = list()
-                wrong_ug_codes = list()
+                non_standard_ug_codes = list()
                 for ug in metadata[metadata_type]:
                     userGroups_uids.append(ug['id'])
                     userGroups_codes[ug['id']] = ug['code']
                     ug_names.append(ug['name'])
                     if ug['code'] in metadata_default_user_group_sharing:
                         found_default_user_groups.append(ug['code'])
+                    else:
+                        if "ADMIN" not in ug['code'] and "ACCESS" not in ug['code'] and "DATA_CAPTURE" not in ug['code']:
+                            non_standard_ug_codes.append(ug['code'])
 
                 if len(found_default_user_groups) != 3:
                     for ug_default_code in metadata_default_user_group_sharing:
                         if ug_default_code not in found_default_user_groups:
                             logger.error("Default user group " + ug_default_code + " is missing in the package... Aborting")
                     exit(1)
+                if len(non_standard_ug_codes) > 0:
+                    for ug_non_standard_code in non_standard_ug_codes:
+                        logger.warning("User Group " + ug_non_standard_code + " is not of type ADMIN, ACCESS or DATA_CAPTURE")
                 logger.info(', '.join(ug_names))
                 metadata[metadata_type] = check_and_apply_sharing(metadata[metadata_type], metadata_type)
             elif metadata_type == "dashboards":
