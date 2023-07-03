@@ -1495,8 +1495,9 @@ def main():
                 # For example, the package prefix could be COVID-19_CS, but there is also another package COVID-19_POE
                 # These two packages share the same userGroups, prefixed COVID-19
                 if len(metaobject) == 0 and metadata_type in ['userGroups']:
-                    # Try with first to chars of the package_prefix
-                    metaobject += get_metadata_element(metadata_type, 'code:$like:' + package_prefix[0:2])
+                    # Try with the first part of the code
+                    package_prefix_first_part = package_prefix.split('_')[0]
+                    metaobject += get_metadata_element(metadata_type, 'code:$like:' + package_prefix_first_part)
 
             if metadata_type[:-1] in dashboard_items:
                 # Update data dimension items
