@@ -2040,12 +2040,28 @@ def main():
                     else:
                         if "ADMIN" not in ug['code'] and "ACCESS" not in ug['code'] and "DATA_CAPTURE" not in ug['code']:
                             non_standard_ug_codes.append(ug['code'])
-
                 if len(found_default_user_groups) != 3:
-                    for ug_default_code in metadata_default_user_group_sharing:
-                        if ug_default_code not in found_default_user_groups:
+                    user_group_missing_standard_error = False
+                    for ug_default_code in found_default_user_groups:
+                        package_prefix_first_part = '_'.join(package_prefix.split('_')[:-1])
+                        # Check if we find the parent prefix user groups and if so, replace them in the dict
+                        if ug_default_code == package_prefix_first_part + "_ADMIN":
+                            metadata_default_user_group_sharing[
+                                package_prefix_first_part + "_ADMIN"] = metadata_default_user_group_sharing.pop(
+                                package_prefix + "_ADMIN")
+                        elif ug_default_code == package_prefix_first_part + "_ACCESS":
+                            metadata_default_user_group_sharing[
+                                package_prefix_first_part + "_ACCESS"] = metadata_default_user_group_sharing.pop(
+                                package_prefix + "_ACCESS")
+                        elif ug_default_code == package_prefix_first_part + "_DATA_CAPTURE":
+                            metadata_default_user_group_sharing[
+                                package_prefix_first_part + "_DATA_CAPTURE"] = metadata_default_user_group_sharing.pop(
+                                package_prefix + "_DATA_CAPTURE")
+                        else:
+                            user_group_missing_standard_error = True
                             logger.error("Default user group " + ug_default_code + " is missing in the package... Aborting")
-                    exit(1)
+                    if user_group_missing_standard_error:
+                        exit(1)
                 if len(non_standard_ug_codes) > 0:
                     for ug_non_standard_code in non_standard_ug_codes:
                         logger.warning("User Group " + ug_non_standard_code + " is not of type ADMIN, ACCESS or DATA_CAPTURE")
