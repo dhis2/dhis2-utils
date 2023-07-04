@@ -2035,13 +2035,12 @@ def main():
                     userGroups_uids.append(ug['id'])
                     userGroups_codes[ug['id']] = ug['code']
                     ug_names.append(ug['name'])
-                    if ug['code'] in metadata_default_user_group_sharing:
+                    if "ADMIN" in ug['code'] or "ACCESS" in ug['code'] or "DATA_CAPTURE" in ug['code']:
                         found_default_user_groups.append(ug['code'])
                     else:
-                        if "ADMIN" not in ug['code'] and "ACCESS" not in ug['code'] and "DATA_CAPTURE" not in ug['code']:
-                            non_standard_ug_codes.append(ug['code'])
+                        non_standard_ug_codes.append(ug['code'])
                 if len(found_default_user_groups) != 3:
-                    user_group_missing_standard_error = False
+                    standard_user_groups_found = 0
                     for ug_default_code in found_default_user_groups:
                         package_prefix_first_part = '_'.join(package_prefix.split('_')[:-1])
                         # Check if we find the parent prefix user groups and if so, replace them in the dict
@@ -2049,18 +2048,19 @@ def main():
                             metadata_default_user_group_sharing[
                                 package_prefix_first_part + "_ADMIN"] = metadata_default_user_group_sharing.pop(
                                 package_prefix + "_ADMIN")
+                            standard_user_groups_found += 1
                         elif ug_default_code == package_prefix_first_part + "_ACCESS":
                             metadata_default_user_group_sharing[
                                 package_prefix_first_part + "_ACCESS"] = metadata_default_user_group_sharing.pop(
                                 package_prefix + "_ACCESS")
+                            standard_user_groups_found += 1
                         elif ug_default_code == package_prefix_first_part + "_DATA_CAPTURE":
                             metadata_default_user_group_sharing[
                                 package_prefix_first_part + "_DATA_CAPTURE"] = metadata_default_user_group_sharing.pop(
                                 package_prefix + "_DATA_CAPTURE")
-                        else:
-                            user_group_missing_standard_error = True
-                            logger.error("Default user group " + ug_default_code + " is missing in the package... Aborting")
-                    if user_group_missing_standard_error:
+                            standard_user_groups_found += 1
+                    if standard_user_groups_found != 3:
+                        logger.warning("There was one or more errors with default user groups ADMIN, ACCESS, DATA CAPTURE in the package... Aborting")
                         exit(1)
                 if len(non_standard_ug_codes) > 0:
                     for ug_non_standard_code in non_standard_ug_codes:
