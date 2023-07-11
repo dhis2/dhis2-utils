@@ -517,8 +517,6 @@ def check_and_apply_sharing(json_object, metadata_type=None, omit=[], verbose=Fa
     Returns:
         metaobj (list): same metadata after cleaning
     """
-    if metadata_type == 'programStages':
-        metadata_type = 'programStages'
     # Build the userGroups sharing object to apply to (mostly) all metadata
     userGroup_sharing_object = dict()
     for ug_uid in userGroups_uids:
