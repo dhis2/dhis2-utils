@@ -6,7 +6,7 @@ from dateutil.relativedelta import relativedelta
 import time
 from faker import Faker
 import calendar
-from random import randrange, random, choice, uniform, seed, choices, randint
+from random import randrange, random, choice, uniform, seed, choices, randint, sample
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
@@ -31,9 +31,9 @@ except IOError:
 else:
     api_source = Api.from_auth_file('./auth.json')
 
-date_format = '%Y-%m-%d'
-
 program_orgunits = list()
+org_units_used = list()
+do_not_repeat_ou = False
 program_teas = list()
 program_des = list()
 optionSetDict = dict()
@@ -45,10 +45,9 @@ attributeOptionCombo_UID = ""
 log_file = "./dummyDataTracker.log"
 logzero.logfile(log_file)
 
-
 scope = ['https://spreadsheets.google.com/feeds',
          'https://www.googleapis.com/auth/drive']
-google_spreadshseet_credentials = 'dummy-data-297922-97b90db83bdc.json'
+google_spreadshseet_credentials = 'd2pack-token-e9bbfebebff6c66afd061ceb4b7e3b1a2bc68471.json'
 try:
     f = open(google_spreadshseet_credentials)
 except IOError:
@@ -58,6 +57,7 @@ else:
     credentials = ServiceAccountCredentials.from_json_keyfile_name(google_spreadshseet_credentials, scope)
 
 import argparse
+
 my_parser = argparse.ArgumentParser(description='Create dummy data in an instance using a Google Spreadsheet')
 my_parser.add_argument('docid', metavar='document_id', type=str,
                        help='the id of the spreadsheet to use')
@@ -89,10 +89,10 @@ try:
             logger.error('Sheet ' + sheet + ' is missing')
             exit(1)
 
-    #df = pd.DataFrame(sh.worksheet("DUMMY_DATA").get_all_records())
+    # df = pd.DataFrame(sh.worksheet("DUMMY_DATA").get_all_records())
     df = get_as_dataframe(sh.worksheet("DUMMY_DATA"), evaluate_formulas=True, dtype=str)
     df = df.dropna(how='all', axis=1)
-    df['mandatory'] = df['mandatory'].map({'True':True, 'TRUE':True, 'False':False, 'FALSE':False})
+    df['mandatory'] = df['mandatory'].map({'True': True, 'TRUE': True, 'False': False, 'FALSE': False})
 
     df_params = get_as_dataframe(sh.worksheet("PARAMETERS"), evaluate_formulas=True, dtype=str)
     df_params = df_params.dropna(how='all', axis=1)
@@ -106,7 +106,7 @@ try:
             api_source = Api(server_url, credentials['dhis']['username'], credentials['dhis']['password'])
     # server_url = "https://who-dev.dhis2.org/tracker_dev"
     df_number_replicas = get_as_dataframe(sh.worksheet("NUMBER_REPLICAS"), evaluate_formulas=True,
-                                          converters={'PRIMAL_ID':str,'NUMBER':int})
+                                          converters={'PRIMAL_ID': str, 'NUMBER': int})
     df_number_replicas = df_number_replicas.dropna(how='all', axis=1)
     df_number_replicas.dropna(subset=["NUMBER"], inplace=True)
     df_distrib = None
@@ -133,7 +133,6 @@ pd.set_option('display.max_columns', None)
 
 
 def get_ous_in_distrib(df_ou_distrib, program_ous, org_unit_level):
-
     def get_ous_in_program(ou_list, program_ous):
         ou_list_as_set = set(ou_list)
         intersection = ou_list_as_set.intersection(set(program_ous))
@@ -151,16 +150,40 @@ def get_ous_in_distrib(df_ou_distrib, program_ous, org_unit_level):
             valid_ou_found = True
         # Assuming it is a name
         else:
-            #Get UID of OU Name:
-            ou = api_source.get('organisationUnits', params={'fields':'id,name', 'filter':'name:like:'+value}).json()['organisationUnits']
-            if len(ou) == 1:
-                ou = ou[0]
-                # Find the OUs at the required level
-                facilities = find_ou_children_at_level(api_source, ou['id'], org_unit_level)
-                df_result.at[index, 'VALUE'] = get_ous_in_program(facilities, program_ous)
-                valid_ou_found = True
+            if 'OUG' in value:
+                # Get UID of OUG:
+                OUG_uid = value.replace('OUG{','').replace('}','')
+                if not is_valid_uid(OUG_uid):
+                    logger.error('OUG UID ' + value + ' specified in distribution is not valid')
+                else:
+                    OUG = api_source.get('organisationUnitGroups',
+                                   params={'fields': 'id,name,organisationUnits', 'filter': 'id:eq:' + OUG_uid}).json()[
+                        'organisationUnitGroups']
+                    if len(OUG) != 1:
+                        logger.error('OUG UID ' + value + ' could not be found in the instance')
+                    else:
+                        OUG = OUG[0]
+                        ou_list = list()
+                        if 'organisationUnits' in OUG and len(OUG['organisationUnits']) > 0:
+                            for ou in OUG['organisationUnits']:
+                                ou_list.append(ou['id'])
+                            df_result.at[index, 'VALUE'] = get_ous_in_program(ou_list, program_ous)
+                            valid_ou_found = True
+                        else:
+                            logger.error('OUG ' + value + ' is empty or does not contain OUs')
             else:
-                logger.error('Could not find ou with name ' + value)
+                # Get UID of OU Name:
+                ou = \
+                api_source.get('organisationUnits', params={'fields': 'id,name', 'filter': 'name:like:' + value}).json()[
+                    'organisationUnits']
+                if len(ou) == 1:
+                    ou = ou[0]
+                    # Find the OUs at the required level
+                    facilities = find_ou_children_at_level(api_source, ou['id'], org_unit_level)
+                    df_result.at[index, 'VALUE'] = get_ous_in_program(facilities, program_ous)
+                    valid_ou_found = True
+                else:
+                    logger.error('Could not find ou with name ' + value)
 
         if not valid_ou_found:
             logger.error('Could not find any valid organisation unit for value ' + value)
@@ -170,7 +193,7 @@ def get_ous_in_distrib(df_ou_distrib, program_ous, org_unit_level):
     return df_result
 
 
-def get_exp_random_dates_from_date_to_today(start_date, end_date = date.today(), k = 10):
+def get_exp_random_dates_from_date_to_today(start_date, end_date=date.today(), k=10):
     # start_date is in the form datetime.strptime('', '%Y-%m-%d')
     # k = Number of dates to return
 
@@ -182,6 +205,9 @@ def get_exp_random_dates_from_date_to_today(start_date, end_date = date.today(),
         upper_date = lower_date.replace(day=calendar.monthrange(lower_date.year, lower_date.month)[1])
         if upper_date > end_date:
             upper_date = end_date
+        if lower_date > end_date:
+            lower_date = end_date
+
         # print(lower_date.strftime('%Y-%m-%d'))
         # print(upper_date.strftime('%Y-%m-%d'))
         return lower_date + timedelta(
@@ -217,9 +243,8 @@ def isTimeFormat(input):
 
 
 def isDateFormat(input):
-    global date_format
     try:
-        datetime.strptime(input, date_format)
+        datetime.strptime(input, '%Y-%m-%d')
         return True
     except ValueError:
         return False
@@ -237,7 +262,7 @@ def isLongLat(input):
     return result
 
 
-def validate_value(value_type, value, optionSet = list()):
+def validate_value(value_type, value, optionSet=list()):
     # FILE_RESOURCE
     # ORGANISATION_UNIT
     # IMAGE
@@ -255,27 +280,26 @@ def validate_value(value_type, value, optionSet = list()):
 
     correct = False
 
-
-    if len(optionSet) > 0: # It is an option
+    if len(optionSet) > 0:  # It is an option
         value = convert_trueORfalse_to_number(value)
         if value in optionSet:
             correct = True
 
-    elif value_type == 'AGE': # Either an age in years/months/days or a date-of-birth (YYY-MM-DD)
-        #if value.isnumeric() and 0 <= int(value) <= 120:
+    elif value_type == 'AGE':  # Either an age in years/months/days or a date-of-birth (YYY-MM-DD)
+        # if value.isnumeric() and 0 <= int(value) <= 120:
         if isDateFormat(value):
             correct = True
         # todo: check for years/months/days
-    elif value_type == 'TEXT': # Text (length of text up to 50,000 characters)
+    elif value_type == 'TEXT':  # Text (length of text up to 50,000 characters)
         if len(value) <= 50000:
             correct = True
-    elif value_type == 'LONG_TEXT': # Always true
+    elif value_type == 'LONG_TEXT':  # Always true
         correct = True
     elif value_type == 'INTEGER_ZERO_OR_POSITIVE':
         value = convert_trueORfalse_to_number(value)
         if value.isnumeric() and 0 <= int(value):
             correct = True
-            value = str(int(value)) # Cast float
+            value = str(int(value))  # Cast float
     elif value_type == 'INTEGER_NEGATIVE':
         if value.isnumeric() and 0 > int(value):
             correct = True
@@ -319,10 +343,10 @@ def validate_value(value_type, value, optionSet = list()):
     elif value_type == 'TIME':
         if isTimeFormat(value):
             correct = True
-    elif value_type == 'PERCENTAGE': # Any decimal value between 0 and 100
+    elif value_type == 'PERCENTAGE':  # Any decimal value between 0 and 100
         if value.isnumeric() and 0 <= int(value) <= 100:
             correct = True
-    elif value_type == 'UNIT_INTERVAL': # Any decimal value between 0 and 1
+    elif value_type == 'UNIT_INTERVAL':  # Any decimal value between 0 and 1
         if value.isnumeric() and 0 <= int(value) <= 1:
             correct = True
     elif value_type == 'ORGANISATION_UNIT':
@@ -353,9 +377,6 @@ def validate_value(value_type, value, optionSet = list()):
 
 
 def create_dummy_value(uid, gender='M'):
-
-    global date_format
-
     def findWholeWord(w):
         return re.compile(r'\b({0})\b'.format(w), flags=re.IGNORECASE).search
 
@@ -377,8 +398,8 @@ def create_dummy_value(uid, gender='M'):
     faker = Faker()
     Faker.seed()
     value = None
-    min_value = -50#dummy_data_params['min_value']
-    max_value = 50#dummy_data_params['max_value']
+    min_value = -50  # dummy_data_params['min_value']
+    max_value = 50  # dummy_data_params['max_value']
     # If it is not a DE or TEA, it is a enrollmentDate or eventDate, so we initialize to this value
     value_type = 'DATE'
     name = ""
@@ -388,14 +409,13 @@ def create_dummy_value(uid, gender='M'):
     global optionSetDict
     global program_orgunits
 
-
     # Define some min / max values for teas
     if elem_type == 'tea':
         if findWholeWord('weight')(name):
             if findWholeWord('birth')(name):
                 min_value = 500
                 max_value = 5000
-            else: # in kg
+            else:  # in kg
                 min_value = 5.0
                 max_value = 150.0
 
@@ -418,9 +438,9 @@ def create_dummy_value(uid, gender='M'):
             # Other, OTHER
             # Unknown, UNKNOWN
             # if len(optionSetDict[optionSet]) > 2: # More genders than male/female
-                #Introduce other with low probability
-                # if randrange(0, 1000) < 50:
-                #     gender = 'O'
+            # Introduce other with low probability
+            # if randrange(0, 1000) < 50:
+            #     gender = 'O'
 
             for option in optionSetDict[optionSet]:
                 if gender == 'M' and option.lower() in ['male', 'm']:
@@ -444,7 +464,7 @@ def create_dummy_value(uid, gender='M'):
     elif value_type == "DATE":
         min_value = date(year=2015, month=1, day=1)
         max_value = datetime.today()
-        value = faker.date_between(start_date=min_value, end_date=max_value).strftime(date_format)
+        value = faker.date_between(start_date=min_value, end_date=max_value).strftime("%Y-%m-%d")
 
     elif value_type == "TIME":
         value = faker.time()[0:5]  # To get HH:MM and remove SS
@@ -472,10 +492,10 @@ def create_dummy_value(uid, gender='M'):
                         value = faker.last_name()
                     else:
                         value = faker.name()
-                elif findWholeWord('id')(name):
-                    value = 'ID-' + str(uuid.uuid4().fields[-1])
+                elif findWholeWord('id')(name) or findWholeWord('uid')(name):
+                    value = 'ID-' + str(uuid.uuid4().fields[-1])[:7]
                 elif findWholeWord('number')(name):
-                    value = 'N-' + str(uuid.uuid4().fields[-1])
+                    value = 'N-' + str(uuid.uuid4().fields[-1])[:7]
                 elif findWholeWord('code')(name):
                     value = 'Code' + str(uuid.uuid4().fields[-1])[:4]
                 elif 'address' in name_to_check:
@@ -492,11 +512,11 @@ def create_dummy_value(uid, gender='M'):
 
     elif value_type == 'AGE':
         # age_range = choice(['child', 'adolescent', 'adult', 'retired'])
-        age_ranges = choice([[1,5*365], [5*365,15*365], [15*365,65*365], [65*365,100*365]])
+        age_ranges = choice([[1, 5 * 365], [5 * 365, 15 * 365], [15 * 365, 65 * 365], [65 * 365, 100 * 365]])
         today = date.today()
 
         days = randrange(age_ranges[0], age_ranges[1])
-        value = (today - timedelta(days=days)).strftime(date_format)
+        value = (today - timedelta(days=days)).strftime("%Y-%m-%d")
 
     elif value_type == "INTEGER_POSITIVE":
         min_value = 1
@@ -516,15 +536,15 @@ def create_dummy_value(uid, gender='M'):
     elif value_type == "NUMBER":
         value = round(uniform(min_value, max_value), 2)
 
-    elif value_type == 'PERCENTAGE': # Any decimal value between 0 and 100
+    elif value_type == 'PERCENTAGE':  # Any decimal value between 0 and 100
         value = round(uniform(0, 100), 2)
 
-    elif value_type == 'UNIT_INTERVAL': # Any decimal value between 0 and 1
+    elif value_type == 'UNIT_INTERVAL':  # Any decimal value between 0 and 1
         value = round(uniform(0, 1), 2)
 
     elif value_type == 'ORGANISATION_UNIT':
         random_ou = choice(program_orgunits)
-        value = random_ou['parent']['id'] # Assign OU from where the patient is coming to the parent
+        value = random_ou['parent']['id']  # Assign OU from where the patient is coming to the parent
 
     elif value_type == 'PHONE_NUMBER':
         value = faker.phone_number()
@@ -532,8 +552,9 @@ def create_dummy_value(uid, gender='M'):
         value = "".join([replacements.get(c, c) for c in strs])
 
     elif value_type == 'COORDINATE':
-        #form: '[164,72197,-67,617041]'
-        value = '[' + str(round(np.random.uniform(-180, 180),6)) + ',' + str(round(np.random.uniform(-90, 90),6)) + ']'
+        # form: '[164,72197,-67,617041]'
+        value = '[' + str(round(np.random.uniform(-180, 180), 6)) + ',' + str(
+            round(np.random.uniform(-90, 90), 6)) + ']'
     else:
         logger.info('Warning, type ' + value_type + ' not supported')
 
@@ -542,7 +563,7 @@ def create_dummy_value(uid, gender='M'):
 
 def check_mandatory_elements_are_present(df, column):
     df_only_true_mandatory = df[df['mandatory'] == True]
-    if df_only_true_mandatory[column].count() != df_only_true_mandatory.shape[0]: # If any of the them is missing
+    if df_only_true_mandatory[column].count() != df_only_true_mandatory.shape[0]:  # If any of the them is missing
         return False
     else:
         return True
@@ -558,12 +579,13 @@ def check_unique_attributes_do_not_repeat(df):
     if duplicateRowsDF.shape[0] > 0:
         for index, row in duplicateRowsDF.iterrows():
             if row['UID'] in program_teas and program_teas[row['UID']]['unique'] == 'true':
-                logger.error('Unique TEA (' + row['UID'] + '): ' + program_teas[row['UID']]['name'] + ' has duplicate values')
+                logger.error(
+                    'Unique TEA (' + row['UID'] + '): ' + program_teas[row['UID']]['name'] + ' has duplicate values')
                 correct = False
     return correct
 
 
-def check_template_TEIs_in_cols(df, ws_dummy_data = None):
+def check_template_TEIs_in_cols(df, ws_dummy_data=None):
     import xlsxwriter
     writer = pd.ExcelWriter('Validation results.xlsx', engine='xlsxwriter')
     # Convert the dataframe to an XlsxWriter Excel object.
@@ -575,46 +597,23 @@ def check_template_TEIs_in_cols(df, ws_dummy_data = None):
     if ws_dummy_data is not None:
         error_cell_fmt = CellFormat(backgroundColor=Color(1, 0, 0))
 
-        # Clear previous errors if applicable by reapplying the formatting
-        batch = batch_updater(sh)
-        # Add header formatting
-        header = str(1)
-        batch.format_cell_range(ws_dummy_data, header, CellFormat(
-            backgroundColor=Color(0.40, 0.65, 1),
-            textFormat=TextFormat(bold=True, foregroundColor=Color(1, 1, 1), fontSize=11),
-            horizontalAlignment='CENTER'
-        ))
-        # Added alternative formatting
-        for i in range(3, df.shape[0], 2):
-            even_row = str(i)
-            batch.format_cell_range(ws_dummy_data, even_row, CellFormat(
-                backgroundColor=Color(0.90, 0.95, 1)
-            ))
-        b = Border("SOLID_THICK", Color(0, 0, 0))
-        # Add border to the stages
-        stage_indexes = df.index[df['Stage'] != ''].tolist()
-        for i in stage_indexes:
-            stage_row = str(i + 2)
-            batch.format_cell_range(ws_dummy_data, stage_row, CellFormat(borders=Borders(top=b)))
-        # Add formatting to spreadsheet
+    # Clear previous errors if applicable from spreadsheet
+    try:
+        df_valitation_results = get_as_dataframe(sh.worksheet("VALIDATION_RESULTS"), dtype=str)
+        for index, row in df_valitation_results.iterrows():
+            if 'CELL' in row:
+                cell = row['CELL']
+                if not pd.isnull(cell[1:]):
+                    row_number = int(cell[1:])
+                    if row_number % 2 == 0:  # Even rows in white
+                        batch.format_cell_range(ws_dummy_data, cell + ':' + cell,
+                                                CellFormat(backgroundColor=Color(1, 1, 1)))
+                    else:  # Odd rows in light blue
+                        batch.format_cell_range(ws_dummy_data, cell + ':' + cell,
+                                                CellFormat(backgroundColor=Color(0.90, 0.95, 1)))
         batch.execute()
-    # try:
-    #     df_valitation_results = get_as_dataframe(sh.worksheet("VALIDATION_RESULTS"), dtype=str)
-    #     for index, row in df_valitation_results.iterrows():
-    #         if 'CELL' in row:
-    #             cell = row['CELL']
-    #             if not pd.isnull(cell[1:]):
-    #                 row_number = int(cell[1:])
-    #                 if row_number % 2 == 0: # Even rows in white
-    #                     batch.format_cell_range(ws_dummy_data, cell + ':' + cell,
-    #                                             CellFormat(backgroundColor=Color(1, 1, 1)))
-    #                 else: # Odd rows in light blue
-    #                     batch.format_cell_range(ws_dummy_data, cell + ':' + cell,
-    #                                             CellFormat(backgroundColor=Color(0.90, 0.95, 1)))
-    #     batch.execute()
-    # except gspread.WorksheetNotFound:
-    #     pass
-
+    except gspread.WorksheetNotFound:
+        pass
 
     # Write the column headers with the defined format.
     # for col_num, value in enumerate(df.columns.values):
@@ -673,16 +672,19 @@ def check_template_TEIs_in_cols(df, ws_dummy_data = None):
                         if not pd.isnull(row['optionSet']): optionSet_list = row['optionSet'].split("\n")
                         optionSet_list = [x.strip() for x in optionSet_list]
                         correct, value = validate_value(row['valueType'], row[tei_column],
-                                                            optionSet_list)
+                                                        optionSet_list)
                         if not correct:
-                            error_message = tei_column + ', Stage=' + stage_name + occurrence + ': Value (' + row['valueType'] + ') for ' + row['TEA / DE / eventDate'] + ' = ' + str(value) + ' is NOT valid'
+                            error_message = tei_column + ', Stage=' + stage_name + occurrence + ': Value (' + row[
+                                'valueType'] + ') for ' + row['TEA / DE / eventDate'] + ' = ' + str(
+                                value) + ' is NOT valid'
                             logger.error(error_message)
                             errors = errors + 1
-                            worksheet.write(index+1, df.columns.get_loc(tei_column), value, error_format)
+                            worksheet.write(index + 1, df.columns.get_loc(tei_column), value, error_format)
                             if ws_dummy_data is not None:
-                                ws_col_row = chr(65+df.columns.get_loc(tei_column))+str(index+2)
+                                ws_col_row = chr(65 + df.columns.get_loc(tei_column)) + str(index + 2)
                                 try:
-                                    batch.format_cell_range(ws_dummy_data, ws_col_row + ':' + ws_col_row, error_cell_fmt)
+                                    batch.format_cell_range(ws_dummy_data, ws_col_row + ':' + ws_col_row,
+                                                            error_cell_fmt)
                                     # gsf.format_cell_range(ws_dummy_data, ws_col_row + ':' + ws_col_row, error_cell_fmt)
                                 except APIError as e:
                                     logger.error(e.code + ':' + e.message)
@@ -694,15 +696,17 @@ def check_template_TEIs_in_cols(df, ws_dummy_data = None):
                             df.at[index, tei_column] = value
                     else:
                         if row['mandatory'] == True:
-                            error_message = tei_column + ', Stage=' + stage_name + occurrence + ': Value (' + row['valueType'] + ') for ' + row['TEA / DE / eventDate'] + ' is missing'
+                            error_message = tei_column + ', Stage=' + stage_name + occurrence + ': Value (' + row[
+                                'valueType'] + ') for ' + row['TEA / DE / eventDate'] + ' is missing'
                             logger.error(error_message)
                             errors = errors + 1
                             worksheet.write(index + 1, df_event.columns.get_loc(tei_column), '', error_format)
                             if ws_dummy_data is not None:
-                                ws_col_row = chr(65+df.columns.get_loc(tei_column))+str(index+2)
+                                ws_col_row = chr(65 + df.columns.get_loc(tei_column)) + str(index + 2)
                                 try:
-                                    batch.format_cell_range(ws_dummy_data, ws_col_row + ':' + ws_col_row, error_cell_fmt)
-                                    #gsf.format_cell_range(ws_dummy_data, ws_col_row + ':' + ws_col_row, error_cell_fmt)
+                                    batch.format_cell_range(ws_dummy_data, ws_col_row + ':' + ws_col_row,
+                                                            error_cell_fmt)
+                                    # gsf.format_cell_range(ws_dummy_data, ws_col_row + ':' + ws_col_row, error_cell_fmt)
                                 except APIError as e:
                                     logger.error(e.code + ':' + e.message)
                                     pass
@@ -720,7 +724,8 @@ def check_template_TEIs_in_cols(df, ws_dummy_data = None):
         logger.error('Found ' + str(errors) + ' errors!!!')
         batch.execute()
         # Delete worksheet for validation. Capture exception does not exist and pass
-        ws_validation = sh.add_worksheet('VALIDATION_RESULTS', df_validation_results.shape[0], df_validation_results.shape[1])
+        ws_validation = sh.add_worksheet('VALIDATION_RESULTS', df_validation_results.shape[0],
+                                         df_validation_results.shape[1])
         set_with_dataframe(ws_validation, df_validation_results)
         set_column_width(ws_validation, 'B:', 800)
         # Close the Pandas Excel writer and output the Excel file.
@@ -731,13 +736,14 @@ def check_template_TEIs_in_cols(df, ws_dummy_data = None):
 
 
 def from_df_to_TEI_json(df_replicas, tei_template, event_template, df_ou_ratio=None):
-
     global program_uid
     global program_orgunits
     global trackedEntityType_UID
     global attributeCategoryOptions_UID
     global attributeOptionCombo_UID
     global df_distrib
+    global org_units_used
+    global do_not_repeat_ou
 
     tei_columns = [col for col in df_replicas if col.startswith('TEI_')]
     logger.info('Found ' + str(len(tei_columns)) + ' TEIs in file')
@@ -745,9 +751,44 @@ def from_df_to_TEI_json(df_replicas, tei_template, event_template, df_ou_ratio=N
 
     ou_values = list()
     if df_ou_ratio is not None:
-        for ou_list in df_ou_ratio['VALUE'].tolist():
-            ou_values.append(choice(ou_list))
-        ou_values = choices_with_ratio(ou_values, df_ou_ratio['RATIO'].tolist(), len(tei_columns))
+        # Total number of OUs to select is len(tei_columns)
+        total_number_ous = len(tei_columns)
+        list_ous = df_ou_ratio['VALUE'].tolist()
+        index_ratio = 0
+        for ratio in df_ou_ratio['RATIO'].tolist():
+            if ratio == 0:
+                continue
+            list_ous_to_use = list_ous[index_ratio]
+            number_ous_to_pick = ratio*total_number_ous
+            if do_not_repeat_ou:
+                # We dont have enough ous and we cannot repeat them... Give an error
+                if len(list_ous_to_use) < number_ous_to_pick:
+                    logger.error("The list of OUs does not have enough elements to pick from, and do not repeat ou is enabled")
+                    exit(1)
+                selected_ous = []
+                while len(selected_ous) < number_ous_to_pick:
+                    available_ous = set(list_ous_to_use) - set(selected_ous) - set(org_units_used)
+                    if not available_ous:
+                        logger.error("No OUs available to pick from")
+                        break
+                    random_ou = choice(list(available_ous))
+                    selected_ous.append(random_ou)
+
+                org_units_used.extend(selected_ous)
+                ou_values += selected_ous
+            else:
+                if number_ous_to_pick < len(list_ous_to_use):
+                    ou_values += sample(list_ous_to_use, number_ous_to_pick)
+                else:
+                    ou_values += [choice(list_ous_to_use) for _ in range(number_ous_to_pick)]
+            index_ratio += 1
+        # Just in case
+        # if len(list_ous_to_use) < total_number_ous:
+        #     return sample(list_ous_to_use * (total_number_ous // len(list_ous_to_use) + 1), total_number_ous)
+
+        # for ou_list in df_ou_ratio['VALUE'].tolist():
+        #     ou_values.append(choice(ou_list))
+        # ou_values = choices_with_ratio(ou_values, df_ou_ratio['RATIO'].tolist(), len(tei_columns))
 
     # The indexes where every stage starts
     stage_indexes = df_replicas.index[df_replicas['Stage'].notnull()].tolist()
@@ -766,7 +807,10 @@ def from_df_to_TEI_json(df_replicas, tei_template, event_template, df_ou_ratio=N
         else:
             # Be careful here, this should normally give an int but...
             random_ou = dict()
-            random_ou['id'] = ou_values[int(tei_column.split("_")[1])-1]
+            random_ou['id'] = ou_values[int(tei_column.split("_")[1]) - 1]
+
+        with open('ous_used.txt', 'a') as f:
+            f.write(random_ou['id'] + '\n')
 
         tei["trackedEntityInstance"] = trackedEntityInstance_UID
         tei["trackedEntityType"] = trackedEntityType_UID
@@ -890,9 +934,9 @@ def run_rules_in_df(df, rule):
                 # We are assuming here a single UID in the condition and single UID in expression
                 # we could loop through for uid in uid_list: and call replace multiple times
                 new_condition = condition.replace("#{" + uid_list[0] + "}",
-                                                      "num(df[df.UID == '" + uid_list[0] + "']['"+col+"'].tolist()[0])")
+                                                  "num(df[df.UID == '" + uid_list[0] + "']['" + col + "'].tolist()[0])")
                 new_assignment = assignment.replace("#{" + uid_list[1] + "}",
-                                                            "df.at[df[df.UID == '" + uid_list[1] + "'].index, '"+col+"']")
+                                                    "df.at[df[df.UID == '" + uid_list[1] + "'].index, '" + col + "']")
 
                 exec(new_condition + ":" + new_assignment)
     else:
@@ -912,9 +956,6 @@ def run_rules_in_df(df, rule):
 
 
 def create_replicas_from_df(df, column, start_date, end_date, number_of_replicas, df_distrib, df_rules):
-
-    global date_format
-
     def post_processing_values(value_type, value_list):
         if value_type in ['BOOLEAN', 'TRUE_ONLY']:
             return [str(item).lower() for item in value_list]
@@ -935,7 +976,7 @@ def create_replicas_from_df(df, column, start_date, end_date, number_of_replicas
         if len(uid_pos) == 1 and tei_id in df_distrib.columns:
             uid_position = uid_pos[0]
             index = uid_positions.index(uid_position)
-            if uid_position != uid_positions[len(uid_positions)-1]:
+            if uid_position != uid_positions[len(uid_positions) - 1]:
                 df_ratio = df_distrib.loc[uid_positions[index]:uid_positions[index + 1] - 1][['VALUE', tei_id]]
             else:
                 df_ratio = df_distrib.loc[uid_positions[index]:][['VALUE', tei_id]]
@@ -967,15 +1008,15 @@ def create_replicas_from_df(df, column, start_date, end_date, number_of_replicas
     # enrollment date can be found at least in two ways: it is the first value in the TEI_X column or it is the
     # only row with UID = program_uid
     # Check if enrollment is there
-    enrollmentDate = datetime.strptime(df.iloc[0][column], date_format).date()
+    enrollmentDate = datetime.strptime(df.iloc[0][column], '%Y-%m-%d').date()
     stage_indexes = df.index[df['Stage'].notnull()].tolist()
-    for clone in range(1, number_of_replicas+1):
+    for clone in range(1, number_of_replicas + 1):
         start_time = time.time()
         logger.info("Creating TEI_" + str(clone))
         new_column = list()
         # days to shift is going to be equal to the number of days between the random date and the enrollment date
         # If the value is negative we are moving the date to the past, otherwise to the future
-        days_to_shift = (random_dates[(clone-1)] - enrollmentDate).days
+        days_to_shift = (random_dates[(clone - 1)] - enrollmentDate).days
 
         # We need to decide on the gender beforehand to make sure the attributes make sense
         # First check if it is not distributed. We are going to try to find the whole word sex/gender
@@ -994,24 +1035,31 @@ def create_replicas_from_df(df, column, start_date, end_date, number_of_replicas
                     if age_uid != "" and age_uid == row['UID']:
                         # Special case for age, recalculate it
                         dob = datetime.now() - relativedelta(years=distributed_values_per_id[row['UID']][(clone - 1)])
-                        new_column.append(dob.strftime(date_format))
+                        new_column.append(dob.strftime("%Y-%m-%d"))
                     else:
                         # Shift all dates
-                        new_date = datetime.strptime(row[column], date_format) + timedelta(days=days_to_shift)
+                        new_date = datetime.strptime(row[column], "%Y-%m-%d") + timedelta(days=days_to_shift)
                         # before it was new_date < datetime.today(), but if we check against end_date, it allows
                         # creating events in the future
-                        new_column.append(new_date.strftime(date_format))
-
+                        if new_date.date() < date.today():
+                            new_column.append(new_date.strftime("%Y-%m-%d"))
+                        else:
+                            new_column.append('')
+                            if index in stage_indexes:
+                                skipStage = True
+                                logger.warning("Skipping stage, date = " + new_date.strftime("%Y-%m-%d"))
                 else:
                     if row['UID'] in distributed_values_per_id:
-                        distributed_values_per_id[row['UID']] = post_processing_values(row['valueType'], distributed_values_per_id[row['UID']])
+                        distributed_values_per_id[row['UID']] = post_processing_values(row['valueType'],
+                                                                                       distributed_values_per_id[
+                                                                                           row['UID']])
                     if index >= stage_indexes[1]:
                         # Do not do anything for stage data for now, unless ratios have been defined
                         if row['UID'] in distributed_values_per_id:
                             new_column.append(distributed_values_per_id[row['UID']][(clone - 1)])
                         else:
                             new_column.append(row[column])
-                    else: # Enrollment
+                    else:  # Enrollment
                         if row['UID'] in distributed_values_per_id:
                             new_column.append(distributed_values_per_id[row['UID']][(clone - 1)])
                         else:
@@ -1042,19 +1090,19 @@ def main():
     global trackedEntityType_UID
     global attributeCategoryOptions_UID
     global attributeOptionCombo_UID
-    #global filename
+    # global filename
     global df_params
     global df
     global df_distrib
     global df_rules
-    global date_format
-    #global number_replicas_file
+    global do_not_repeat_ou
+    # global number_replicas_file
 
     if 'PARAMETER' not in df_params.columns.tolist() or 'VALUE' not in df_params.columns.tolist():
         logger.error('Cannot find required columns PARAMETER/VALUE in params file')
         exit(1)
     parameters = ['program_uid', 'orgUnit_uid', 'descendants', 'orgUnit_level', 'ignore_validation_errors',
-                  'start_date', 'end_date', 'server_url', 'chunk_size', 'metadata_version']
+                  'start_date', 'end_date', 'server_url', 'chunk_size', 'metadata_version', 'do_not_repeat_ou']
     mandatory_params = ['program_uid']
     # Assign defaults
     orgUnit_level = 4
@@ -1065,6 +1113,7 @@ def main():
     start_date = (date.today() - timedelta(weeks=75))
     end_date = date.today()
     ignore_validation_errors = False
+    do_not_repeat_ou = False
     chunk_size = 60
     for index, row in df_params.iterrows():
         param = row['PARAMETER']
@@ -1102,6 +1151,11 @@ def main():
                     custom_orgunits = the_good_OU_UIDs
         elif param == 'orgUnit_level' and row['VALUE'].isnumeric():
             orgUnit_level = int(row['VALUE'])
+        elif param == 'do_not_repeat_ou':
+            if isinstance(row['VALUE'], bool):
+                do_not_repeat_ou = row['VALUE']
+            elif isinstance(row['VALUE'], str) and row['VALUE'].lower() in ['true', 'false']:
+                if row['VALUE'].lower() == 'true': do_not_repeat_ou = True
         elif param == 'descendants':
             if isinstance(row['VALUE'], bool):
                 orgUnit_descendants = row['VALUE']
@@ -1115,13 +1169,13 @@ def main():
         elif param == 'start_date':
             if isinstance(row['VALUE'], str):
                 if isDateFormat(row['VALUE']):
-                    start_date = datetime.strptime(row['VALUE'], date_format).date()
+                    start_date = datetime.strptime(row['VALUE'], '%Y-%m-%d').date()
             else:
                 start_date = row['VALUE'].date()
         elif param == 'end_date':
             if isinstance(row['VALUE'], str):
                 if isDateFormat(row['VALUE']):
-                    end_date = datetime.strptime(row['VALUE'], date_format).date()
+                    end_date = datetime.strptime(row['VALUE'], '%Y-%m-%d').date()
             else:
                 end_date = row['VALUE'].date()
 
@@ -1132,7 +1186,7 @@ def main():
         logger.error('Missing mandatory parameters: ' + ','.join(mandatory_params))
         exit(1)
 
-    program = api_source.get('programs/'+program_uid,
+    program = api_source.get('programs/' + program_uid,
                              params={"paging": "false",
                                      "fields": "id,name,enrollmentDateLabel,version,programTrackedEntityAttributes,programStages,programRuleVariables,organisationUnits,trackedEntityType"}).json()
 
@@ -1140,19 +1194,23 @@ def main():
         # Check metadata version
         if program_metadata_version != 0 and program_metadata_version != program['version']:
             logger.warning("The flat file was created with program version = " + str(program_metadata_version) +
-                         ' but the current version for this program is ' + str(program['version']))
-            #exit(1)
+                           ' but the current version for this program is ' + str(program['version']))
+            # exit(1)
 
         trackedEntityType_UID = program['trackedEntityType']['id']
 
         # Get orgUnits of program
         orgunits_uid = json_extract(program['organisationUnits'], 'id')
-
+        all_orgunits_at_level = api_source.get('organisationUnits',
+                                               params={"paging": "false",
+                                                       "filter": "level:eq:" + str(orgUnit_level),
+                                                       "fields": "id,name,level,parent"}).json()['organisationUnits']
         if custom_orgunits is None or len(custom_orgunits) == 0:
             all_orgunits_at_level = api_source.get('organisationUnits',
-                                      params={"paging": "false",
-                                              "filter": "level:eq:"+str(orgUnit_level),
-                                              "fields":"id,name,level,parent"}).json()['organisationUnits']
+                                                   params={"paging": "false",
+                                                           "filter": "level:eq:" + str(orgUnit_level),
+                                                           "fields": "id,name,level,parent"}).json()[
+                'organisationUnits']
             program_orgunits = list()
             for ou in all_orgunits_at_level:
                 if ou['id'] in orgunits_uid:
@@ -1176,13 +1234,14 @@ def main():
                     df_ou_distrib = df_distrib.loc[all_positions[index]:]
                 df_ou_distrib = get_ous_in_distrib(df_ou_distrib.reset_index(drop=True), orgunits_uid, orgUnit_level)
 
-
         # We are assuming here that there is going to be always a default value for CO and COC
         attributeCategoryOptions_UID = api_source.get('categoryOptions',
-                                                      params={"filter":"name:in:[default,DEFAULT]"}).json()['categoryOptions'][0]['id']
+                                                      params={"filter": "name:in:[default,DEFAULT]"}).json()[
+            'categoryOptions'][0]['id']
         # We are assuming here that there is going to be always a default value for CO and COC
         attributeOptionCombo_UID = api_source.get('categoryOptionCombos',
-                                                      params={"filter":"name:in:[default,DEFAULT]"}).json()['categoryOptionCombos'][0]['id']
+                                                  params={"filter": "name:in:[default,DEFAULT]"}).json()[
+            'categoryOptionCombos'][0]['id']
 
         # Get Program Attributes
         teas_uid = json_extract_nested_ids(program, 'trackedEntityAttribute')
@@ -1232,7 +1291,7 @@ def main():
         # print(df)
         # print(df.info())
 
-        #df_out = df[['UID', 'TEI_1']].apply(lambda x: create_dummy_value(x['UID']), axis=1)
+        # df_out = df[['UID', 'TEI_1']].apply(lambda x: create_dummy_value(x['UID']), axis=1)
 
         # Open TEI template
         with open('TEI_template.json', 'r') as f:
@@ -1259,21 +1318,24 @@ def main():
                         df_ratio = None
                 else:
                     df_ratio = None
-                replicas = from_df_to_TEI_json(create_replicas_from_df(df, tei_id, start_date, end_date, row['NUMBER'], df_distrib, df_rules), tei_template, event_template, df_ratio)
+                replicas = from_df_to_TEI_json(
+                    create_replicas_from_df(df, tei_id, start_date, end_date, row['NUMBER'], df_distrib, df_rules),
+                    tei_template, event_template, df_ratio)
                 #post_chunked_data(api_source, replicas, 'trackedEntityInstances', chunk_size)
-                #post_to_server(api_source, {'trackedEntityInstances': replicas}, 'trackedEntityInstances')
+                # post_to_server(api_source, {'trackedEntityInstances': replicas}, 'trackedEntityInstances')
                 list_of_TEIs = list_of_TEIs + replicas
                 logger.info("--- Elapsed time = %s seconds ---" % (time.time() - start_time))
             else:
                 if tei_id not in df.columns:
                     if not pd.isnull(tei_id) and tei_id != "":
-                        logger.warning('The PRIMAL_ID ' + tei_id + ' in NUMBER_REPLICAS do not match the IDs in DUMMY DATA:')
+                        logger.warning(
+                            'The PRIMAL_ID ' + tei_id + ' in NUMBER_REPLICAS do not match the IDs in DUMMY DATA:')
                     [logger.warning(col) for col in df.columns.tolist() if 'TEI_' in col]
 
                 else:
                     logger.warning('Value ' + str(row['NUMBER']) + ' in row ' + tei_id + ' is not valid... Skipping')
 
-        #post_to_server(api_source, {'trackedEntityInstances': list_of_TEIs}, 'trackedEntityInstances')
+        # post_to_server(api_source, {'trackedEntityInstances': list_of_TEIs}, 'trackedEntityInstances')
 
         # logger.info(json.dumps(list_of_TEIs, indent=4)) # , sort_keys=True))
 
