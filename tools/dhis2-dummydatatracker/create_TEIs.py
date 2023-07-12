@@ -868,6 +868,10 @@ def from_df_to_TEI_json(df_replicas, tei_template, event_template, df_ou_ratio=N
                             new_event['dataValues'] = list()
                             first_row = False
                         else:
+                            # source: json.dumps() TypeError: Object of type int32 is not JSON serializable
+                            # np.int32 is not JSON serializable but python int is, what you have to do is just converting np.int32 to python int.
+                            # if isinstance(value, np.int32):
+                            #    new_event['dataValues'].append({'dataElement': row['UID'], 'value': int(value)})
                             if not pd.isnull(value) and value != "":
                                 new_event['dataValues'].append({'dataElement': row['UID'], 'value': value})
 
