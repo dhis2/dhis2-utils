@@ -754,8 +754,7 @@ def from_df_to_TEI_json(df_replicas, tei_template, event_template, df_ou_ratio=N
         # Total number of OUs to select is len(tei_columns)
         total_number_ous = len(tei_columns)
         list_ous = df_ou_ratio['VALUE'].tolist()
-        index_ratio = 0
-        for ratio in df_ou_ratio['RATIO'].tolist():
+        for index_ratio, ratio in enumerate(df_ou_ratio['RATIO'].tolist()):
             if ratio == 0:
                 continue
             list_ous_to_use = list_ous[index_ratio]
@@ -781,7 +780,7 @@ def from_df_to_TEI_json(df_replicas, tei_template, event_template, df_ou_ratio=N
                     ou_values += sample(list_ous_to_use, number_ous_to_pick)
                 else:
                     ou_values += [choice(list_ous_to_use) for _ in range(number_ous_to_pick)]
-            index_ratio += 1
+
         # Just in case
         # if len(list_ous_to_use) < total_number_ous:
         #     return sample(list_ous_to_use * (total_number_ous // len(list_ous_to_use) + 1), total_number_ous)
