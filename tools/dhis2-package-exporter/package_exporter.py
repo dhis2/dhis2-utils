@@ -585,9 +585,6 @@ def check_and_apply_sharing(json_object, metadata_type=None, omit=[], verbose=Fa
                             if userGroupId in userGroup_sharing_object:
                                 source_sharing = item['sharing']['userGroups'][userGroupId]['access']
                                 target_sharing = userGroup_sharing_object[userGroupId]['access']
-                                # print(metadata_type)
-                                # print(source_sharing)
-                                # print(target_sharing)
                                 if source_sharing != target_sharing:
                                     logger.warning(uid + " " + name + " shared with user group " +
                                                    userGroups_codes[userGroupId] + " with wrong access: " +
@@ -595,26 +592,18 @@ def check_and_apply_sharing(json_object, metadata_type=None, omit=[], verbose=Fa
                                     item['sharing']['userGroups'][userGroupId]['access'] = target_sharing
                             # Not a default sharing but still belongs to the package
                             else:
-                                # Get the code
                                 current_ug_code = userGroups_codes[userGroupId]
-                                # metadata_default_user_group_sharing
-                                default_found = ""
-                                for ug_sharing_default in ['ADMIN', 'ACCESS', 'DATA_CAPTURE']:
-                                    if ug_sharing_default in current_ug_code:
-                                        default_found = ug_sharing_default
-                                        break
-                                # Thanks to a previous check when exporting UGs, we should always find any of the 3
-                                target_sharing = ""
-                                for ug_sharing_default in metadata_default_user_group_sharing:
-                                    if default_found in ug_sharing_default:
-                                        target_sharing = metadata_default_user_group_sharing[ug_sharing_default]
-                                # Now let's check if it the expected access
-                                source_sharing = item['sharing']['userGroups'][userGroupId]['access']
-                                if source_sharing != target_sharing:
-                                    logger.warning(uid + " " + name + " shared with user group " +
-                                                   userGroups_codes[userGroupId] + " with wrong access: " +
-                                                   source_sharing + " (Expected " + target_sharing + ") ... Correcting")
-                                    item['sharing']['userGroups'][userGroupId]['access'] = target_sharing
+                                default_found = next(
+                                    (ug_sharing_default for ug_sharing_default in ['ADMIN', 'ACCESS', 'DATA_CAPTURE'] if
+                                     ug_sharing_default in current_ug_code), "")
+                                if default_found:
+                                    target_sharing = metadata_default_user_group_sharing.get(default_found, "")
+                                    source_sharing = item['sharing']['userGroups'][userGroupId]['access']
+                                    if source_sharing != target_sharing:
+                                        logger.warning(uid + " " + name + " shared with user group " +
+                                                       userGroups_codes[userGroupId] + " with wrong access: " +
+                                                       source_sharing + " (Expected " + target_sharing + ") ... Correcting")
+                                        item['sharing']['userGroups'][userGroupId]['access'] = target_sharing
                 # Add the default sharing
                 # Exception: default (cat option, category, catcombo)
                 if name.lower() != 'default':
