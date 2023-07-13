@@ -443,10 +443,10 @@ def update_last_updated(metaobj, metadata_type):
             else:
                 last_updated_by = 'NOT AVAILABLE'
             # Add to dataframe
-            df_report_lastUpdated = df_report_lastUpdated.append(
-                {'metadata_type': metadata_type, 'uid': id, 'name': name, 'code': code,
-                 'last_updated': last_updated, 'updated_by': last_updated_by}
-                , ignore_index=True)
+            df_report_lastUpdated = pd.concat([df_report_lastUpdated,
+                                               pd.DataFrame({'metadata_type': metadata_type, 'uid': id, 'name': name,
+                                                             'code': code, 'last_updated': last_updated,
+                                                             'updated_by': last_updated_by}, index=[0])])
 
 
 def clean_metadata(metaobj):
