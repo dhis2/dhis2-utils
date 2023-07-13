@@ -681,7 +681,7 @@ def check_template_TEIs_in_cols(df, ws_dummy_data=None):
                             errors = errors + 1
                             worksheet.write(index + 1, df.columns.get_loc(tei_column), value, error_format)
                             if ws_dummy_data is not None:
-                                ws_col_row = chr(65 + df.columns.get_loc(tei_column) + 1) + str(index + 2)
+                                ws_col_row = chr(65 + df.columns.get_loc(tei_column)) + str(index + 2)
                                 try:
                                     batch.format_cell_range(ws_dummy_data, ws_col_row + ':' + ws_col_row,
                                                             error_cell_fmt)
@@ -868,10 +868,6 @@ def from_df_to_TEI_json(df_replicas, tei_template, event_template, df_ou_ratio=N
                             new_event['dataValues'] = list()
                             first_row = False
                         else:
-                            # source: json.dumps() TypeError: Object of type int32 is not JSON serializable
-                            # np.int32 is not JSON serializable but python int is, what you have to do is just converting np.int32 to python int.
-                            # if isinstance(value, np.int32):
-                            #    new_event['dataValues'].append({'dataElement': row['UID'], 'value': int(value)})
                             if not pd.isnull(value) and value != "":
                                 new_event['dataValues'].append({'dataElement': row['UID'], 'value': value})
 
@@ -992,6 +988,9 @@ def create_replicas_from_df(df, column, start_date, end_date, number_of_replicas
                                                                     number_of_replicas)
 
     df_replicas = pd.DataFrame()
+    df_replicas = pd.concat(
+        [df_replicas, pd.DataFrame(columns=["TEI_" + str(clone) for clone in range(1, number_of_replicas + 1)])],
+        axis=1)
 
     # Check if gender and sex are included in the distribution
     gender_uid = ''
@@ -1061,25 +1060,18 @@ def create_replicas_from_df(df, column, start_date, end_date, number_of_replicas
                         if row['UID'] in distributed_values_per_id:
                             new_column.append(distributed_values_per_id[row['UID']][(clone - 1)])
                         else:
-                            if 'random' in row and row['random']:
-                                new_column.append(create_dummy_value(row['UID'], gender))
-                            else:
-                                new_column.append(row[column])
+                            new_column.append(row[column])
                     else:  # Enrollment
                         if row['UID'] in distributed_values_per_id:
                             new_column.append(distributed_values_per_id[row['UID']][(clone - 1)])
                         else:
-                            if 'random' in row and row['random']:
-                                new_column.append(create_dummy_value(row['UID'], gender))
-                            else:
-                                new_column.append(row[column])
-
+                            new_column.append(create_dummy_value(row['UID'], gender))
 
         df_replicas["TEI_" + str(clone)] = new_column
         logger.warning("--- %s seconds ---" % (time.time() - start_time))
 
-    df_replicas['UID'] = df['UID']
-    df_replicas['Stage'] = df['Stage']
+    df_replicas = pd.concat([df_replicas, df['UID']], axis=1)
+    df_replicas = pd.concat([df_replicas, df['Stage']], axis=1)
 
     if df_rules is not None:
         for index, row in df_rules.iterrows():
@@ -1230,6 +1222,12 @@ def main():
             for ou in custom_orgunits:
                 if ou['id'] in orgunits_uid:
                     program_orgunits.append(ou)
+                    
+        if len(program_orgunits) == 0:
+            logger.error("Not possible to find available OUs to create dummy data. Possible reasons:\n"
+                         "1. No OUs have been assigned to the program\n"
+                         "2. The OU selections made in PARAMETERS returned no result")
+            exit(1)
 
         df_ou_distrib = None
         if df_distrib is not None and df_distrib[df_distrib.NAME == 'Organisation Unit'].shape[0] > 0:
@@ -1331,7 +1329,7 @@ def main():
                 replicas = from_df_to_TEI_json(
                     create_replicas_from_df(df, tei_id, start_date, end_date, row['NUMBER'], df_distrib, df_rules),
                     tei_template, event_template, df_ratio)
-                #post_chunked_data(api_source, replicas, 'trackedEntityInstances', chunk_size)
+                post_chunked_data(api_source, replicas, 'trackedEntityInstances', chunk_size)
                 # post_to_server(api_source, {'trackedEntityInstances': replicas}, 'trackedEntityInstances')
                 list_of_TEIs = list_of_TEIs + replicas
                 logger.info("--- Elapsed time = %s seconds ---" % (time.time() - start_time))
