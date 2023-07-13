@@ -681,7 +681,7 @@ def check_template_TEIs_in_cols(df, ws_dummy_data=None):
                             errors = errors + 1
                             worksheet.write(index + 1, df.columns.get_loc(tei_column), value, error_format)
                             if ws_dummy_data is not None:
-                                ws_col_row = chr(65 + df.columns.get_loc(tei_column)) + str(index + 2)
+                                ws_col_row = chr(65 + df.columns.get_loc(tei_column) + 1) + str(index + 2)
                                 try:
                                     batch.format_cell_range(ws_dummy_data, ws_col_row + ':' + ws_col_row,
                                                             error_cell_fmt)
@@ -1061,12 +1061,19 @@ def create_replicas_from_df(df, column, start_date, end_date, number_of_replicas
                         if row['UID'] in distributed_values_per_id:
                             new_column.append(distributed_values_per_id[row['UID']][(clone - 1)])
                         else:
-                            new_column.append(row[column])
+                            if 'random' in row and row['random']:
+                                new_column.append(create_dummy_value(row['UID'], gender))
+                            else:
+                                new_column.append(row[column])
                     else:  # Enrollment
                         if row['UID'] in distributed_values_per_id:
                             new_column.append(distributed_values_per_id[row['UID']][(clone - 1)])
                         else:
-                            new_column.append(create_dummy_value(row['UID'], gender))
+                            if 'random' in row and row['random']:
+                                new_column.append(create_dummy_value(row['UID'], gender))
+                            else:
+                                new_column.append(row[column])
+
 
         df_replicas["TEI_" + str(clone)] = new_column
         logger.warning("--- %s seconds ---" % (time.time() - start_time))
