@@ -1078,8 +1078,8 @@ def create_replicas_from_df(df, column, start_date, end_date, number_of_replicas
         df_replicas["TEI_" + str(clone)] = new_column
         logger.warning("--- %s seconds ---" % (time.time() - start_time))
 
-    df_replicas['UID'] = df['UID']
-    df_replicas['Stage'] = df['Stage']
+    df_replicas = pd.concat([df_replicas, df['UID']], axis=1)
+    df_replicas = pd.concat([df_replicas, df['Stage']], axis=1)
 
     if df_rules is not None:
         for index, row in df_rules.iterrows():
