@@ -1231,6 +1231,11 @@ def main():
                 if ou['id'] in orgunits_uid:
                     program_orgunits.append(ou)
 
+        if len(program_orgunits) == 0:
+            logger.error('The program does not have OUs assigned or the selections made in PARAMETERS made impossible '
+                         'to build a list of organisation units where dummy data can be created') 
+            exit(1)
+
         df_ou_distrib = None
         if df_distrib is not None and df_distrib[df_distrib.NAME == 'Organisation Unit'].shape[0] > 0:
             ou_pos = df_distrib.index[(df_distrib.NAME == 'Organisation Unit')].tolist()
