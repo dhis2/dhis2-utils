@@ -100,12 +100,28 @@ where co.uid='LPeJEUjotaB';
 
 -- Category option combo count per category option
 
-select count(cocco.categoryoptioncomboid) as cat_option_combo_count, cocco.categoryoptionid as cat_option_id, co.name as cat_option_name
+select co.name as cat_option_name, count(cocco.categoryoptioncomboid) as cat_option_combo_count
 from categoryoptioncombos_categoryoptions cocco 
 inner join dataelementcategoryoption co on cocco.categoryoptionid=co.categoryoptionid 
-group by cocco.categoryoptionid, co.name 
-order by count(categoryoptioncomboid) desc 
-limit 100;
+group by cat_option_name
+order by cat_option_combo_count desc 
+limit 500;
+
+-- Category option combo count per category combo
+
+select cc.name as cat_combo_name, count(ccoc.categoryoptioncomboid) as cat_option_combo_count
+from categorycombo cc
+inner join categorycombos_optioncombos ccoc on cc.categorycomboid = ccoc.categorycomboid
+group by cat_combo_name
+order by cat_option_combo_count desc;
+
+-- Category option count per category
+
+select c.name as cat_name, count(cco.categoryoptionid) as cat_option_count
+from dataelementcategory c
+inner join categories_categoryoptions cco on c.categoryid = cco.categoryid 
+group by cat_name
+order by cat_option_count desc;
 
 -- Exploded _datasetorganisationunitcategory view
 
@@ -256,13 +272,13 @@ from userrole ur
 inner join userroleauthorities ura on ur.userroleid=ura.userroleid 
 where ura.authority = 'ALL';
 
--- (Write) MD5 set password to "district" for admin user
-
-update users set password='48e8f1207baef1ef7fe478a57d19f2e5', disabled = false where username='admin';
-
--- (Write) Bcrypt set password to "district" for admin user
+-- (Write) Bcrypt set password to "district" for admin user up to 2.37
 
 update users set password='$2a$10$wjLPViry3bkYEcjwGRqnYO1bT2Kl.ZY0kO.fwFDfMX53hitfx5.3C', disabled = false where username='admin';
+
+-- (Write) Bcrypt set password to "district" for admin user after 2.37
+
+update userinfo set password='$2a$10$wjLPViry3bkYEcjwGRqnYO1bT2Kl.ZY0kO.fwFDfMX53hitfx5.3C', disabled = false where username='admin';
 
 -- (Write) Add user to first user role with ALl authority 
 
@@ -510,8 +526,19 @@ group by pr.name;
 
 select p.uid as program_uid, p.name as program_name, count(*) as event_count
 from programstageinstance psi
-inner join programinstance pin on psi.programinstanceid = pin.programinstanceid 
-inner join program p on pin.programid = p.programid
+inner join programinstance pi on psi.programinstanceid = pi.programinstanceid 
+inner join program p on pi.programid = p.programid
+where psi.deleted = false
+group by p.uid, p.name
+order by p.name;
+
+-- Get count of event audit values per program (deleted false)
+
+select p.uid as program_uid, p.name as program_name, count(*) as audit_value_count
+from trackedentitydatavalueaudit tedva
+inner join programstageinstance psi on tedva.programstageinstanceid = psi.programstageinstanceid 
+inner join programinstance pi on psi.programinstanceid = pi.programinstanceid 
+inner join program p on pi.programid = p.programid
 where psi.deleted = false
 group by p.uid, p.name
 order by p.name;

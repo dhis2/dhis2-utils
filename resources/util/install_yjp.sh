@@ -7,6 +7,9 @@
 #
 # Enable with:
 # JAVA_OPTS="$JAVA_OPTS -agentpath:/path/to/libyjpagent.so"
+#
+# The YJP URL refers to a Linux YourKit profiler compressed archive where the root folder is named 'yjp'
+# See https://www.yourkit.com/java/profiler/download/
 
 YJP_URL="https://s3-eu-west-1.amazonaws.com/content.dhis2.org/development/yjp/yjp.zip" 
 YJP_FILE="yjp.zip"

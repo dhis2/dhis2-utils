@@ -36,7 +36,7 @@ def post_to_server(jsonObject, apiObject='metadata', strategy='CREATE_AND_UPDATE
             if apiObject == 'metadata':
                 logger.info("metadata imported :" + text['status'] + " " + json.dumps(text['stats']))
             else:
-                logger.info("data imported :" + text['status'] + " " + json.dumps(text['importCount']))
+#                logger.info("data imported :" + text['status'] + " " + json.dumps(text['importCount']))
                 if text['status'] == 'WARNING': logger.warning(text)
 
 
@@ -117,15 +117,18 @@ def generate_dummy_numeric_value(value_type, min_value, max_value):
     if min_value is None: min_value = -100
     if max_value is None: max_value = 100
     if value_type == "INTEGER_POSITIVE":
-        min_value = 1
+        if min_value <= 0:
+            min_value = 1
         value = randrange(min_value, max_value)
 
     elif value_type == "INTEGER_ZERO_OR_POSITIVE":
-        min_value = 0
+        if min_value < 0:
+            min_value = 0
         value = randrange(min_value, max_value)
 
     elif value_type == "INTEGER_NEGATIVE":
-        max_value = -1
+        if max_value >= 0:
+            max_value = -1
         value = randrange(min_value, max_value)
 
     elif value_type == "INTEGER":
@@ -220,6 +223,8 @@ def get_org_units(selection_type, value, random_size = None):
             ou_filter = "name:ilike:" + value  # To verify
         elif selection_type == 'code':
             ou_filter = "code:in:[" + value + "]"
+        elif selection_type == "group": # add any org unit groups by UID
+            ou_filter="organisationUnitGroups.id:in:[" + value + "]"
         elif selection_type == 'level':
             if value.isnumeric() and 0 < int(value):
                 ou_filter = "level:in:[" + value + "]"
@@ -342,7 +347,7 @@ def main():
     my_parser.add_argument('-cf', '--create_flat_file', action="store", metavar='file_name', const='xxx', nargs='?',
                            help='Create spreadsheet for min/max values'
                                 'Eg: --create_flat_file=my_file.csv')
-    my_parser.add_argument('-uf', '--use_flat_file', action="store", metavar='file_name', nargs=1,
+    my_parser.add_argument('-uf', '--use_flat_file', action="store", metavar='file_name', type=str,
                            help='Use spreadsheet for min/max values'
                                 'Eg: --use_flat_file=my_file.csv')
     my_parser.add_argument('-i', '--instance', action="store", dest="instance", type=str,
@@ -351,6 +356,13 @@ def main():
                            help='From all OUs selected from ous command, takes a random sample of ous_random_size')
 
     args = my_parser.parse_args()
+
+
+    if args.use_flat_file is not None:
+        filename = args.use_flat_file
+        print(filename)
+        logger.info("Reading " + filename + " for min/max value")
+        df_min_max = pd.read_csv('./' + filename, sep=None, engine='python')
 
     credentials_file = 'auth.json'
 
@@ -363,6 +375,7 @@ def main():
         with open(credentials_file, 'r') as json_file:
             credentials = json.load(json_file)
         if args.instance is not None:
+            #api_source = Api(args.instance, 'admin', 'district')
             api_source = Api(args.instance, credentials['dhis']['username'], credentials['dhis']['password'])
         else:
             api_source = Api.from_auth_file(credentials_file)
@@ -385,7 +398,10 @@ def main():
             print('Please provide a value for org_unit_selection to create the dummy data')
         else:
             if len(args.org_unit_selection) >= 1:
-                ouUIDs = get_org_units(args.org_unit_selection[0], args.org_unit_selection[1], int(args.ous_random_size))
+                if args.ous_random_size is not None:
+                    ouUIDs = get_org_units(args.org_unit_selection[0], args.org_unit_selection[1], int(args.ous_random_size))
+                else:
+                    ouUIDs = get_org_units(args.org_unit_selection[0], args.org_unit_selection[1])
                 if len(ouUIDs) == 0:
                     print('The OU selection ' + args.org_unit_selection[0] + ' '
                           + args.org_unit_selection[1] + ' returned no result')
@@ -431,11 +447,11 @@ def main():
         logger.warning('Could not find default Category Combo')
 
     COC = api_source.get('categoryOptionCombos',
-                         params={"paging": "false", "fields": "id,name"}).json()['categoryOptionCombos']
+                         params={"paging": "false", "fields": "id,name,code"}).json()['categoryOptionCombos']
     COC = reindex(COC, 'id')
 
     DE = api_source.get('dataElements',
-                        params={"paging": "false", "fields": "id,name,categoryCombo,aggregationType,valueType,optionSet"}).json()[
+                        params={"paging": "false", "fields": "id,name,code,categoryCombo,aggregationType,valueType,optionSet"}).json()[
         'dataElements']
     DE = reindex(DE, 'id')
 
@@ -517,8 +533,8 @@ def main():
 
             # Get dataElements
             for DSE in ds['dataSetElements']:
-                df_min_max = pd.DataFrame({}, columns=['DE UID', 'COC UID', 'DE Name', 'COC Name', 'valueType', 'min',
-                                                       'max'])
+                # df_min_max = pd.DataFrame({}, columns=['DE UID', 'COC UID', 'DE Name', 'COC Name', 'valueType', 'min',
+                #                                        'max'])
                 de = ''
                 if 'dataElement' in DSE:
                     deUID = DSE['dataElement']['id']
@@ -552,19 +568,27 @@ def main():
 
             logger.info("Found " + str(len(dsDataElements)) + " dataElements in dataset")
 
+            #df_min_max = None
+
             if args.create_flat_file is not None:
                 for de in dsDataElements:
                     if 'COCs' in dsDataElements[de]:
                         for coc in dsDataElements[de]['COCs']:
                             str_pair = de + "." + coc
+                            if 'code' in COC[coc]:
+                                coc_code = COC[coc]['code']
+                                coc_uid = COC[coc]['id']
+                            else:
+                                coc_code = ""
+                                coc_uid = ""
                             if str_pair not in greyedFields:
-                                df_min_max = df_min_max.append({"DE UID": de, "COC UID": coc,
+                                df_min_max = df_min_max.append({"DE UID": DE[de]['id'], "COC UID": coc_uid,
                                                                 "DE Name": DE[de]['name'], "COC Name": COC[coc]['name'],
                                                                 "valueType": dsDataElements[de]['valueType'],
                                                                 "min": "", "max": ""}, ignore_index=True)
                     else:
-                        df_min_max = df_min_max.append({"DE UID": de, "COC UID": "",
-                                                        "DE Name": DE[de]['name'], "COC Name": "",
+                        df_min_max = df_min_max.append({"DE UID": DE[de]['id'], "COC UID": "DEFAULT",
+                                                        "DE Name": DE[de]['name'], "COC Name": "default",
                                                         "valueType": dsDataElements[de]['valueType'],
                                                         "min": "", "max": ""}, ignore_index=True)
 
@@ -612,6 +636,10 @@ def main():
                                     dataValueSets.append({"dataElement": de,
                                                           "value": value, "orgUnit": ouUID, "period": period})
 
+                    with open('first_ou_one_week.json', 'w',
+                              encoding='utf8') as file:
+                        file.write(json.dumps({'dataValues': dataValueSets}, indent=4, sort_keys=True, ensure_ascii=False))
+                    file.close()
                     post_to_server({'dataValues': dataValueSets}, 'dataValueSets')
                     dataValueSets = list()
                     ouCount += 1

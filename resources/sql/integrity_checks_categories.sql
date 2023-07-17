@@ -63,7 +63,7 @@ select * from categoryoptioncombo where categoryoptioncomboid not in (select dis
 
 -- Get category option combos whose name is blank or null
 
-SELECT * FROM categoryoptioncombo where name ='' OR name IS NULL;
+select * from categoryoptioncombo where name ='' or name is null;
 
 -- Get category combos with categories which share the same category options
 

@@ -121,7 +121,7 @@ def main():
                     logger.error(f"ALL-MQ-19. Translation duplicated. Translation property={dup.split('|')[1]} locale={dup.split('|')[0]} values={translation_values}")
 
     for resource_type, resource_list in package.items():
-        if resource_type == "package":
+        if resource_type in ["package", "system"]:  # "package" and "system" are dictionaries, not lists.
             continue
         for resource in resource_list:
             # Review translations of the package that are placed under the 2 hierarchy level (not directly under package).
@@ -169,6 +169,7 @@ def main():
         prv_names = [prv["name"] for prv in package["programRuleVariables"] if prv["program"]["id"] == program]
         if len(prv_names) != len(set(prv_names)):
             logger.error(f"PRV-MQ-1 - In program '{myutils.get_name_by_type_and_uid(package, 'programs', program)}' ({program}), more than one PRV with the same name: {([item for item, count in collections.Counter(prv_names).items() if count > 1])}")
+            num_error += 1
 
     forbidden = ["and", "or", "not"]  # (dhis version >= 2.34)
     for prv in package["programRuleVariables"]:
@@ -381,6 +382,38 @@ def main():
                 message = f"DS-MQ-2 The dataSet '{dataSet_name}' ({dataSet_uid}) has an empty custom form"
                 logger.error(message)
                 num_error += 1
+
+    # Review only Data Element, Indicator, Program Indicator, Categories, Category Options, Category Combos, Maps, Visualizations
+    resources_to_review_naming = ["dataElements", "indicators", "programIndicators", "categories", "categoryOptions", "categoryCombos", "maps", "visualizations"]
+    for resource_type in resources_to_review_naming:
+        if resource_type not in package:
+            continue
+        for resource in package[resource_type]:
+            keys_to_validate = ["name", "shortName"]
+            for n in keys_to_validate:
+                if n not in resource:
+                    continue
+                # ALL-MQ-9 validation. Name and shortName SHOULD NOT contain >,<, ≥, ≤.
+                if any(ch in resource[n] for ch in ('>', '<', '≤', '≥')):
+                    logger.warning(f"ALL-MQ-9 {resource_type} ({resource['id']}) contains any of this characters '>', '<', '≤', '≥' in {n}: '{resource[n]}'")
+
+                # ALL-MQ-10 validation. Name and shortName SHOULD NOT contain the pattern "digit - digit"
+                pattern = r"\d - \d"
+                result = sum(1 for _ in re.finditer(pattern, resource[n]))
+                if result:
+                    logger.warning(f"ALL-MQ-10 {resource_type} ({resource['id']}) contains the expression 'digit(0-9) - digit(0-9) in {n}: '{resource[n]}'")
+
+    # Check existence of a description
+    # Review only: programs, dataSets, dataElements, trackedEntityAttributes, trackedEntityTypes, indicators, programIndicators, validationRules, predictors, programRules, visualizations (event chart, event report, map, data visualizer), dashboards
+    resources_to_review_description = ["programs", "dataSets", "dataElements", "trackedEntityAttributes", "trackedEntityTypes", "indicators", "programIndicators", "validationRules", "predictors", "programRules", "visualizations", "dashboards"]
+    for resource_type in resources_to_review_description:
+        if resource_type not in package:
+            continue
+        for resource in package[resource_type]:
+            if "description" not in resource:
+                    logger.warning(f"ALL-MQ-8 No description in {resource_type} ({resource['id']})")
+
+
     logger.info('-------------------------------------Finished validation-------------------------------------')
 
     #  See https://stackoverflow.com/questions/15435652/python-does-not-release-filehandles-to-logfile

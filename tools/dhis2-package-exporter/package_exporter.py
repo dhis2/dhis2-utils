@@ -8,8 +8,10 @@ from re import match, findall, compile, search
 import argparse
 from tools.json import reindex, remove_duplicates_by_id
 
+# This global variable allow defining the fields that are exported by default: *, :owner, etc..
+global_fields = ":owner"
 
-def get_metadata_element(metadata_type, filter="", fields='*'):
+def get_metadata_element(metadata_type, filter="", fields=global_fields):
     params = {"paging": "false",
               "fields": fields}
     if filter != "":
@@ -47,7 +49,7 @@ def get_metadata_element_with_fields(metadata_type, filter=""):
     # This function should be removed at some point. The whole purpose is to
     # to provide a workaround for when the API call using * does not work
     params = {"paging": "false",
-              "fields": "*"}
+              "fields": global_fields}
     if filter != "":
         params["filter"] = filter
     try:
@@ -153,7 +155,14 @@ def json_extract_nested_ids(obj, key):
                     # the key points to another dictionary eg, key is 'dataElement':
                     # "dataElement" : { "id": UID }
                     elif isinstance(v, dict):
-                        arr.append(v["id"])
+                        if 'id' in v:
+                            arr.append(v["id"])
+                        # It is a dictionary but not containing the id
+                        # Fetch the key and keep on looking
+                        else:
+                            for _key in list(v.keys()):
+                                if isinstance(v[_key], dict):
+                                    extract(v, arr, _key)
                     # if it is not a list or a dict, we simply take the value eg, key is organisationUnit
                     # "organisationUnit" : UID
                     else:
@@ -342,6 +351,7 @@ def get_hardcoded_values_in_fields(metaobj, metadata_type, fields):
     Returns:
         result (list): a list of unique UIDs found
     """
+
     result = list()
     if not isinstance(fields, list):
         fields = [fields]
@@ -356,6 +366,8 @@ def get_hardcoded_values_in_fields(metaobj, metadata_type, fields):
     if isinstance(metaobj, list):
         for element in metaobj:
             for key in element:
+                if key in fields and second_level != "" and 'orgUnit.group' in element[key][second_level]:
+                    z = None
                 if key in fields:
                     if metadata_type == 'dataElements_ind' or metadata_type == 'categoryOptionCombos':
                         pattern = compile(r'#\{([a-zA-Z0-9]{11})\.*([a-zA-Z0-9]{11})*\}')
@@ -368,7 +380,9 @@ def get_hardcoded_values_in_fields(metaobj, metadata_type, fields):
                     elif metadata_type == 'constants':
                         pattern = compile(r'C\{([a-zA-Z0-9]{11})\}')
                     elif metadata_type == 'organisationUnitGroups':
-                        pattern = compile(r'OUG\{([a-zA-Z0-9]{11})\}')
+                        # In predictors it goes like this: orgUnit.group(JCgLXxVGcRS)
+                        # but in indicators it is OUG{JCgLXxVGcRS}
+                        pattern = compile(r'(orgUnit\.group|OUG)\{?\(?([a-zA-Z0-9]{11})\}?\)?')
                     else:
                         logger.error('Error in function get_hardcoded_values_in_fields: unknown type ' + metadata_type)
                     if second_level != "":
@@ -383,6 +397,8 @@ def get_hardcoded_values_in_fields(metaobj, metadata_type, fields):
                                 if metadata_type == 'dataElements_ind':
                                     uid = z_match[0]
                                 elif metadata_type == 'categoryOptionCombos':
+                                    uid = z_match[1]
+                                elif metadata_type == 'organisationUnitGroups':
                                     uid = z_match[1]
                             else:
                                 uid = z_match
@@ -427,10 +443,10 @@ def update_last_updated(metaobj, metadata_type):
             else:
                 last_updated_by = 'NOT AVAILABLE'
             # Add to dataframe
-            df_report_lastUpdated = df_report_lastUpdated.append(
-                {'metadata_type': metadata_type, 'uid': id, 'name': name, 'code': code,
-                 'last_updated': last_updated, 'updated_by': last_updated_by}
-                , ignore_index=True)
+            df_report_lastUpdated = pd.concat([df_report_lastUpdated,
+                                               pd.DataFrame({'metadata_type': metadata_type, 'uid': id, 'name': name,
+                                                             'code': code, 'last_updated': last_updated,
+                                                             'updated_by': last_updated_by}, index=[0])])
 
 
 def clean_metadata(metaobj):
@@ -484,10 +500,15 @@ def clean_metadata(metaobj):
     return metaobj
 
 
-def check_sharing(json_object, omit=[], verbose=False):
+def check_and_apply_sharing(json_object, metadata_type=None, omit=[], verbose=False):
     """
-    Check publicAccess, user, users, userAccesses and userGroupAccesses for particular list of metadata objects
-    It also performs some corrections (for example, adding WHO Admin, removing some undesired User Groups in sharing..)
+    Check the object sharing
+       public -> Makes sure the sharing is the correct one depending on the metadata type
+       owner -> Makes sure only package_admin user owns the metadata
+       users -> Makes sure the object is not shared with any user
+       userGroups -> Verify that the object is not shared with a userGroup which does not belong in the package
+                  -> For some specific metadata, verify and correct the sharing with the standard userGroups CAPTURE, ACCESS, ADMIN
+                  -> and the other optional user groups in the package e.g. LAB ACCESS, LAB DATA CAPTURE
     Args:
       json_object (list): metadata to process
       omit (list): can be used to omit certain keys
@@ -496,72 +517,101 @@ def check_sharing(json_object, omit=[], verbose=False):
     Returns:
         metaobj (list): same metadata after cleaning
     """
+    # Build the userGroups sharing object to apply to (mostly) all metadata
+    userGroup_sharing_object = dict()
+    for ug_uid in userGroups_uids:
+        if userGroups_codes[ug_uid] in metadata_default_user_group_sharing:
+            userGroup_sharing_object[ug_uid] = {
+                "access": metadata_default_user_group_sharing[userGroups_codes[ug_uid]],
+                "id": ug_uid
+            }
+
+    # Public Access for this metadata_type
+    publicAccess = 'r-------' # default
+    if metadata_type == 'categoryOptions':
+        publicAccess = 'r-rw----'
+    elif metadata_type == 'dataSets':
+        publicAccess = 'r-r-----'
+    elif metadata_type == 'dashboards':
+        publicAccess = '--------'
+
     if isinstance(json_object, list):
-        for item in json_object:
-            # Check public access
-            if 'publicAccess' in item and 'publicAccess' not in omit:
-                if item['publicAccess'][1:2] == 'w':
-                    if verbose:
-                        logger.warning(
-                            'Element ' + item["id"] + ' has write public access ' + item['publicAccess'][0:2])
-            if 'user' in item and 'user' not in omit:
-                if item['user']['id'] != package_admin_uid:
-                    if verbose:
-                        logger.warning('Element ' + item["id"] + ' has wrong user: ' + item['user'][
+        for i in range(0, len(json_object)):
+            item = json_object[i]
+            if 'name' in item:
+                name = item['name']
+            else:
+                name = ""
+            uid = item['id']
+            # Remove publicAccess, it is just an old placeholder, this goes now in sharing
+            if 'publicAccess' in item:
+                item.pop('publicAccess', None)
+            # Remove users
+            if 'user' in item:
+                item.pop('user', None)
+            # Remove users from userGroups
+            if 'users' in item:
+                item['users'] = []
+            # Remove userGroupAccesses, this goes now in sharing
+            if 'userGroupAccesses' in item:
+                item['userGroupAccesses'] = []
 
-                            'id'] + '... Replacing with package_admin')
-                    user_package_admin = {'id': package_admin_uid, 'name': 'package admin', 'username': 'package_admin'}
-
-                    for key in list(item['user']):
-                        if key not in user_package_admin:
-                            del item['user'][key]
-                        else:
-                            item['user'][key] = user_package_admin[key]
-            if 'users' in item and isinstance(item['users'], list) and 'users' not in omit:
-                users = item['users']
-                outsiders = list()
-                for user in users:
-                    if user['id'] != package_admin_uid:
-                        outsiders.append(user["id"])
-                if len(outsiders) > 0:
-                    if verbose:
-                        logger.warning('Element ' + item["id"] + ' is shared with wrong users : ' + str(
-                            outsiders) + '... Correcting')
-                    item['users'] = []
-            if 'userAccesses' in item and len(item['userAccesses']) > 0:
-                if verbose:
-                    logger.warning('Element ' + item["id"] + ' is shared with specific users... Removing')
-                item['userAccesses'] = []
-            if 'userGroupAccesses' in item and 'userGroupAccesses' not in omit:
-                correct_user_groups = list()
-                outsider_user_groups = list()
-                for uga in item['userGroupAccesses']:
-                    if uga['id'] not in userGroups_uids:
-                        message = ""
-                        message += uga['id']
-                        if 'name' in uga:
-                            message += ' - ' + uga['name']
-                        outsider_user_groups.append(message)
-                    else:
-                        correct_user_groups.append(uga)
-                item['userGroupAccesses'] = correct_user_groups
-                if len(outsider_user_groups) > 0:
-                    if verbose:
-                        logger.warning(
-                            'Element ' + item["id"] + ' is shared with a User Group(s) outside the package: ' +
-                            ', '.join(outsider_user_groups) + '... Deleted')
-            # Starting in 2.36 a new sharing object was introduced
             if 'sharing' in item and 'sharing' not in omit:
+                # all aggregate metadata should be shared with public read access, with these exceptions
+                #  Dashboards: metadata read
+                #  Category options: metadata read; data readwrite
+                # all tracker packages should have no public access
+                if 'public' not in item['sharing']:
+                    item['sharing']['public'] = ""
+                item['sharing']['public'] = publicAccess
+                # Make sure package admin is the owner
                 if 'owner' in item['sharing']:
                     item['sharing']['owner'] = package_admin_uid
                 # Clean users, we share always with userGroups
                 item['sharing']['users'] = {}
                 # Process userGroups in sharing
+                # Remove userGroups which are not part of the package
                 if 'userGroups' in item['sharing']:
                     userGroupIds = list(item['sharing']['userGroups'].keys())
+                    # The metadata must be shared with the default user groups in the standard way
+                    # If it is shared with a UG of the package which is not default we will try to figure out if it
+                    # belongs to ACCESS, CAPTURE or ADMIN and check that the sharing is correct
+                    # A UG sharing which does not belong to the package is removed
                     for userGroupId in userGroupIds:
                         if userGroupId not in userGroups_uids:
+                            logger.warning('Removing incorrect user group ' + userGroupId + ' sharing in object ' + uid + " " + name)
                             item['sharing']['userGroups'].pop(userGroupId, None)
+                        else:
+                            if userGroupId in userGroup_sharing_object:
+                                source_sharing = item['sharing']['userGroups'][userGroupId]['access']
+                                target_sharing = userGroup_sharing_object[userGroupId]['access']
+                                if source_sharing != target_sharing:
+                                    logger.warning(uid + " " + name + " shared with user group " +
+                                                   userGroups_codes[userGroupId] + " with wrong access: " +
+                                                   source_sharing + " (Expected " + target_sharing + ") ... Correcting")
+                                    item['sharing']['userGroups'][userGroupId]['access'] = target_sharing
+                            # Not a default sharing but still belongs to the package
+                            else:
+                                current_ug_code = userGroups_codes[userGroupId]
+                                default_found = next(
+                                    (ug_sharing_default for ug_sharing_default in ['ADMIN', 'ACCESS', 'DATA_CAPTURE'] if
+                                     ug_sharing_default in current_ug_code), "")
+                                if default_found:
+                                    target_sharing = metadata_default_user_group_sharing.get(default_found, "")
+                                    source_sharing = item['sharing']['userGroups'][userGroupId]['access']
+                                    if source_sharing != target_sharing:
+                                        logger.warning(uid + " " + name + " shared with user group " +
+                                                       userGroups_codes[userGroupId] + " with wrong access: " +
+                                                       source_sharing + " (Expected " + target_sharing + ") ... Correcting")
+                                        item['sharing']['userGroups'][userGroupId]['access'] = target_sharing
+                # Add the default sharing
+                # Exception: default (cat option, category, catcombo)
+                if name.lower() != 'default':
+                    if 'userGroups' not in item['sharing']:
+                        item['sharing']['userGroups'] = dict()
+                    for key, value in userGroup_sharing_object.items():
+                        item['sharing']['userGroups'][key] = value
+
 
     return json_object
 
@@ -832,13 +882,14 @@ def get_category_elements(cat_combo_uid, cat_uid_dict=None):
     if 'code' not in catCombo or catCombo['code'].lower() != 'default':
         cat['categoryCombos'] = list(dict.fromkeys(cat['categoryCombos'] + [cat_combo_uid]))
         cat['categories'] = list(dict.fromkeys(cat['categories'] + json_extract_nested_ids(catCombo, 'categories')))
+        # Get COCs referenced by this Cat Combo
+        COCs = get_metadata_element('categoryOptionCombos',
+                                    filter="categoryCombo.id:eq:" + cat_combo_uid,
+                                    fields="id,name,categoryOptions")
         cat['categoryOptionCombos'] = list(
-            dict.fromkeys(cat['categoryOptionCombos'] + json_extract_nested_ids(catCombo, 'categoryOptionCombos')))
+            dict.fromkeys(cat['categoryOptionCombos'] + json_extract(COCs, 'id')))
 
         # Get the categoryOptions used in COCs
-        COCs = get_metadata_element('categoryOptionCombos',
-                                    filter="id:in:[" + ','.join(cat['categoryOptionCombos']) + "]",
-                                    fields="id,name,categoryOptions")
         for coc in COCs:
             cat['categoryOptions'] = list(
                 dict.fromkeys(cat['categoryOptions'] + json_extract_nested_ids(coc, 'categoryOptions')))
@@ -896,6 +947,8 @@ def add_metadata_object_list_with_merge(current_metadata_obj, new_metadata_obj, 
 def main():
     global api_source
     global userGroups_uids
+    global userGroups_codes
+    global metadata_default_user_group_sharing
     global df_report_lastUpdated
     global package_admin_uid
     global users
@@ -911,10 +964,16 @@ def main():
                            help='instance to extract the package from (robot account is required!) - tracker_dev by default')
     my_parser.add_argument('-desc', '--description', action="store", dest="description", type=str,
                            help='Description of the package or any comments you want to add')
+    my_parser.add_argument('-han', '--health_area_name', action="store", dest="health_area_name", type=str,
+                           help='Name of the Health area of the package')
+    my_parser.add_argument('-hac', '--health_area_code', action="store", dest="health_area_code", type=str,
+                           help='Code of the Health area of the package')
     my_parser.add_argument('-vb', '--verbose', dest='verbose', action='store_true')
     my_parser.set_defaults(verbose=False)
     my_parser.add_argument('-od', '--only_dashboards', dest='only_dashboards', action='store_true')
     my_parser.set_defaults(only_dashboards=False)
+    my_parser.add_argument('-efo', '--export_full_objects', dest='export_full_objects', action='store_true')
+    my_parser.set_defaults(export_full_objects=False)
 
     args = my_parser.parse_args()
 
@@ -1015,7 +1074,7 @@ def main():
             try:
                 dataSets = api_source.get('dataSets',
                                           params={"paging": "false",
-                                                  "fields": "*",
+                                                  "fields": global_fields,
                                                   "filter": "id:in:[" + package_type_or_uid + "]"}).json()['dataSets']
             except RequestException as e:
                 # if e.code == 404:
@@ -1040,7 +1099,7 @@ def main():
                     dataSets += api_source.get('dataSets',
                                                params={"paging": "false",
                                                        "filter": "code:$like:" + prefix,
-                                                       "fields": "*"}).json()['dataSets']
+                                                       "fields": global_fields}).json()['dataSets']
 
             except RequestException as e:
                 pass
@@ -1055,7 +1114,7 @@ def main():
                     tmp_programs += api_source.get('programs',
                                                    params={"paging": "false",
                                                            "filter": "code:$like:" + prefix,
-                                                           "fields": "*"}).json()['programs']
+                                                           "fields": global_fields}).json()['programs']
                 programs = list()
                 for program in tmp_programs:
                     # A tracker program has a 'trackedEntityType'
@@ -1077,7 +1136,7 @@ def main():
                     dashboards += api_source.get('dashboards',
                                                  params={"paging": "false",
                                                          "filter": "code:$like:" + prefix,
-                                                         "fields": "*"}).json()['dashboards']
+                                                         "fields": global_fields}).json()['dashboards']
             except RequestException as e:
                 pass
             else:
@@ -1107,6 +1166,7 @@ def main():
         # Iteration over this list happens in reversed order
         # Altering the order can cause the script to stop working
         metadata_import_order = [
+            'organisationUnitGroupSets', 'organisationUnitGroups',
             'categoryOptionGroupSets', 'categoryOptionGroups',
             'categoryOptions', 'categories', 'categoryCombos', 'categoryOptionCombos',
             'legendSets',  # used in indicators, optionGroups, programIndicators and trackedEntityAttributes
@@ -1122,7 +1182,6 @@ def main():
             'programs', 'programSections',
             'programStageSections', 'programStages',
             'programIndicatorGroups', 'programIndicators',
-            'organisationUnitGroupSets', 'organisationUnitGroups',  # Assuming this will only be found in indicators
             'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
             'programRuleVariables', 'programRuleActions', 'programRules',
             'visualizations', 'maps', 'eventVisualizations', 'eventReports', 'eventCharts', 'dashboards',
@@ -1135,6 +1194,7 @@ def main():
     elif package_type_or_uid == 'DSH' or args.only_dashboards:
         metadata_import_order = [
             'categoryOptionGroupSets', 'categoryOptionGroups',
+            'organisationUnitGroupSets', 'organisationUnitGroups',
             'legendSets',
             'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
             'visualizations', 'maps', 'eventVisualizations', 'eventReports', 'eventCharts', 'dashboards',
@@ -1144,6 +1204,7 @@ def main():
     elif package_type_or_uid == 'AGG':
         # This list is looped backwards
         metadata_import_order = [
+            'organisationUnitGroupSets', 'organisationUnitGroups',
             'categoryOptionGroupSets', 'categoryOptionGroups',
             'categoryOptions', 'categories', 'categoryCombos', 'categoryOptionCombos',
             'legendSets',  # used in indicators, optionGroups, programIndicators and trackedEntityAttributes
@@ -1154,7 +1215,6 @@ def main():
             'validationNotificationTemplates', 'validationRules', 'validationRuleGroups',  # group first
             'jobConfigurations',
             'predictors', 'predictorGroups',  # group first
-            'organisationUnitGroupSets', 'organisationUnitGroups',  # Assuming this will only be found in indicators
             'indicatorTypes', 'indicatorGroupSets', 'indicators', 'indicatorGroups',
             # groups first, to get indicator uids
             'sections', 'dataSets',
@@ -1179,10 +1239,19 @@ def main():
             metadata_import_order.remove('eventReports')
             metadata_import_order.remove('eventCharts')
 
+    # If we are exporting for internal use of UiO, there is no need to include OUG or OUGS since
+    # they should be present in our instance
+    if args.export_full_objects:
+        if 'organisationUnitGroups' in metadata_import_order:
+            metadata_import_order.remove('organisationUnitGroups')
+        if 'organisationUnitGroupSets' in metadata_import_order:
+            metadata_import_order.remove('organisationUnitGroupSets')
+
     metadata = dict()
 
     # todo: these could be part of a big dictionary instead of having individual keys
     userGroups_uids = list()
+    userGroups_codes = dict()
     dashboard_items = {"visualization": [], "eventReport": [], "eventChart": [],
                        "eventVisualization": [], "map": []}
     attributes_uids = ['iehcXLBKVWM',  # Code (ICD-10)
@@ -1246,6 +1315,15 @@ def main():
     constants_uids = list()
     package_admin_uid = 'vUeLeQMSwhN'
     package_user_role_uid = 'nCNR71ZbTHK'
+
+    # Default access - all metadata should be shared with 3 groups per toolkit/pkg:
+    metadata_default_user_group_sharing = {
+        package_prefix + "_ADMIN": "rw------",
+        package_prefix + "_ACCESS": "r-------",
+        package_prefix + "_DATA_CAPTURE": "r-------"
+    }
+    # Metadata for which ACCESS will have read permissions and DATA_CAPTURE read/write permissions
+    metadata_types_supporting_data_capture = ['dataSets', 'programs', 'programStages', 'trackedEntityTypes', 'categoryOptions']
 
     metadata_filters = {
         "attributes": "id:in:[" + ','.join(attributes_uids) + "]",
@@ -1353,8 +1431,6 @@ def main():
 
         for metadata_type in reversed(metadata_import_order):
             logger.info("------------ " + metadata_type + " ------------")
-            if metadata_type == 'categoryOptionGroupSets':
-                metadata_type = 'categoryOptionGroupSets'
             if metadata_type == "package":
                 locale = "en"
                 if args.only_dashboards:
@@ -1370,6 +1446,8 @@ def main():
                     "code": package_code,
                     "description": package_description,
                     "type": package_type,
+                    "healthAreaName": args.health_area_name,
+                    "healthAreaCode": args.health_area_code,
                     "version": "",
                     "lastUpdated": "",
                     "DHIS2Version": api_source.version,
@@ -1377,6 +1455,14 @@ def main():
                     "locale": locale
                 }
                 continue
+
+            # Adjust sharing
+            if metadata_type in metadata_types_supporting_data_capture:
+                metadata_default_user_group_sharing[package_prefix + "_ACCESS"] = "r-r-----"
+                metadata_default_user_group_sharing[package_prefix + "_DATA_CAPTURE"] = "r-rw----"
+            else:
+                metadata_default_user_group_sharing[package_prefix + "_ACCESS"] = "r-------"
+                metadata_default_user_group_sharing[package_prefix + "_DATA_CAPTURE"] = "r-------"
 
             # --- Get the stuff -------------------------------------------------------------
             if 'code:$like' in metadata_filters[metadata_type]:
@@ -1398,8 +1484,9 @@ def main():
                 # For example, the package prefix could be COVID-19_CS, but there is also another package COVID-19_POE
                 # These two packages share the same userGroups, prefixed COVID-19
                 if len(metaobject) == 0 and metadata_type in ['userGroups']:
-                    # Try with first to chars of the package_prefix
-                    metaobject += get_metadata_element(metadata_type, 'code:$like:' + package_prefix[0:2])
+                    # Try with the first part of the code
+                    package_prefix_first_part = package_prefix.split('_')[0]
+                    metaobject += get_metadata_element(metadata_type, 'code:$like:' + package_prefix_first_part)
 
             if metadata_type[:-1] in dashboard_items:
                 # Update data dimension items
@@ -1433,7 +1520,8 @@ def main():
 
             elif metadata_type == "predictors":
                 # Replace hardcoded UIDs for organisation Unit Levels with a placeholder
-                metaobject = replace_organisation_level_with_placeholder(metaobject)
+                if not args.export_full_objects:
+                    metaobject = replace_organisation_level_with_placeholder(metaobject)
                 # Remove predictorGroups in predictors which do not belong to the package
                 metaobject = remove_undesired_children(metaobject, predictorGroups_uids, 'predictorGroups')
 
@@ -1506,21 +1594,42 @@ def main():
                                                                                 'categoryOptionGroups')
 
                 elif metadata_type == "categoryOptionGroupSets":
-                    # We need to remove the categoryOptionGroupSets which contain categoryOptionGroups not belonging to the package
+                    # Remove the categoryOptionGroupSet if none of its COGs is included in the package
+                    # If some COGs are included in the package, simply blank the ones which belong to it but are not included
                     new_metaobject = list()
                     cat_opt_group_set_ids_to_keep = list()
+                    placeholder_category_option_groups_to_add = list()
                     for catOptGroupSet in metaobject:
                         valid_cat_opt_group_set = True
+                        number_of_valid_cat_opt_grp = 0
+                        category_option_groups_to_add = list()
                         for catOptGroup in catOptGroupSet['categoryOptionGroups']:
-                            if catOptGroup['id'] not in cat_uids['categoryOptionGroups']:
-                                valid_cat_opt_group_set = False
-                                break
+                            if catOptGroup['id'] in cat_uids['categoryOptionGroups']:
+                                number_of_valid_cat_opt_grp += 1
+                            else:
+                                category_option_groups_to_add.append(catOptGroup['id'])
+                        # Here is where we check the logic If none of the COG made it, then remove the COGS
+                        if number_of_valid_cat_opt_grp == 0:
+                            valid_cat_opt_group_set = False
+                        # In this case, we keep the COGS but we need to add the COG as the placeholder list
+                        elif number_of_valid_cat_opt_grp != len(catOptGroupSet['categoryOptionGroups']):
+                            placeholder_category_option_groups_to_add = \
+                                list(dict.fromkeys(placeholder_category_option_groups_to_add + category_option_groups_to_add))
+
                         if valid_cat_opt_group_set and catOptGroupSet['id'] not in cat_opt_group_set_ids_to_keep:
                             new_metaobject.append(catOptGroupSet)
                             cat_opt_group_set_ids_to_keep.append(catOptGroupSet['id'])
+
                     metadata['categoryOptionGroups'] = remove_undesired_children(metadata['categoryOptionGroups'],
                                                                                  cat_opt_group_set_ids_to_keep,
                                                                                  'groupSets')
+                    # Add the placeholders
+                    metadata['categoryOptionGroups'] += get_metadata_element('categoryOptionGroups', 'id:in:['+','.join(placeholder_category_option_groups_to_add)+']', ':owner')
+                    metadata['categoryOptionGroups'] = clean_metadata(metadata['categoryOptionGroups'])
+                    metadata['categoryOptionGroups'] = check_and_apply_sharing(metadata['categoryOptionGroups'])
+                    for index in range(0, len(metadata['categoryOptionGroups'])):
+                        if metadata['categoryOptionGroups'][index]['id'] in placeholder_category_option_groups_to_add:
+                            metadata['categoryOptionGroups'][index].pop('categoryOptions')
                     metaobject = new_metaobject
 
                     # categoryOptionGroups and categoryOptionGroupSets reference each other, so also do this clean up
@@ -1563,7 +1672,8 @@ def main():
             ## Remove orgunits
             org_units_assigned = json_extract_nested_ids(metaobject, 'organisationUnits')
             if len(org_units_assigned) > 0:
-                if metadata_type in ['eventReports', 'eventCharts', 'eventVisualizations', 'visualizations']:
+                if metadata_type in ['eventReports', 'eventCharts', 'eventVisualizations', 'visualizations'] and \
+                        not args.export_full_objects:
                     metaobject = check_and_replace_root_ou_assigned(metaobject)
                 else:
                     logger.warning('There are org units assigned... Removing')
@@ -1587,9 +1697,7 @@ def main():
             ## Check sharing
             ### With userGroups
             if metadata_type != 'userGroups':  # userGroups are processed in post-processing
-                metaobject = check_sharing(metaobject)
-            # else:
-            #    metaobject = check_sharing(metaobject, ['userGroupAccesses'])
+                metaobject = check_and_apply_sharing(metaobject, metadata_type)
 
             ## Custom checks
             if package_type_or_uid in ['TRK', 'EVT']:
@@ -1634,7 +1742,7 @@ def main():
 
                         trackedEntityAttributes_in_data_dimension = get_metadata_element(metadata_type, "id:in:[" + ','.join(
                             diff_data_dimension) + "]")
-                        trackedEntityAttributes_in_data_dimension = check_sharing(trackedEntityAttributes_in_data_dimension)
+                        trackedEntityAttributes_in_data_dimension = check_and_apply_sharing(trackedEntityAttributes_in_data_dimension, metadata_type)
                         trackedEntityAttributes_in_data_dimension = clean_metadata(trackedEntityAttributes_in_data_dimension)
                         metaobject += trackedEntityAttributes_in_data_dimension
                         trackedEntityAttributes_uids['P'] += diff_data_dimension
@@ -1680,7 +1788,7 @@ def main():
                         total_errors += 1
                         programIndicators_in_data_dimension = get_metadata_element(metadata_type, "id:in:[" + ','.join(
                             diff_data_dimension) + "]")
-                        programIndicators_in_data_dimension = check_sharing(programIndicators_in_data_dimension)
+                        programIndicators_in_data_dimension = check_and_apply_sharing(programIndicators_in_data_dimension, metadata_type)
                         programIndicators_in_data_dimension = clean_metadata(programIndicators_in_data_dimension)
                         metaobject += programIndicators_in_data_dimension
                         programIndicators_uids['P'] += diff_data_dimension
@@ -1721,9 +1829,12 @@ def main():
                         new_userGroups = remove_subset_from_set(new_userGroups, 'users')
                         # Add userGroups and check sharing
                         metadata['userGroups'] += new_userGroups
-                        # Before calling check_sharing, update the userGroup uids global variable
-                        userGroups_uids += new_userGroups_uids
-                        metadata['userGroups'] = check_sharing(metadata['userGroups'])
+                        # Before calling check_and_apply_sharing, update the userGroup uids global variable
+                        # userGroups_uids += new_userGroups_uids
+                        # for new_userGroup in new_userGroups:
+                        #     if new_userGroup['id'] not in userGroups_codes:
+                        #         userGroups_codes[new_userGroup['id']] = new_userGroup['code']
+                        # metadata['userGroups'] = check_and_apply_sharing(metadata['userGroups'], metadata_type)
 
             elif metadata_type == "validationNotificationTemplates":
                 # Check for userGroups used which are not included in the package
@@ -1745,9 +1856,9 @@ def main():
                     new_userGroups = remove_subset_from_set(new_userGroups, 'users')
                     # Add userGroups and check sharing
                     metadata['userGroups'] += new_userGroups
-                    # Before calling check_sharing, update the userGroup uids global variable
+                    # Before calling check_and_apply_sharing, update the userGroup uids global variable
                     userGroups_uids += new_userGroups_uids
-                    metadata['userGroups'] = check_sharing(metadata['userGroups'])
+                    metadata['userGroups'] = check_and_apply_sharing(metadata['userGroups'], metadata_type)
 
             if metadata_type == "dataEntryForms":
                 for custom_form in metaobject:
@@ -1841,7 +1952,7 @@ def main():
                 diff = list(dict.fromkeys(diff_ps + diff_ds + diff_ind + diff_pred))
                 if len(diff) > 0:
                     dataElements_in_indicators = get_metadata_element(metadata_type, "id:in:[" + ','.join(diff) + "]")
-                    dataElements_in_indicators = check_sharing(dataElements_in_indicators)
+                    dataElements_in_indicators = check_and_apply_sharing(dataElements_in_indicators, metadata_type)
                     dataElements_in_indicators = clean_metadata(dataElements_in_indicators)
                     metaobject += dataElements_in_indicators
 
@@ -1854,7 +1965,7 @@ def main():
                                    + str(diff_data_dimension) + "... Adding them")
                     dataElements_in_data_dimension = get_metadata_element(metadata_type, "id:in:[" + ','.join(
                         diff_data_dimension) + "]")
-                    dataElements_in_data_dimension = check_sharing(dataElements_in_data_dimension)
+                    dataElements_in_data_dimension = check_and_apply_sharing(dataElements_in_data_dimension, metadata_type)
                     dataElements_in_data_dimension = clean_metadata(dataElements_in_data_dimension)
                     metaobject += dataElements_in_data_dimension
                     dataElements_in_package += diff_data_dimension
@@ -1879,7 +1990,7 @@ def main():
                                    + str(diff_data_dimension) + "... Adding them")
                     indicators_in_data_dimension = get_metadata_element(metadata_type,
                                                                         "id:in:[" + ','.join(diff_data_dimension) + "]")
-                    indicators_in_data_dimension = check_sharing(indicators_in_data_dimension)
+                    indicators_in_data_dimension = check_and_apply_sharing(indicators_in_data_dimension, metadata_type)
                     indicators_in_data_dimension = clean_metadata(indicators_in_data_dimension)
                     metaobject += indicators_in_data_dimension
                     indicator_uids += diff_data_dimension
@@ -1890,7 +2001,7 @@ def main():
                                    + str(diff_data_set) + "... Adding them")
                     indicators_in_dataset = get_metadata_element(metadata_type,
                                                                  "id:in:[" + ','.join(diff_data_set) + "]")
-                    indicators_in_dataset = check_sharing(indicators_in_dataset)
+                    indicators_in_dataset = check_and_apply_sharing(indicators_in_dataset, metadata_type)
                     indicators_in_dataset = clean_metadata(indicators_in_dataset)
                     metaobject += indicators_in_dataset
                     indicator_uids += diff_data_dimension
@@ -1904,13 +2015,68 @@ def main():
 
             # --- Post processing ---------------------------------------------------------
             if metadata_type == "userGroups":
+                missing_user_groups = 0
                 # Store the ids
                 ug_names = list()
+                found_default_user_groups = list()
+                non_standard_ug_codes = list()
+                standard_ug_required_codes = ["ADMIN", "ACCESS", "DATA_CAPTURE"]
                 for ug in metadata[metadata_type]:
                     userGroups_uids.append(ug['id'])
+                    userGroups_codes[ug['id']] = ug['code']
                     ug_names.append(ug['name'])
+                    # Store in separate lists standard and non standard UGs
+                    if any(code in ug['code'] for code in standard_ug_required_codes):
+                        found_default_user_groups.append(ug['code'])
+                    else:
+                        non_standard_ug_codes.append(ug['code'])
+
+                # Check that at least, one ADMIN, one ACCESS and one DATA_CAPTURE are present in the UGs
+                # Check also that the naming convention package_prefix + ADMIN / ACCESS / DATA_CAPTURE is there
+                # As a fallback, it could be that rather we have UGs using parent prefix. For example, we could have
+                # TB_DRS_ADMIN (package_prefix + '_ADMIN') or TB_ADMIN (package_prefix_first_part + '_ADMIN')
+                count_standard_naming_ug = 0  # In binary, first 3 bits: 0 0 0
+                for ug_default_code in found_default_user_groups:
+                    # Check if we find the parent prefix user groups and if so, replace them in the dict
+                    if ug_default_code == package_prefix + "_ADMIN":
+                        count_standard_naming_ug |= 4  # Set third bit to 1
+                    elif ug_default_code == package_prefix + "_ACCESS":
+                        count_standard_naming_ug |= 2  # Set second bit to 1
+                    elif ug_default_code == package_prefix + "_DATA_CAPTURE":
+                        count_standard_naming_ug |= 1  # Set first bit to 1
+                if count_standard_naming_ug != 7:  # First 3 bits are not 1 1 1?
+                    logger.warning(
+                        "Any of the standard UGs with the package_prefix in the code is missing in the package... Checking parent prefix")
+                    package_prefix_first_part = '_'.join(package_prefix.split('_')[:-1])
+                    count_standard_naming_ug = 0
+                    for ug_default_code in found_default_user_groups:
+                        # Check if we find the parent prefix user groups and if so, replace them in the dict
+                        if ug_default_code == package_prefix_first_part + "_ADMIN":
+                            metadata_default_user_group_sharing[
+                                package_prefix_first_part + "_ADMIN"] = metadata_default_user_group_sharing.pop(
+                                package_prefix + "_ADMIN")
+                            count_standard_naming_ug |= 4  # Set third bit to 1
+                        elif ug_default_code == package_prefix_first_part + "_ACCESS":
+                            metadata_default_user_group_sharing[
+                                package_prefix_first_part + "_ACCESS"] = metadata_default_user_group_sharing.pop(
+                                package_prefix + "_ACCESS")
+                            count_standard_naming_ug |= 2  # Set second bit to 1
+                        elif ug_default_code == package_prefix_first_part + "_DATA_CAPTURE":
+                            metadata_default_user_group_sharing[
+                                package_prefix_first_part + "_DATA_CAPTURE"] = metadata_default_user_group_sharing.pop(
+                                package_prefix + "_DATA_CAPTURE")
+                            count_standard_naming_ug |= 1  # Set first bit to 1
+                    if count_standard_naming_ug != 7:  # First 3 bits are not 1 1 1?
+                        logger.error(
+                            "Could not found any of the default UGs with standard naming convention... Aborting")
+                        exit(1)
+                if len(non_standard_ug_codes) > 0:
+                    for ug_non_standard_code in non_standard_ug_codes:
+                        logger.warning(
+                            "User Group " + ug_non_standard_code + " is not of type ADMIN, ACCESS or DATA_CAPTURE")
+
                 logger.info(', '.join(ug_names))
-                metadata[metadata_type] = check_sharing(metadata[metadata_type])
+                metadata[metadata_type] = check_and_apply_sharing(metadata[metadata_type], metadata_type)
             elif metadata_type == "dashboards":
                 # The following loop compiles all ids by type of dashboard items
                 # for example, let's get all ids of all visualisations used in all dashboards of this package
@@ -1928,10 +2094,12 @@ def main():
                 # Add legendSets
                 legendSets_uids += json_extract_nested_ids(metaobject, 'legendSets')
                 legendSets_uids += json_extract_nested_ids(metaobject, 'legendSet')
+                legendSets_uids += json_extract_nested_ids(metaobject, 'legend')
                 # See if there is a reference to a categoryOption Group and/or Set
                 cat_uids['categoryOptionGroups'] += json_extract_nested_ids(metaobject, 'categoryOptionGroups')
                 cat_uids['categoryOptionGroupSets'] += json_extract_nested_ids(metaobject, 'categoryOptionGroupSet')
                 organisationUnitGroups_uids += json_extract_nested_ids(metaobject, 'itemOrganisationUnitGroups')
+                organisationUnitGroups_uids += json_extract_nested_ids(metaobject, 'organisationUnitGroups')
                 if len(organisationUnitGroups_uids) > 0:
                     metadata_filters["organisationUnitGroups"] = "id:in:[" + ','.join(organisationUnitGroups_uids) + "]"
 
@@ -1992,8 +2160,6 @@ def main():
                     metadata_filters["trackedEntityTypes"] = "id:in:[" + ','.join(trackedEntityTypes_uids) + "]"
                     metadata_filters["trackedEntityAttributes"] = "id:in:[" + ','.join(
                         trackedEntityAttributes_uids['P']) + "]"
-                # At this point we have collected all possible references to constants, so update that filter too
-                metadata_filters["constants"] = "id:in:[" + ','.join(list(dict.fromkeys(constants_uids))) + "]"
                 programNotificationTemplates_uids += json_extract_nested_ids(metaobject, 'notificationTemplates')
                 metadata_filters['programNotificationTemplates'] = "id:in:[" + ','.join(
                     programNotificationTemplates_uids) + "]"
@@ -2033,9 +2199,9 @@ def main():
                         new_userGroup = remove_subset_from_set(new_userGroup, 'users')
                         # Add userGroups and check sharing
                         metadata['userGroups'] += new_userGroup
-                        # Before calling check_sharing, update the userGroup uids global variable
+                        # Before calling check_and_apply_sharing, update the userGroup uids global variable
                         userGroups_uids += new_userGroup[0]['id']
-                        metadata['userGroups'] = check_sharing(metadata['userGroups'])
+                        metadata['userGroups'] = check_and_apply_sharing(metadata['userGroups'], metadata_type)
                     if 'compulsoryDataElementOperands' in ds:
                         # Search for categoryOptionCombo, legendSets
                         for operand in ds['compulsoryDataElementOperands']:
@@ -2063,6 +2229,10 @@ def main():
                         # GEN PACKAGE
                         # metadata_filters["categoryCombos"] = "id:in:[" + ','.join(
                         #     cat_uids['categoryCombos']) + "]"
+
+                # At this point we have collected all possible references to constants, so update that filter too
+                metadata_filters["constants"] = "id:in:[" + ','.join(list(dict.fromkeys(constants_uids))) + "]"
+
 
             elif metadata_type == "trackedEntityTypes":
                 # Scan for trackedEntityAttributes used
@@ -2186,6 +2356,15 @@ def main():
                 for coc in hardcoded_cocs:
                     if coc not in cat_uids['categoryOptionCombos']:
                         add_category_option_combo(coc, cat_uids)
+                constants_uids += get_hardcoded_values_in_fields(metaobject, 'constants',
+                                                                'generator.expression')
+                organisationUnitGroups_uids += get_hardcoded_values_in_fields(metaobject, 'organisationUnitGroups',
+                                                                'generator.expression')
+                if len(organisationUnitGroups_uids) > 0:
+                    # Make list of UIDs unique
+                    organisationUnitGroups_uids = list(dict.fromkeys(organisationUnitGroups_uids))
+                    metadata_filters["organisationUnitGroups"] = "id:in:[" + ','.join(organisationUnitGroups_uids) + "]"
+
             elif metadata_type == "predictorGroups":
                 # Get predictor uids
                 predictor_uids = json_extract_nested_ids(metaobject, 'predictors')
@@ -2207,6 +2386,8 @@ def main():
                                                                           'rightSide.expression'])
 
                 hardcoded_cocs = get_hardcoded_values_in_fields(metaobject, 'categoryOptionCombos',
+                                                                ['leftSide.expression', 'rightSide.expression'])
+                constants_uids += get_hardcoded_values_in_fields(metaobject, 'constants',
                                                                 ['leftSide.expression', 'rightSide.expression'])
                 for coc in hardcoded_cocs:
                     if coc not in cat_uids['categoryOptionCombos']:
@@ -2269,4 +2450,3 @@ if __name__ == "__main__":
     # if the number of errors > 0, exit with code -1
     if package_file is None:
         sys.exit(1)
-

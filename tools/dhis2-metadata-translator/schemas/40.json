@@ -1,0 +1,598 @@
+{
+    "translatable_fields": {
+        "attributes": {
+            "name": "NAME",
+            "shortName": "SHORT_NAME",
+            "description": "DESCRIPTION"
+        },
+        "userRoles": {
+            "name": "NAME"
+        },
+        "userGroups": {
+            "name": "NAME"
+        },
+        "constants": {
+            "description": "DESCRIPTION",
+            "name": "NAME",
+            "shortName": "SHORT_NAME"
+        },
+        "options": {
+            "description": "DESCRIPTION",
+            "formName": "FORM_NAME",
+            "name": "NAME"
+        },
+        "optionSets": {
+            "name": "NAME"
+        },
+        "optionGroups": {
+            "description": "DESCRIPTION",
+            "name": "NAME",
+            "shortName": "SHORT_NAME"
+        },
+        "optionGroupSets": {
+            "description": "DESCRIPTION",
+            "name": "NAME"
+        },
+        "legendSets": {
+            "name": "NAME"
+        },
+        "organisationUnits": {
+            "name": "NAME",
+            "shortName": "SHORT_NAME",
+            "description": "DESCRIPTION"
+        },
+        "organisationUnitLevels": {
+            "name": "NAME"
+        },
+        "organisationUnitGroups": {
+            "description": "DESCRIPTION",
+            "name": "NAME",
+            "shortName": "SHORT_NAME"
+        },
+        "organisationUnitGroupSets": {
+            "description": "DESCRIPTION",
+            "name": "NAME",
+            "shortName": "SHORT_NAME"
+        },
+        "categoryOptions": {
+            "description": "DESCRIPTION",
+            "formName": "FORM_NAME",
+            "name": "NAME",
+            "shortName": "SHORT_NAME"
+        },
+        "categoryOptionGroups": {
+            "description": "DESCRIPTION",
+            "name": "NAME",
+            "shortName": "SHORT_NAME"
+        },
+        "categoryOptionGroupSets": {
+            "description": "DESCRIPTION",
+            "name": "NAME",
+            "shortName": "SHORT_NAME"
+        },
+        "categories": {
+            "description": "DESCRIPTION",
+            "name": "NAME",
+            "shortName": "SHORT_NAME"
+        },
+        "categoryCombos": {
+            "name": "NAME"
+        },
+        "categoryOptionCombos": {
+            "name": "NAME"
+        },
+        "dataElements": {
+            "description": "DESCRIPTION",
+            "formName": "FORM_NAME",
+            "name": "NAME",
+            "shortName": "SHORT_NAME"
+        },
+        "routes": {
+            "name": "NAME"
+        },
+        "dataElementGroups": {
+            "description": "DESCRIPTION",
+            "name": "NAME",
+            "shortName": "SHORT_NAME"
+        },
+        "dataElementGroupSets": {
+            "description": "DESCRIPTION",
+            "name": "NAME",
+            "shortName": "SHORT_NAME"
+        },
+        "indicatorTypes": {
+            "name": "NAME"
+        },
+        "indicators": {
+            "denominatorDescription": "DENOMINATOR_DESCRIPTION",
+            "numeratorDescription": "NUMERATOR_DESCRIPTION",
+            "name": "NAME",
+            "shortName": "SHORT_NAME",
+            "description": "DESCRIPTION",
+            "formName": "FORM_NAME"
+        },
+        "indicatorGroups": {
+            "name": "NAME"
+        },
+        "indicatorGroupSets": {
+            "name": "NAME"
+        },
+        "dataEntryForms": {
+            "name": "NAME"
+        },
+        "dataSets": {
+            "name": "NAME",
+            "shortName": "SHORT_NAME",
+            "description": "DESCRIPTION",
+            "formName": "FORM_NAME"
+        },
+        "dataSetNotificationTemplates": {
+            "subjectTemplate": "SUBJECT_TEMPLATE",
+            "name": "NAME",
+            "messageTemplate": "MESSAGE_TEMPLATE"
+        },
+        "sections": {
+            "name": "NAME"
+        },
+        "dataApprovalLevels": {
+            "name": "NAME"
+        },
+        "dataApprovalWorkflows": {
+            "name": "NAME"
+        },
+        "validationRules": {
+            "description": "DESCRIPTION",
+            "instruction": "INSTRUCTION",
+            "name": "NAME"
+        },
+        "validationRuleGroups": {
+            "name": "NAME"
+        },
+        "validationNotificationTemplates": {
+            "subjectTemplate": "SUBJECT_TEMPLATE",
+            "name": "NAME",
+            "messageTemplate": "MESSAGE_TEMPLATE"
+        },
+        "trackedEntityAttributes": {
+            "name": "NAME",
+            "shortName": "SHORT_NAME",
+            "description": "DESCRIPTION",
+            "formName": "FORM_NAME"
+        },
+        "trackedEntityTypes": {
+            "description": "DESCRIPTION",
+            "formName": "FORM_NAME",
+            "name": "NAME"
+        },
+        "programNotificationTemplates": {
+            "subjectTemplate": "SUBJECT_TEMPLATE",
+            "name": "NAME",
+            "messageTemplate": "MESSAGE_TEMPLATE"
+        },
+        "programStageSections": {
+            "description": "DESCRIPTION",
+            "formName": "FORM_NAME",
+            "name": "NAME"
+        },
+        "programStages": {
+            "name": "NAME",
+            "dueDateLabel": "DUE_DATE_LABEL",
+            "executionDateLabel": "EXECUTION_DATE_LABEL",
+            "description": "DESCRIPTION",
+            "formName": "FORM_NAME"
+        },
+        "programs": {
+            "enrollmentDateLabel": "ENROLLMENT_DATE_LABEL",
+            "incidentDateLabel": "INCIDENT_DATE_LABEL",
+            "name": "NAME",
+            "shortName": "SHORT_NAME",
+            "description": "DESCRIPTION",
+            "formName": "FORM_NAME"
+        },
+        "eventCharts": {
+            "domainAxisLabel": "domainAxisLabel",
+            "subtitle": "subtitle",
+            "rangeAxisLabel": "rangeAxisLabel",
+            "name": "NAME",
+            "description": "DESCRIPTION",
+            "title": "title",
+            "targetLineLabel": "targetLineLabel",
+            "baseLineLabel": "baseLineLabel"
+        },
+        "programSections": {
+            "description": "DESCRIPTION",
+            "formName": "FORM_NAME",
+            "name": "NAME"
+        },
+        "programIndicators": {
+            "description": "DESCRIPTION",
+            "formName": "FORM_NAME",
+            "name": "NAME",
+            "shortName": "SHORT_NAME"
+        },
+        "programIndicatorGroups": {
+            "name": "NAME"
+        },
+        "relationshipTypes": {
+            "fromToName": "RELATIONSHIP_FROM_TO_NAME",
+            "toFromName": "RELATIONSHIP_TO_FROM_NAME",
+            "name": "NAME"
+        },
+        "programRuleVariables": {
+            "name": "NAME"
+        },
+        "programRuleActions": {
+            "content": "CONTENT"
+        },
+        "programRules": {
+            "name": "NAME"
+        },
+        "eventReports": {
+            "subtitle": "subtitle",
+            "name": "NAME",
+            "description": "DESCRIPTION",
+            "title": "title"
+        },
+        "eventHooks": {
+            "name": "NAME"
+        },
+        "aggregateDataExchanges": {
+            "name": "NAME"
+        },
+        "mapViews": {
+            "description": "DESCRIPTION"
+        },
+        "reports": {
+            "name": "NAME"
+        },
+        "visualizations": {
+            "subtitle": "subtitle",
+            "name": "NAME",
+            "description": "DESCRIPTION",
+            "title": "title"
+        },
+        "documents": {
+            "name": "NAME"
+        },
+        "externalMapLayers": {
+            "name": "NAME"
+        },
+        "eventVisualizations": {
+            "domainAxisLabel": "domainAxisLabel",
+            "subtitle": "subtitle",
+            "rangeAxisLabel": "rangeAxisLabel",
+            "name": "NAME",
+            "description": "DESCRIPTION",
+            "title": "title",
+            "targetLineLabel": "targetLineLabel",
+            "baseLineLabel": "baseLineLabel"
+        },
+        "maps": {
+            "description": "DESCRIPTION",
+            "name": "NAME"
+        },
+        "predictors": {
+            "description": "DESCRIPTION",
+            "name": "NAME",
+            "shortName": "SHORT_NAME"
+        },
+        "predictorGroups": {
+            "name": "NAME"
+        },
+        "dashboardItems": {},
+        "dashboards": {
+            "description": "DESCRIPTION",
+            "name": "NAME"
+        },
+        "eventFilters": {
+            "description": "DESCRIPTION",
+            "name": "NAME"
+        },
+        "programStageWorkingLists": {
+            "description": "DESCRIPTION",
+            "name": "NAME"
+        },
+        "trackedEntityInstanceFilters": {
+            "description": "DESCRIPTION",
+            "name": "NAME"
+        }
+    },
+    "translatable_max_chars": {
+        "attributes": {
+            "NAME": 230,
+            "SHORT_NAME": 50,
+            "DESCRIPTION": 2147483647
+        },
+        "userRoles": {
+            "NAME": 230
+        },
+        "userGroups": {
+            "NAME": 230
+        },
+        "constants": {
+            "DESCRIPTION": 2147483647,
+            "NAME": 230,
+            "SHORT_NAME": 50
+        },
+        "options": {
+            "DESCRIPTION": 2147483647,
+            "FORM_NAME": 2147483647,
+            "NAME": 230
+        },
+        "optionSets": {
+            "NAME": 230
+        },
+        "optionGroups": {
+            "DESCRIPTION": 2147483647,
+            "NAME": 230,
+            "SHORT_NAME": 50
+        },
+        "optionGroupSets": {
+            "DESCRIPTION": 2147483647,
+            "NAME": 230
+        },
+        "legendSets": {
+            "NAME": 230
+        },
+        "organisationUnits": {
+            "NAME": 230,
+            "SHORT_NAME": 50,
+            "DESCRIPTION": 2147483647
+        },
+        "organisationUnitLevels": {
+            "NAME": 230
+        },
+        "organisationUnitGroups": {
+            "DESCRIPTION": 2147483647,
+            "NAME": 230,
+            "SHORT_NAME": 50
+        },
+        "organisationUnitGroupSets": {
+            "DESCRIPTION": 2147483647,
+            "NAME": 230,
+            "SHORT_NAME": 50
+        },
+        "categoryOptions": {
+            "DESCRIPTION": 2147483647,
+            "FORM_NAME": 230,
+            "NAME": 230,
+            "SHORT_NAME": 50
+        },
+        "categoryOptionGroups": {
+            "DESCRIPTION": 2147483647,
+            "NAME": 230,
+            "SHORT_NAME": 50
+        },
+        "categoryOptionGroupSets": {
+            "DESCRIPTION": 2147483647,
+            "NAME": 230,
+            "SHORT_NAME": 50
+        },
+        "categories": {
+            "DESCRIPTION": 2147483647,
+            "NAME": 230,
+            "SHORT_NAME": 50
+        },
+        "categoryCombos": {
+            "NAME": 230
+        },
+        "categoryOptionCombos": {
+            "NAME": 2147483647
+        },
+        "dataElements": {
+            "DESCRIPTION": 2147483647,
+            "FORM_NAME": 230,
+            "NAME": 230,
+            "SHORT_NAME": 50
+        },
+        "routes": {
+            "NAME": 230
+        },
+        "dataElementGroups": {
+            "DESCRIPTION": 2147483647,
+            "NAME": 230,
+            "SHORT_NAME": 50
+        },
+        "dataElementGroupSets": {
+            "DESCRIPTION": 2147483647,
+            "NAME": 230,
+            "SHORT_NAME": 50
+        },
+        "indicatorTypes": {
+            "NAME": 230
+        },
+        "indicators": {
+            "DENOMINATOR_DESCRIPTION": 2147483647,
+            "NUMERATOR_DESCRIPTION": 2147483647,
+            "NAME": 230,
+            "SHORT_NAME": 50,
+            "DESCRIPTION": 2147483647,
+            "FORM_NAME": 2147483647
+        },
+        "indicatorGroups": {
+            "NAME": 230
+        },
+        "indicatorGroupSets": {
+            "NAME": 230
+        },
+        "dataEntryForms": {
+            "NAME": 160
+        },
+        "dataSets": {
+            "NAME": 230,
+            "SHORT_NAME": 50,
+            "DESCRIPTION": 2147483647,
+            "FORM_NAME": 2147483647
+        },
+        "dataSetNotificationTemplates": {
+            "SUBJECT_TEMPLATE": 100,
+            "NAME": 230,
+            "MESSAGE_TEMPLATE": 2147483647
+        },
+        "sections": {
+            "NAME": 230
+        },
+        "dataApprovalLevels": {
+            "NAME": 230
+        },
+        "dataApprovalWorkflows": {
+            "NAME": 230
+        },
+        "validationRules": {
+            "DESCRIPTION": 2147483647,
+            "INSTRUCTION": 2147483647,
+            "NAME": 230
+        },
+        "validationRuleGroups": {
+            "NAME": 230
+        },
+        "validationNotificationTemplates": {
+            "SUBJECT_TEMPLATE": 100,
+            "NAME": 230,
+            "MESSAGE_TEMPLATE": 2147483647
+        },
+        "trackedEntityAttributes": {
+            "NAME": 230,
+            "SHORT_NAME": 50,
+            "DESCRIPTION": 2147483647,
+            "FORM_NAME": 2147483647
+        },
+        "trackedEntityTypes": {
+            "DESCRIPTION": 2147483647,
+            "FORM_NAME": 2147483647,
+            "NAME": 230
+        },
+        "programNotificationTemplates": {
+            "SUBJECT_TEMPLATE": 100,
+            "NAME": 230,
+            "MESSAGE_TEMPLATE": 2147483647
+        },
+        "programStageSections": {
+            "DESCRIPTION": 2147483647,
+            "FORM_NAME": 2147483647,
+            "NAME": 230
+        },
+        "programStages": {
+            "NAME": 230,
+            "DUE_DATE_LABEL": 255,
+            "EXECUTION_DATE_LABEL": 255,
+            "DESCRIPTION": 2147483647,
+            "FORM_NAME": 2147483647
+        },
+        "programs": {
+            "ENROLLMENT_DATE_LABEL": 2147483647,
+            "INCIDENT_DATE_LABEL": 2147483647,
+            "NAME": 230,
+            "SHORT_NAME": 50,
+            "DESCRIPTION": 2147483647,
+            "FORM_NAME": 2147483647
+        },
+        "eventCharts": {
+            "domainAxisLabel": 255,
+            "subtitle": 255,
+            "rangeAxisLabel": 255,
+            "NAME": 230,
+            "DESCRIPTION": 2147483647,
+            "title": 255,
+            "targetLineLabel": 255,
+            "baseLineLabel": 255
+        },
+        "programSections": {
+            "DESCRIPTION": 2147483647,
+            "FORM_NAME": 2147483647,
+            "NAME": 230
+        },
+        "programIndicators": {
+            "DESCRIPTION": 2147483647,
+            "FORM_NAME": 2147483647,
+            "NAME": 230,
+            "SHORT_NAME": 50
+        },
+        "programIndicatorGroups": {
+            "NAME": 230
+        },
+        "relationshipTypes": {
+            "RELATIONSHIP_FROM_TO_NAME": 255,
+            "RELATIONSHIP_TO_FROM_NAME": 255,
+            "NAME": 230
+        },
+        "programRuleVariables": {
+            "NAME": 230
+        },
+        "programRuleActions": {
+            "CONTENT": 2147483647
+        },
+        "programRules": {
+            "NAME": 230
+        },
+        "eventReports": {
+            "subtitle": 255,
+            "NAME": 230,
+            "DESCRIPTION": 2147483647,
+            "title": 255
+        },
+        "eventHooks": {
+            "NAME": 230
+        },
+        "aggregateDataExchanges": {
+            "NAME": 230
+        },
+        "mapViews": {
+            "DESCRIPTION": 2147483647
+        },
+        "reports": {
+            "NAME": 230
+        },
+        "visualizations": {
+            "subtitle": 255,
+            "NAME": 230,
+            "DESCRIPTION": 2147483647,
+            "title": 255
+        },
+        "documents": {
+            "NAME": 230
+        },
+        "externalMapLayers": {
+            "NAME": 230
+        },
+        "eventVisualizations": {
+            "domainAxisLabel": 255,
+            "subtitle": 255,
+            "rangeAxisLabel": 255,
+            "NAME": 230,
+            "DESCRIPTION": 2147483647,
+            "title": 255,
+            "targetLineLabel": 255,
+            "baseLineLabel": 255
+        },
+        "maps": {
+            "DESCRIPTION": 2147483647,
+            "NAME": 230
+        },
+        "predictors": {
+            "DESCRIPTION": 2147483647,
+            "NAME": 230,
+            "SHORT_NAME": 50
+        },
+        "predictorGroups": {
+            "NAME": 230
+        },
+        "dashboardItems": {},
+        "dashboards": {
+            "DESCRIPTION": 2147483647,
+            "NAME": 230
+        },
+        "eventFilters": {
+            "DESCRIPTION": 255,
+            "NAME": 230
+        },
+        "programStageWorkingLists": {
+            "DESCRIPTION": 2147483647,
+            "NAME": 230
+        },
+        "trackedEntityInstanceFilters": {
+            "DESCRIPTION": 255,
+            "NAME": 230
+        }
+    }
+}

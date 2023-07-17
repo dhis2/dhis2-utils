@@ -2,6 +2,11 @@ import json
 import chardet
 import sys
 import pandas as pd
+import openpyxl
+from openpyxl.workbook import Workbook
+from openpyxl.styles import Font
+from openpyxl.utils import get_column_letter
+from openpyxl.formatting.rule import FormulaRule, CellIsRule
 from datetime import datetime
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -234,15 +239,21 @@ if __name__ == '__main__':
                            help='Previous json file')
     my_parser.add_argument('new_json', metavar='new_json', type=str,
                            help='New json file')
-    my_parser.add_argument('gsheet_name', metavar='gsheet_name', type=str,
+    my_parser.add_argument('sheet_name', metavar='sheet_name', type=str,
                            help='Title of the spreadsheet to use or create (if it exists in the workspace, it gets updated)')
+    my_parser.add_argument('-ug', '--use_gspread', action="store_true", dest='use_gspread',
+                           help='Upload result to Google Spreadsheet (requires token)')
+    my_parser.set_defaults(use_gspread=False)
     my_parser.add_argument('-sw', '--share_with', action="append", metavar='email', nargs=1,
                            help='email address to share the generated spreadsheet with as OWNER. '
                                 'Eg: --share_with=peter@dhis2.org')
     args = my_parser.parse_args()
     package_file1 = args.old_json
     package_file2 = args.new_json
-    sh_name = args.gsheet_name
+
+    upload_to_gspread = args.use_gspread
+
+    sh_name = args.sheet_name
 
     if not os.path.exists(package_file1):
         print("The file " + package_file1 + " could not be found")
@@ -250,33 +261,34 @@ if __name__ == '__main__':
     if not os.path.exists(package_file2):
         print("The file " + package_file2 + " could not be found")
         exit(1)
-    if args.share_with is not None and len(args.share_with) > 0:
-        for param in args.share_with:
-            if not (re.search('^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$', param[0])):
-                print("The email address " + param[0] + " is not valid")
-                exit(1)
+    if upload_to_gspread:
+        if args.share_with is not None and len(args.share_with) > 0:
+            for param in args.share_with:
+                if not (re.search('^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$', param[0])):
+                    print("The email address " + param[0] + " is not valid")
+                    exit(1)
 
-    scope = ['https://spreadsheets.google.com/feeds',
-             'https://www.googleapis.com/auth/drive']
-    google_spreadshseet_credentials = 'dummy-data-297922-97b90db83bdc.json'
-    try:
-        f = open(google_spreadshseet_credentials)
-    except IOError:
-        print("Please provide file with google spreadsheet credentials")
-        exit(1)
-    else:
-        credentials = ServiceAccountCredentials.from_json_keyfile_name(google_spreadshseet_credentials, scope)
+        scope = ['https://spreadsheets.google.com/feeds',
+                 'https://www.googleapis.com/auth/drive']
+        google_spreadshseet_credentials = 'dummy-data-297922-97b90db83bdc.json'
+        try:
+            f = open(google_spreadshseet_credentials)
+        except IOError:
+            print("Please provide file with google spreadsheet credentials")
+            exit(1)
+        else:
+            credentials = ServiceAccountCredentials.from_json_keyfile_name(google_spreadshseet_credentials, scope)
 
-    gc = gspread.authorize(credentials)
-    mode='update'
-    sheet1_still_there = False
-    try:
-        gs = gc.open(sh_name)
-    except gspread.SpreadsheetNotFound:
-        mode='create'
-        sheet1_still_there = True
-        gs = gc.create(sh_name)
-        pass
+        gc = gspread.authorize(credentials)
+        mode='update'
+        sheet1_still_there = False
+        try:
+            gs = gc.open(sh_name)
+        except gspread.SpreadsheetNotFound:
+            mode='create'
+            sheet1_still_there = True
+            gs = gc.create(sh_name)
+            pass
 
     df = dict()
     delete_payload = dict()
@@ -429,49 +441,104 @@ if __name__ == '__main__':
             file.write(json.dumps(delete_payload, indent=4, sort_keys=True, ensure_ascii=False))
         file.close()
 
+    writer = pd.ExcelWriter(sh_name + '.xlsx', engine='openpyxl')
     for metadata_type in df:
-        # if metadata_type not in ['optionSets', 'dataElements', 'visualizations']:
-        #     continue
-        successful = False
-        while not successful:
-            print('Processing ' + metadata_type)
-            metadata_type_ws_exists = True
-            try:
-                gs.worksheet(metadata_type)
-            except gspread.WorksheetNotFound:
-                metadata_type_ws_exists = False
+        print('Processing ' + metadata_type)
 
-            try:
-                if mode == 'create' or not metadata_type_ws_exists:
-                    if sheet1_still_there:
-                        ws = gs.sheet1
-                        ws.update_title(metadata_type)
-                        sheet1_still_there = False
+        df[metadata_type].to_excel(writer, sheet_name=metadata_type, index=False, header=True)
+
+        # Get the worksheet
+        ws = writer.sheets[metadata_type]
+
+        for cell in ws[1]:
+            cell.font = Font(bold=True)
+
+        # Freeze the first row
+        ws.freeze_panes = ws['A2']
+
+        index = 1
+        for column in df[metadata_type].columns:
+            width = df[metadata_type][column].str.len().max()
+            if width < 10:
+                width = 10
+            ws.column_dimensions[get_column_letter(index)].width = width
+            index += 1
+
+
+        fill_red = openpyxl.styles.PatternFill(start_color='00FF0000', end_color='00FF0000',
+                                           fill_type='solid')
+        fill_blue = openpyxl.styles.PatternFill(start_color='001C8FFF', end_color='001C8FFF',
+                                           fill_type='solid')
+        fill_green = openpyxl.styles.PatternFill(start_color='0000FF00', end_color='0000FF00',
+                                           fill_type='solid')
+        rule1 = FormulaRule(formula=['=$A2="CREATED"'], stopIfTrue=True, fill=fill_green)
+        rule2 = FormulaRule(formula=['=$A2="UPDATED"'], stopIfTrue=True, fill=fill_blue)
+        rule3 = FormulaRule(formula=['=$A2="DELETED"'], stopIfTrue=True, fill=fill_red)
+        rule4 = FormulaRule(formula=['=$D2="CREATED"'], stopIfTrue=True, fill=fill_green)
+        rule5 = FormulaRule(formula=['=$D2="UPDATED"'], stopIfTrue=True, fill=fill_blue)
+        rule6 = FormulaRule(formula=['=$D2="DELETED"'], stopIfTrue=True, fill=fill_red)
+
+        # Add the conditional formatting rules to the worksheet
+        ws.conditional_formatting.add(get_column_letter(1) + '2:' + get_column_letter(3) + str(ws.max_row), rule1)
+        ws.conditional_formatting.add(get_column_letter(1) + '2:' + get_column_letter(3) + str(ws.max_row), rule2)
+        ws.conditional_formatting.add(get_column_letter(1) + '2:' + get_column_letter(3) + str(ws.max_row), rule3)
+
+        ws.conditional_formatting.add(get_column_letter(4) + '2:' + get_column_letter(6) + str(ws.max_row), rule4)
+        ws.conditional_formatting.add(get_column_letter(4) + '2:' + get_column_letter(6) + str(ws.max_row), rule5)
+        ws.conditional_formatting.add(get_column_letter(4) + '2:' + get_column_letter(6) + str(ws.max_row), rule6)
+
+    writer.save()
+
+
+    if upload_to_gspread:
+        for metadata_type in df:
+            # if metadata_type not in ['optionSets', 'dataElements', 'visualizations']:
+            #     continue
+            successful = False
+            while not successful:
+                print('Processing ' + metadata_type)
+                metadata_type_ws_exists = True
+                try:
+                    gs.worksheet(metadata_type)
+                except gspread.WorksheetNotFound:
+                    metadata_type_ws_exists = False
+
+                try:
+                    if mode == 'create' or not metadata_type_ws_exists:
+                        if sheet1_still_there:
+                            ws = gs.sheet1
+                            ws.update_title(metadata_type)
+                            sheet1_still_there = False
+                        else:
+                            ws = gs.add_worksheet(title=metadata_type, rows=df[metadata_type].shape[0], cols=df[metadata_type].shape[1])
                     else:
-                        ws = gs.add_worksheet(title=metadata_type, rows=df[metadata_type].shape[0], cols=df[metadata_type].shape[1])
-                else:
-                    ws = gs.worksheet(metadata_type)
+                        ws = gs.worksheet(metadata_type)
 
-                ws.clear()
-                set_with_dataframe(worksheet=ws, dataframe=df[metadata_type], include_index=False,
-                                   include_column_header=True, resize=True)
+                    ws.clear()
+                    set_with_dataframe(worksheet=ws, dataframe=df[metadata_type], include_index=False,
+                                       include_column_header=True, resize=True)
 
-                ws.format('A1:H1', {'textFormat': {'bold': True}})
-                set_frozen(ws, rows=1)
-                apply_conditional_format_to_ws(ws)
-            except APIError as e:
-                # Temporary fix for write requests per minute per user per project 60
-                # This could be improved by using batch requests
-                result = e.args[0]
-                if result['code'] == 429:
-                    print('Quota exceeded, waiting 1min before retrying')
-                    time.sleep(60)
-                    pass
+                    ws.format('A1:H1', {'textFormat': {'bold': True}})
+                    set_frozen(ws, rows=1)
+                    apply_conditional_format_to_ws(ws)
+                except APIError as e:
+                    # Temporary fix for write requests per minute per user per project 60
+                    # This could be improved by using batch requests
+                    result = e.args[0]
+                    if result['code'] == 429:
+                        print('Quota exceeded, waiting 1min before retrying')
+                        time.sleep(60)
+                        pass
+                    else:
+                        print('UNHANDLED ERROR IN THE API REQUEST: ' + str(result))
+                        exit()
                 else:
-                    print('UNHANDLED ERROR IN THE API REQUEST: ' + str(result))
-                    exit()
-            else:
-                successful = True
+                    successful = True
+
+        gs.share('manuel@dhis2.org', perm_type='user', role='writer')
+        if args.share_with is not None:
+            for email in args.share_with:
+                gs.share(email[0], perm_type='user', role='writer')
 
     gs.share('manuel@dhis2.org', perm_type='user', role='writer')
     if args.share_with is not None:
