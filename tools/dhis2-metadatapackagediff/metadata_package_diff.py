@@ -540,7 +540,10 @@ if __name__ == '__main__':
             for email in args.share_with:
                 gs.share(email[0], perm_type='user', role='writer')
 
-        google_spreadsheet_url = "https://docs.google.com/spreadsheets/d/%s" % gs.id
-        print('Google spreadsheet created/updated here: ' + google_spreadsheet_url)
+    gs.share('manuel@dhis2.org', perm_type='user', role='writer')
+    if args.share_with is not None:
+        for email in args.share_with:
+            gs.share(email[0], perm_type='user', role='writer')
 
-
+    google_spreadsheet_url = "https://docs.google.com/spreadsheets/d/%s" % gs.id
+    print('Google spreadsheet created/updated here: ' + google_spreadsheet_url)
