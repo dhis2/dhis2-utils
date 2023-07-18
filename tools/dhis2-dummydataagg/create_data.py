@@ -36,7 +36,7 @@ def post_to_server(jsonObject, apiObject='metadata', strategy='CREATE_AND_UPDATE
             if apiObject == 'metadata':
                 logger.info("metadata imported :" + text['status'] + " " + json.dumps(text['stats']))
             else:
-#                logger.info("data imported :" + text['status'] + " " + json.dumps(text['importCount']))
+                logger.info("data imported :" + text['status'] + " " + json.dumps(text['importCount']))
                 if text['status'] == 'WARNING': logger.warning(text)
 
 
@@ -72,7 +72,7 @@ def value_type_is_numeric(value_type):
 
 
 def convert_value(value, value_type):
-    if isnan(value):
+    if isnan(value) or not str(value).isnumeric():
         return None
     else:
         if value_type == 'NUMBER':
@@ -114,6 +114,7 @@ def get_min_max_from_df(df, value_type, de_uid, coc_uid=None):
 
 def generate_dummy_numeric_value(value_type, min_value, max_value):
     value = 0
+
     if min_value is None: min_value = -100
     if max_value is None: max_value = 100
     if value_type == "INTEGER_POSITIVE":
@@ -221,10 +222,10 @@ def get_org_units(selection_type, value, random_size = None):
             ou_filter = "name:in:[" + value + "]"  # To verify
         elif selection_type == 'ilike':
             ou_filter = "name:ilike:" + value  # To verify
+        elif selection_type == 'group':
+            ou_filter = "organisationUnitGroups.id:in:[" + value + "]"
         elif selection_type == 'code':
             ou_filter = "code:in:[" + value + "]"
-        elif selection_type == "group": # add any org unit groups by UID
-            ou_filter="organisationUnitGroups.id:in:[" + value + "]"
         elif selection_type == 'level':
             if value.isnumeric() and 0 < int(value):
                 ou_filter = "level:in:[" + value + "]"
@@ -533,9 +534,6 @@ def main():
 
             # Get dataElements
             for DSE in ds['dataSetElements']:
-                # df_min_max = pd.DataFrame({}, columns=['DE UID', 'COC UID', 'DE Name', 'COC Name', 'valueType', 'min',
-                #                                        'max'])
-                de = ''
                 if 'dataElement' in DSE:
                     deUID = DSE['dataElement']['id']
                     dsDataElements[deUID] = dict()
@@ -568,19 +566,16 @@ def main():
 
             logger.info("Found " + str(len(dsDataElements)) + " dataElements in dataset")
 
-            #df_min_max = None
-
             if args.create_flat_file is not None:
                 for de in dsDataElements:
                     if 'COCs' in dsDataElements[de]:
                         for coc in dsDataElements[de]['COCs']:
                             str_pair = de + "." + coc
+                            coc_uid = COC[coc]['id']
                             if 'code' in COC[coc]:
                                 coc_code = COC[coc]['code']
-                                coc_uid = COC[coc]['id']
                             else:
                                 coc_code = ""
-                                coc_uid = ""
                             if str_pair not in greyedFields:
                                 df_min_max = df_min_max.append({"DE UID": DE[de]['id'], "COC UID": coc_uid,
                                                                 "DE Name": DE[de]['name'], "COC Name": COC[coc]['name'],
