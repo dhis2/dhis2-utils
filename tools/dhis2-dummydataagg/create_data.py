@@ -34,11 +34,13 @@ def post_to_server(jsonObject, apiObject='metadata', strategy='CREATE_AND_UPDATE
         # errorCode = errorReport['errorCode']
         else:
             if apiObject == 'metadata':
-                logger.info("metadata imported :" + text['status'] + " " + json.dumps(text['stats']))
+                if 'stats' in text:
+                    logger.info("metadata imported :" + text['status'] + " " + json.dumps(text['stats']))
+                elif 'response' in text and 'stats' in text['response']:
+                    logger.info("metadata imported " + text['status'] + " " + json.dumps(text['response']['stats']))
             else:
                 logger.info("data imported :" + text['status'] + " " + json.dumps(text['importCount']))
                 if text['status'] == 'WARNING': logger.warning(text)
-
 
 def isDateFormat(input):
     try:
