@@ -53,7 +53,7 @@ CREATE TEMP TABLE IF NOT EXISTS temp1 (
 EXECUTE 'DELETE FROM chart_organisationunits WHERE organisationunitid = $1 ' USING organisationunitid;
 EXECUTE 'INSERT INTO temp1 SELECT chartid from chart_organisationunits where organisationunitid = $1 'USING organisationunitid;
 
-FOR resort_object IN SELECT objectid from temp1 LOOP
+FOR resort_object IN SELECT objectid FROM temp1 LOOP
 EXECUTE 'update chart_organisationunits set sort_order = -t.i
 from (select row_number() over (ORDER BY sort_order) as i, chartid, sort_order, organisationunitid
    from chart_organisationunits where chartid=$1 order by sort_order) t
@@ -67,7 +67,7 @@ EXECUTE 'TRUNCATE temp1';
 EXECUTE 'INSERT INTO temp1 SELECT DISTINCT reporttableid from reporttable_organisationunits where organisationunitid = $1 'USING organisationunitid;
 EXECUTE 'DELETE FROM reporttable_organisationunits WHERE organisationunitid = $1 ' USING organisationunitid;
 
-FOR resort_object IN SELECT objectid from temp1 LOOP
+FOR resort_object IN SELECT objectid FROM temp1 LOOP
 EXECUTE 'update reporttable_organisationunits set sort_order = -t.i
 from (select row_number() over (ORDER BY sort_order) as i, reporttableid, sort_order, organisationunitid
 from reporttable_organisationunits where reporttableid=$1 order by sort_order) t
@@ -82,7 +82,7 @@ EXECUTE 'TRUNCATE temp1';
 EXECUTE 'DELETE FROM visualization_organisationunits WHERE organisationunitid = $1 ' USING organisationunitid;
 EXECUTE 'INSERT INTO temp1 SELECT visualizationid from visualization_organisationunits where organisationunitid = $1 'USING organisationunitid;
 
-FOR resort_object IN SELECT objectid from temp1 LOOP
+FOR resort_object IN SELECT objectid FROM temp1 LOOP
 EXECUTE 'update visualization_organisationunits set sort_order = -t.i
 from (select row_number() over (ORDER BY sort_order) as i, visualizationid, sort_order, organisationunitid
    from visualization_organisationunits where visualizationid=$1 order by sort_order) t
@@ -95,7 +95,7 @@ EXECUTE 'TRUNCATE temp1';
 
 EXECUTE 'INSERT INTO temp1 SELECT DISTINCT mapviewid from mapview_organisationunits where organisationunitid = $1 'USING organisationunitid;
 EXECUTE 'DELETE FROM mapview_organisationunits WHERE organisationunitid = $1 ' USING organisationunitid;
-FOR resort_object IN SELECT objectid from temp1 LOOP
+FOR resort_object IN SELECT objectid FROM temp1 LOOP
 EXECUTE 'update mapview_organisationunits set sort_order = -t.i
 from (select row_number() over (ORDER BY sort_order) as i,mapviewid, sort_order, organisationunitid
 from mapview_organisationunits where mapviewid=$1 order by sort_order) t
@@ -109,7 +109,7 @@ EXECUTE 'TRUNCATE temp1';
 EXECUTE 'INSERT INTO temp1 SELECT DISTINCT eventchartid from eventchart_organisationunits where organisationunitid = $1 'USING organisationunitid;
 EXECUTE 'DELETE FROM eventchart_organisationunits WHERE organisationunitid = $1 ' USING organisationunitid;
 
-FOR resort_object IN SELECT objectid from temp1 LOOP
+FOR resort_object IN SELECT objectid FROM temp1 LOOP
 EXECUTE 'update eventchart_organisationunits set sort_order = -t.i
 from (select row_number() over (ORDER BY sort_order) as i, eventchartid, sort_order, organisationunitid
     from eventchart_organisationunits where eventchartid=$1 order by sort_order) t
@@ -122,7 +122,7 @@ EXECUTE 'TRUNCATE temp1';
 
 EXECUTE 'INSERT INTO temp1 SELECT DISTINCT eventreportid from eventreport_organisationunits where organisationunitid = $1 'USING organisationunitid;
 EXECUTE 'DELETE FROM eventreport_organisationunits WHERE organisationunitid = $1 ' USING organisationunitid;
-FOR resort_object IN SELECT objectid from temp1 LOOP
+FOR resort_object IN SELECT objectid FROM temp1 LOOP
 EXECUTE 'UPDATE eventreport_organisationunits set sort_order = -t.i
 from (select row_number() over (ORDER BY sort_order) as i, eventreportid, sort_order, organisationunitid
     from eventreport_organisationunits where eventreportid=$1 order by sort_order) t
@@ -143,7 +143,7 @@ $$ LANGUAGE plpgsql VOLATILE;
 
 EXECUTE 'INSERT INTO temp1 SELECT DISTINCT eventvisualizationid from eventvisualization_organisationunits where organisationunitid = $1 'USING organisationunitid;
 EXECUTE 'DELETE FROM eventvisualization_organisationunits WHERE organisationunitid = $1 ' USING organisationunitid;
-FOR resort_object IN SELECT objectid from temp1 LOOP
+FOR resort_object IN SELECT objectid FROM temp1 LOOP
 EXECUTE 'UPDATE eventvisualization_organisationunits set sort_order = -t.i
 from (select row_number() over (ORDER BY sort_order) as i, eventvisualizationid, sort_order, organisationunitid
     from eventvisualization_organisationunits where eventvisualizationid=$1 order by sort_order) t
