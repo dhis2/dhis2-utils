@@ -23,8 +23,6 @@ EXECUTE 'DELETE FROM minmaxdataelement WHERE sourceid = $1 ' USING organisationu
 EXECUTE 'DELETE FROM orgunitgroupmembers WHERE organisationunitid = $1 ' USING organisationunitid;
 
 --delete all data from programstageinstance and down based on first programstageinstance orgunit then programinstance orgunit and lastly trackedentityinstance orgunit
-EXECUTE 'DELETE FROM trackedentityattributevalueaudit WHERE trackedentityinstanceid IN (SELECT trackedentityinstanceid FROM trackedentityinstance WHERE organisationunitid = $1) '
-USING organisationunitid;
 EXECUTE 'DELETE FROM programstageinstancecomments WHERE programstageinstanceid IN (SELECT programstageinstanceid FROM programstageinstance WHERE organisationunitid = $1 OR programinstanceid IN (SELECT programinstanceid FROM programinstance WHERE organisationunitid = $1 OR trackedentityinstanceid IN (SELECT trackedentityinstanceid FROM trackedentityinstance WHERE organisationunitid = $1))) '
 USING organisationunitid;
 EXECUTE 'DELETE FROM programstageinstance_outboundsms WHERE programstageinstanceid IN (SELECT programstageinstanceid FROM programstageinstance WHERE organisationunitid = $1 OR programinstanceid IN (SELECT programinstanceid FROM programinstance WHERE organisationunitid = $1 OR trackedentityinstanceid IN (SELECT trackedentityinstanceid FROM trackedentityinstance WHERE organisationunitid = $1))) '
