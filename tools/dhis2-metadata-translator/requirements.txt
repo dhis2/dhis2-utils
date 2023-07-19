@@ -6,7 +6,7 @@ ConfigArgParse==1.5.3
 idna==3.4
 Jinja2==3.1.2
 MarkupSafe==2.1.1
-requests==2.28.1
+requests==2.31.0
 python-slugify==7.0.0
 soupsieve==2.3.2.post1
 translayer @ https://github.com/Philip-Larsen-Donnelly/translayer/archive/refs/heads/main.zip
