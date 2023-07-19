@@ -1,15 +1,25 @@
 
 from dhis2 import Api, RequestException, setup_logger, logger, is_valid_uid #make sure you have dhis2.py installed, otherwise run "pip3 install dhis2.py"
+import json
+
+credentials_file = './auth.json'
+instance = None
 
 try:
-    f = open("./auth.json")
+    f = open(credentials_file)
 except IOError:
     print("Please provide file auth.json with credentials for DHIS2 server")
     exit(1)
 else:
-    api = Api.from_auth_file('./auth.json')
+    with open(credentials_file, 'r') as json_file:
+        credentials = json.load(json_file)
+    if instance is not None:
+        api = Api(instance, credentials['dhis']['username'], credentials['dhis']['password'])
+    else:
+        api = Api.from_auth_file(credentials_file)
 
 setup_logger()
+
 
 def main():
 
@@ -40,23 +50,23 @@ def main():
                 logger.error('Program ' + program_uid + ' specified does not exist')
                 exit(1)
 
-    ou = 'GD7TowwI46c' # Trainingland
     if args.OrgUnit is not None:
         if not is_valid_uid(args.OrgUnit):
             logger.error('The orgunit uid specified is not a valid DHIS2 uid')
             exit(1)
         else:
             try:
-                orgunit = api.get('organisationUnits/' + args.OrgUnit).json()
+                api.get('organisationUnits/' + args.OrgUnit).json()
             except RequestException as e:
                 if e.code == 404:
                     logger.error('Org Unit ' + args.OrgUnit + ' specified does not exist')
                     exit(1)
-            else:
-                ou = orgunit[0]
+
+    else:
+        pass #TODO Obtain root of the OU tree
 
     params = {
-        'ou': ou,
+        'ou': args.OrgUnit,
         'ouMode': 'DESCENDANTS',
         'program': program_uid,
         'skipPaging': 'true',
@@ -69,7 +79,7 @@ def main():
 
     logger.info("Found " + str(len(data)) + " TEIs")
 
-    user = 'robot'
+    user = credentials['dhis']['username']
     for tei in data:
         # #### Uncomment this to filter by user
         if 'enrollments' not in tei:

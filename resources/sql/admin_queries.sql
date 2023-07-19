@@ -100,12 +100,28 @@ where co.uid='LPeJEUjotaB';
 
 -- Category option combo count per category option
 
-select count(cocco.categoryoptioncomboid) as cat_option_combo_count, cocco.categoryoptionid as cat_option_id, co.name as cat_option_name
+select co.name as cat_option_name, count(cocco.categoryoptioncomboid) as cat_option_combo_count
 from categoryoptioncombos_categoryoptions cocco 
 inner join dataelementcategoryoption co on cocco.categoryoptionid=co.categoryoptionid 
-group by cocco.categoryoptionid, co.name 
-order by count(categoryoptioncomboid) desc 
-limit 100;
+group by cat_option_name
+order by cat_option_combo_count desc 
+limit 500;
+
+-- Category option combo count per category combo
+
+select cc.name as cat_combo_name, count(ccoc.categoryoptioncomboid) as cat_option_combo_count
+from categorycombo cc
+inner join categorycombos_optioncombos ccoc on cc.categorycomboid = ccoc.categorycomboid
+group by cat_combo_name
+order by cat_option_combo_count desc;
+
+-- Category option count per category
+
+select c.name as cat_name, count(cco.categoryoptionid) as cat_option_count
+from dataelementcategory c
+inner join categories_categoryoptions cco on c.categoryid = cco.categoryid 
+group by cat_name
+order by cat_option_count desc;
 
 -- Exploded _datasetorganisationunitcategory view
 
@@ -136,12 +152,13 @@ group by c.name
 having count(c.uid) > 1
 order by row_count desc;
 
+
 -- DATA SETS
 
 select ds.uid as ds_uid, ds.name as ds_name, (
-	select count(*)
-	from datasetelement dse
-	where ds.datasetid = dse.datasetid) as de_count
+  select count(*)
+  from datasetelement dse
+  where ds.datasetid = dse.datasetid) as de_count
 from dataset ds
 order by de_count desc;
 
@@ -255,13 +272,13 @@ from userrole ur
 inner join userroleauthorities ura on ur.userroleid=ura.userroleid 
 where ura.authority = 'ALL';
 
--- (Write) MD5 set password to "district" for admin user
-
-update users set password='48e8f1207baef1ef7fe478a57d19f2e5', disabled = false where username='admin';
-
--- (Write) Bcrypt set password to "district" for admin user
+-- (Write) Bcrypt set password to "district" for admin user up to 2.37
 
 update users set password='$2a$10$wjLPViry3bkYEcjwGRqnYO1bT2Kl.ZY0kO.fwFDfMX53hitfx5.3C', disabled = false where username='admin';
+
+-- (Write) Bcrypt set password to "district" for admin user after 2.37
+
+update userinfo set password='$2a$10$wjLPViry3bkYEcjwGRqnYO1bT2Kl.ZY0kO.fwFDfMX53hitfx5.3C', disabled = false where username='admin';
 
 -- (Write) Add user to first user role with ALl authority 
 
@@ -468,23 +485,6 @@ alter table datavalue add constraint fk_datavalue_organisationunitid foreign key
 alter table datavalue add constraint fk_datavalue_periodid foreign key (periodid) references period(periodid);
 
 
-
-
--- COMPLETE DATA SET REGISTRATIONS
-
--- Complete data set registration exploded view
-
-select ds.name, ds.uid, pe.startdate as pestart, pe.enddate as peend, pt.name as ptname, 
-ou.name as ouname, ou.uid as ouuid, aoc.name as aocname, aoc.uid as aocuid, aoc.categoryoptioncomboid as aocid
-from completedatasetregistration cdr
-inner join dataset ds on cdr.datasetid=ds.datasetid
-inner join period pe on cdr.periodid=pe.periodid
-inner join periodtype pt on pe.periodtypeid=pt.periodtypeid
-inner join organisationunit ou on cdr.sourceid=ou.organisationunitid
-inner join categoryoptioncombo aoc on cdr.attributeoptioncomboid=aoc.categoryoptioncomboid
-limit 10000;
-
-
 -- EVENTS
 
 -- Display events out of reasonable time range
@@ -492,16 +492,9 @@ limit 10000;
 select count(*)
 from programstageinstance psi
 where psi.executiondate < '1960-01-01'
-or psi.executiondate > '2020-01-01';
+or psi.executiondate > '2023-01-01';
 
 -- Delete events out of reasonable time range
-
-delete from trackedentitydatavalue tdv
-where tdv.programstageinstanceid in (
-  select psi.programstageinstanceid
-  from programstageinstance psi
-  where psi.executiondate < '1960-01-01'
-  or psi.executiondate > '2020-01-01');
 
 delete from programstageinstance psi
 where psi.executiondate < '1960-01-01'
@@ -523,23 +516,32 @@ order by yr;
 
 -- Get count of data elements per program
 
-select pr.name,count(psd.uid)
+select pr.name, count(psd.uid)
 from program pr
 inner join programstage ps on pr.programid=ps.programid
 inner join programstagedataelement psd on ps.programstageid=psd.programstageid
 group by pr.name;
 
--- Find invalid event values of value type date, replace "foo" with error hint
+-- Get count of events per program (deleted false)
 
-select count(to_date(dv.value, 'YYYY-MM-DD')) 
-from trackedentitydatavalue dv 
-inner join dataelement de on dv.dataelementid=de.dataelementid 
-where de.valuetype='DATE';
+select p.uid as program_uid, p.name as program_name, count(*) as event_count
+from programstageinstance psi
+inner join programinstance pi on psi.programinstanceid = pi.programinstanceid 
+inner join program p on pi.programid = p.programid
+where psi.deleted = false
+group by p.uid, p.name
+order by p.name;
 
-select * from trackedentitydatavalue dv 
-inner join dataelement de on dv.dataelementid=de.dataelementid 
-where de.valuetype='DATE' 
-and value like '%foo%';
+-- Get count of event audit values per program (deleted false)
+
+select p.uid as program_uid, p.name as program_name, count(*) as audit_value_count
+from trackedentitydatavalueaudit tedva
+inner join programstageinstance psi on tedva.programstageinstanceid = psi.programstageinstanceid 
+inner join programinstance pi on psi.programinstanceid = pi.programinstanceid 
+inner join program p on pi.programid = p.programid
+where psi.deleted = false
+group by p.uid, p.name
+order by p.name;
 
 -- (Write) Generate random coordinates based on org unit location for events
 
@@ -562,14 +564,6 @@ where dv.programstageinstanceid in (
   inner join programinstance pi on psi.programinstanceid=psi.programinstanceid
   inner join program pr on pi.programid=pr.programid
   where pr.uid = 'bMcwwoVnbSR');
-
-delete from trackedentitydatavalue dv
-where dv.programstageinstanceid in (
-  select psi.programstageinstanceid
-  from programstageinstance psi
-  inner join programinstance pi on psi.programinstanceid=psi.programinstanceid
-  inner join program pr on pi.programid=pr.programid
-  where pr.uid = 'bMcwwoVnbSR');
   
 delete from programstageinstance psi
 where psi.programinstanceid in (
@@ -577,25 +571,3 @@ where psi.programinstanceid in (
   from programinstance pi
   inner join program pr on pi.programid=pr.programid
   where pr.uid = 'bMcwwoVnbSR');
-
-
--- VARIOUS
-
--- Identify missing sort_order entries in link tables
--- Replace 101 with the number of entries in the link table for one owner
--- Replace 102 with the identifier of the owner entity row
--- Replace categories_categoryoptions with the name of the link table
-
-select generate_series 
-from generate_series(1,101)
-where not generate_series in (
-  select sort_order
-  from categories_categoryoptions
-  where categoryid=102
-);
-
--- Install PostGIS in separate schema
-
-create schema postgis;
-create extension postgis with schema postgis;
-alter database dev set search_path to public, postgis;

@@ -21,6 +21,8 @@ def post_to_server(api, jsonObject, apiObject='metadata', strategy='CREATE_AND_U
         # print(text)
         if text['status'] == 'ERROR':
             logger.error("Import failed!!!!\n" + json.dumps(text['typeReports'], indent=4, sort_keys=True))
+            with open('post_error.json', 'w') as f:
+                json.dump(text['typeReports'], f, indent=4, sort_keys=True)
             return False
         # errorCode = errorReport['errorCode']
         else:
@@ -29,6 +31,8 @@ def post_to_server(api, jsonObject, apiObject='metadata', strategy='CREATE_AND_U
             else:
                 # logger.info("data imported " + text['status'] + " " + json.dumps(text['importCount']))
                 logger.info("Data imported\n" + json.dumps(text, indent=4, sort_keys=True))
+                with open('post_error.json', 'w') as f:
+                    json.dump(text, f, indent=4, sort_keys=True)
                 if text['status'] == 'WARNING': logger.warning(text)
             return True
 

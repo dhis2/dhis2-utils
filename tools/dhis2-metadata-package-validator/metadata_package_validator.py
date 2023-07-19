@@ -8,13 +8,13 @@ import re
 
 
 def main():
-    any_error = False  # This variable is used for checking if any error has been detected by the validator
+    num_error = 0  # This variable is used for counting the number of errors (no warnings) detected by the validator
     my_parser = argparse.ArgumentParser(description='Metadata package validator')
     my_parser.add_argument('-f', '--file', action="store", dest="input_filename", type=str, help='input filename')
     args = my_parser.parse_args()
 
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     # create file handler which logs even debug messages
     fh = logging.FileHandler('package_metadata_validator.log', encoding="utf-8")
@@ -43,6 +43,8 @@ def main():
 
     # Validation for options
     o_mq_2 = {}
+    if "options" not in package:
+        package["options"] = []
     for option in package["options"]:
         # Group options by optionSet (for O-MQ-2)
         optionSet = option["optionSet"]["id"]
@@ -63,7 +65,7 @@ def main():
             optionSet_name = myutils.get_name_by_type_and_uid(package=package, resource_type="optionSets", uid=optionSet_uid)
             message = "O-MQ-2 - The optionSet '" + optionSet_name + "' (" + optionSet_uid + ") has errors in the sortOrder. Current sortOrder: "+", ".join([str(i) for i in sortOrders])
             logging.error(message)
-            any_error = True
+            num_error += 1
 
     # -------------------------------------
 
@@ -95,6 +97,59 @@ def main():
     myutils.iterate_complex(package, check_favorites)
 
     # -------------------------------------
+    # Translations
+    # -------------------------------------
+
+    def check_translations(k, v):
+        if k == "translations":
+            trans_duplicate = list()
+            for translation in v:
+                if "locale" not in translation:
+                    logger.error(f"ALL-MQ-21: Unexpected translation. Missing locale in translation. Double check translation {translation}")
+                else:
+                    trans_duplicate.append(translation["locale"] + "|" + translation["property"])
+                    if not all(x.isalpha() or x in ["-", "_"] for x in translation["locale"]):
+                        logger.error(f"ALL-MQ-21: Unexpected translation. Unexpected symbol in locale. Translation {translation}")
+
+            if len(trans_duplicate) != len(set(trans_duplicate)):
+                duplicates = set([x for x in trans_duplicate if trans_duplicate.count(x) > 1])
+                for dup in duplicates:
+                    translation_values = list()
+                    for translation in v:
+                        if "locale"in translation and translation["locale"] == dup.split('|')[0] and translation["property"] == dup.split('|')[1]:
+                            translation_values.append(translation["value"])
+                    logger.error(f"ALL-MQ-19. Translation duplicated. Translation property={dup.split('|')[1]} locale={dup.split('|')[0]} values={translation_values}")
+
+    for resource_type, resource_list in package.items():
+        if resource_type in ["package", "system"]:  # "package" and "system" are dictionaries, not lists.
+            continue
+        for resource in resource_list:
+            # Review translations of the package that are placed under the 2 hierarchy level (not directly under package).
+            for k, v in resource.items():
+                if k != "translations":
+                    myutils.iterate_complex(v, check_translations)
+
+            if "translations" in resource:
+                trans_duplicate = list()
+                for translation in resource["translations"]:
+                    if "locale" not in translation:
+                        logger.error(f"ALL-MQ-21: Unexpected translation. Missing locale in translation. Resource {resource_type} with UID {resource['id']}. Translation {translation}")
+                        num_error += 1
+                    else:
+                        # for locale-property duplicates
+                        trans_duplicate.append(translation["locale"] + "|" + translation["property"])
+
+                        if not all(x.isalpha() or x in ["-", "_"] for x in translation["locale"]):
+                            logger.error(f"ALL-MQ-21: Unexpected translation. Unexpected symbol in locale. Resource {resource_type} with UID {resource['id']}. Translation {translation}")
+                            num_error += 1
+
+                if len(trans_duplicate) != len(set(trans_duplicate)):
+                    duplicates = set([x for x in trans_duplicate if trans_duplicate.count(x) > 1])
+                    for dup in duplicates:
+                        logger.error(f"ALL-MQ-19. Translation duplicated. Resource {resource_type} with UID {resource['id']}. Translation property='{dup.split('|')[1]}' locale='{dup.split('|')[0]}'")
+                        num_error += 1
+
+    # -------------------------------------
 
     # Program Rules
     if "programRules" not in package:
@@ -103,14 +158,18 @@ def main():
         # PR-ST-3: Program Rule without action
         if len(pr["programRuleActions"]) == 0:
             logger.error(f"PR-ST-3 Program Rule '{pr['name']}' ({pr['id']}) without Program Rule Action")
-            any_error = True
+            num_error += 1
 
-    # PRV-MQ-1 More than one PRV with the same name
+    # PRV-MQ-1 More than one PRV with the same name for the same program
     if "programRuleVariables" not in package:
         package["programRuleVariables"] = []
-    prv_names = [prv["name"] for prv in package["programRuleVariables"]]
-    if len(prv_names) != len(set(prv_names)):
-        logger.error("PRV-MQ-1 - More than one PRV with the same name: "+str([item for item, count in collections.Counter(prv_names).items() if count > 1]))
+    # Get the list of programs that has at least one programRuleVariable
+    prv_programs = set([prv["program"]["id"] for prv in package["programRuleVariables"]])
+    for program in prv_programs:
+        prv_names = [prv["name"] for prv in package["programRuleVariables"] if prv["program"]["id"] == program]
+        if len(prv_names) != len(set(prv_names)):
+            logger.error(f"PRV-MQ-1 - In program '{myutils.get_name_by_type_and_uid(package, 'programs', program)}' ({program}), more than one PRV with the same name: {([item for item, count in collections.Counter(prv_names).items() if count > 1])}")
+            num_error += 1
 
     forbidden = ["and", "or", "not"]  # (dhis version >= 2.34)
     for prv in package["programRuleVariables"]:
@@ -128,6 +187,8 @@ def main():
 
     # PR-ST-4: Data element associated to a program rule action MUST belong to the program that the program rule is associated to.
     de_in_program = []
+    if "programStages" not in package:
+        package["programStages"] = []
     for ps in package["programStages"]:
         for psde in ps["programStageDataElements"]:
             de_in_program.append(psde["dataElement"]["id"])
@@ -144,24 +205,32 @@ def main():
 
     # PR-ST-5: Tracked Entity Attribute associated to a program rule action MUST belong to the program/TET that the program rule is associated to.
     teas_program = []
-    program = package["programs"][0]
-    teas = program["programTrackedEntityAttributes"]
-    if "trackedEntityType" in program:
-        trackedEntityType_uid = program["trackedEntityType"]["id"]
-        for tet in package["trackedEntityTypes"]:
-            if tet["id"] == trackedEntityType_uid:
-                teas = teas + tet["trackedEntityTypeAttributes"]
-    for tea in teas:
-        teas_program.append(tea["trackedEntityAttribute"]["id"])
+    if "programs" in package:
+        for program in package["programs"]:
+            program_id = program["id"]
+            teas = program["programTrackedEntityAttributes"]
+            if "trackedEntityType" in program:
+                trackedEntityType_uid = program["trackedEntityType"]["id"]
+                for tet in package["trackedEntityTypes"]:
+                    if tet["id"] == trackedEntityType_uid:
+                        teas = teas + tet["trackedEntityTypeAttributes"]
+            for tea in teas:
+                teas_program.append(tea["trackedEntityAttribute"]["id"])
+            pr_in_this_program = []
+            for pr in package["programRules"]:
+                if pr["program"]["id"] == program_id:
+                    pr_in_this_program.append(pr["id"])
+            for pra in package["programRuleActions"]:
+                if pra["programRule"]["id"] not in pr_in_this_program:
+                    continue
+                if "trackedEntityAttribute" in pra and pra["trackedEntityAttribute"]["id"] not in teas_program:
+                    pr_uid = pra['programRule']['id']
+                    pr_name = myutils.get_name_by_type_and_uid(package, 'programRules', pr_uid)
+                    tea_uid = pra['trackedEntityAttribute']['id']
+                    tea_name = myutils.get_name_by_type_and_uid(package, 'trackedEntityAttributes', tea_uid)
+                    logging.error(f"PR-ST-5 Program Rule '{pr_name}' ({pr_uid}) in the PR Action uses a TEA '{tea_name}' ({tea_uid}) that does not belong to the associated program.")
 
-    for pra in package["programRuleActions"]:
-        if "trackedEntityAttribute" in pra and pra["trackedEntityAttribute"]["id"] not in teas_program:
-            pr_uid = pra['programRule']['id']
-            pr_name = myutils.get_name_by_type_and_uid(package, 'programRules', pr_uid)
-            tea_uid = pra['trackedEntityAttribute']['id']
-            tea_name = myutils.get_name_by_type_and_uid(package, 'trackedEntityAttribute', tea_uid)
-            logging.error(f"PR-ST-5 Program Rule '{pr_name}' ({pr_uid}) in the PR Action uses a TEA '{tea_name}' ({tea_uid}) that does not belong to the associated program.")
-
+    # -------------------------------------
 
     # code
     PATTERN_OPTION_CODE = re.compile("^([0-9A-Z_\|\-\.]+)+$")
@@ -181,21 +250,183 @@ def main():
                     message = f"ALL-MQ-18- Tab character in code='{resource['code']}' (resource type='{resource_type}' name='{resource['name']}' uid={resource['id']})"
                     logger.error(message)
                     resource["code"] = resource["code"].replace("\t", "")
+                    num_error += 1
                 if resource_type == "options":
                     if not PATTERN_OPTION_CODE.search(resource["code"]):
                         message = f"ALL-MQ-18- Invalid code='{resource['code']}' (resource type='{resource_type}' name='{resource['name']}' uid={resource['id']})"
                         logger.error(message)
+                        num_error += 1
                 else:
                     if not PATTERN_CODE.search(resource["code"]):
                         message = f"ALL-MQ-18- Invalid code='{resource['code']}' (resource type='{resource_type}' name='{resource['name']}' uid={resource['id']})"
                         logger.error(message)
+                        num_error += 1
+
+    # -------------------------------------
+
+    # DE-MQ-2: The name/shortName SHOULD not contains "Number of" or "number of"
+    if "dataElements" not in package:
+        package["dataElements"] = []
+    for de in package["dataElements"]:
+        keys_to_validate_de_mq_1 = ["name", "shortName"]
+        for n in keys_to_validate_de_mq_1:
+            if n in de and "NUMBER OF" in de[n].upper():
+                logger.warning(f"DE-MQ-2 - DataElement contains the words 'number of' ({de['id']}) {n}='{de[n]}'")
+
+    # -------------------------------------
+
+    # Indicators Indicators
+    if "indicators" not in package:
+        package["indicators"] = []
+    for indicator in package["indicators"]:
+        keys_to_validate_pi_mq_2 = ["name", "shortName"]
+        for n in keys_to_validate_pi_mq_2:
+            # I-MQ-3. Indicators should not contain "proportion" or "percentage" in the name, shortName
+            if n in indicator and any(t in indicator[n].upper() for t in ["PROPORTION", "PERCENTAGE"]):
+                logger.warning(
+                    "I-MQ-3 - Indicator contains the word 'proportion' or 'percentage'. Resource Indicator with UID " + indicator['id'] + ". " + n + "='" + indicator[n] + "'")
+
+    # Program Indicators
+    if "programIndicators" not in package:
+        package["programIndicators"] = []
+    for pi in package["programIndicators"]:
+        keys_to_validate_pi_mq_2 = ["name", "shortName"]
+        for n in keys_to_validate_pi_mq_2:
+            # PI-MQ-3. Program Indicators should not contain "proportion" or "percentage" in the name, shortName
+            if n in pi and any(t in pi[n].upper() for t in ["PROPORTION", "PERCENTAGE"]):
+                logger.warning(
+                    "PI-MQ-3 - Program Indicator contains the word 'proportion' or 'percentage'. Resource Program Indicator with UID " + pi['id'] + ". " + n + "='" + pi[n] + "'")
+
+    # -------------------------------------
+
+    # Program Indicators
+    if "programIndicators" not in package:
+        package["programIndicators"] = []
+    for pi in package["programIndicators"]:
+        keys_to_validate = ["filter", "expression"]
+        for n in keys_to_validate:
+            if n in pi and "program_stage_name" in pi[n]:
+                logger.error(f"ALL-MQ-20 From program '{myutils.get_name_by_type_and_uid(package, 'programs', pi['program']['id'])}' ({pi['program']['id']}), the PI '{pi['name']}' ({pi['id']}) contains 'program_stage_name' in the {n}.")
+                num_error += 1
+
+    # Program Rules
+    if "programRules" not in package:
+        package["programRules"] = []
+    for pr in package["programRules"]:
+        keys_to_validate = ["condition"]
+        for n in keys_to_validate:
+            if n in pr and "program_stage_name" in pr[n]:
+                logger.error(f"ALL-MQ-20 From program '{myutils.get_name_by_type_and_uid(package, 'programs', pr['program']['id'])}' ({pr['program']['id']}), the PR '{pr['name']}' ({pr['id']}) contains 'program_stage_name' in the {n}.")
+                num_error += 1
+
+    # Program Rule Actions
+    if "programRuleActions" not in package:
+        package["programRuleActions"] = []
+    for pra in package["programRuleActions"]:
+        keys_to_validate = ["data"]
+        for n in keys_to_validate:
+            if n in pra and "program_stage_name" in pra[n]:
+                pr_uid = pra["programRule"]["id"]
+                program_uid = myutils.get_program_referenced_by_type_and_uid(package, "programRules", pr_uid)
+                logger.error(f"ALL-MQ-20 From program '{myutils.get_name_by_type_and_uid(package, 'programs', program_uid)}' ({program_uid}), the PR '{myutils.get_name_by_type_and_uid(package, 'programRules', pr_uid)}' ({pr_uid}) contains 'program_stage_name' in a PRAction ({pra['id']}).")
+                num_error += 1
+
+    # -------------------------------------
+
+    # Custom forms in programStages
+    if "programStages" not in package:
+        package["programStages"] = []
+    if "dataEntryForms" not in package:
+        package["dataEntryForms"] = []
+    for ps in package["programStages"]:
+        program_uid = ps["program"]["id"]
+        program_name = myutils.get_name_by_type_and_uid(package, "programs", program_uid)
+        if "dataEntryForm" in ps:
+            dataEntryForm_uid = ps["dataEntryForm"]["id"]
+            if myutils.is_field_in_resource(package, "dataEntryForms", dataEntryForm_uid, "htmlCode"):
+                message = f"PS-MQ-1 In program '{program_name}' ({program_uid}), the program stage '{ps['name']}' ({ps['id']}) has a custom form"
+                logger.warning(message)
+            else:
+                message = f"PS-MQ-2 In program '{program_name}' ({program_uid}), the program stage '{ps['name']}' ({ps['id']}) has an empty custom form"
+                logger.error(message)
+                num_error += 1
+
+    # Custom forms in programs
+    if "programs" not in package:
+        package["programs"] = []
+    for p in package["programs"]:
+        program_uid = p["id"]
+        program_name = p["name"]
+        if "dataEntryForm" in p:
+            dataEntryForm_uid = p["dataEntryForm"]["id"]
+            if myutils.is_field_in_resource(package, "dataEntryForms", dataEntryForm_uid, "htmlCode"):
+                message = f"P-MQ-1 The program '{program_name}' ({program_uid}) has a custom form"
+                logger.warning(message)
+            else:
+                message = f"P-MQ-2 The program '{program_name}' ({program_uid}) has an empty custom form"
+                logger.error(message)
+                num_error += 1
+
+    # Custom forms in dataSets
+    if "dataSets" not in package:
+        package["dataSets"] = []
+    for ds in package["dataSets"]:
+        dataSet_uid = ds["id"]
+        dataSet_name = ds["name"]
+        if "dataEntryForm" in ds:
+            dataEntryForm_uid = ds["dataEntryForm"]["id"]
+            if myutils.is_field_in_resource(package, "dataEntryForms", dataEntryForm_uid, "htmlCode"):
+                message = f"DS-MQ-1 The dataSet '{dataSet_name}' ({dataSet_uid}) has a custom form"
+                logger.warning(message)
+            else:
+                message = f"DS-MQ-2 The dataSet '{dataSet_name}' ({dataSet_uid}) has an empty custom form"
+                logger.error(message)
+                num_error += 1
+
+    # Review only Data Element, Indicator, Program Indicator, Categories, Category Options, Category Combos, Maps, Visualizations
+    resources_to_review_naming = ["dataElements", "indicators", "programIndicators", "categories", "categoryOptions", "categoryCombos", "maps", "visualizations"]
+    for resource_type in resources_to_review_naming:
+        if resource_type not in package:
+            continue
+        for resource in package[resource_type]:
+            keys_to_validate = ["name", "shortName"]
+            for n in keys_to_validate:
+                if n not in resource:
+                    continue
+                # ALL-MQ-9 validation. Name and shortName SHOULD NOT contain >,<, ≥, ≤.
+                if any(ch in resource[n] for ch in ('>', '<', '≤', '≥')):
+                    logger.warning(f"ALL-MQ-9 {resource_type} ({resource['id']}) contains any of this characters '>', '<', '≤', '≥' in {n}: '{resource[n]}'")
+
+                # ALL-MQ-10 validation. Name and shortName SHOULD NOT contain the pattern "digit - digit"
+                pattern = r"\d - \d"
+                result = sum(1 for _ in re.finditer(pattern, resource[n]))
+                if result:
+                    logger.warning(f"ALL-MQ-10 {resource_type} ({resource['id']}) contains the expression 'digit(0-9) - digit(0-9) in {n}: '{resource[n]}'")
+
+    # Check existence of a description
+    # Review only: programs, dataSets, dataElements, trackedEntityAttributes, trackedEntityTypes, indicators, programIndicators, validationRules, predictors, programRules, visualizations (event chart, event report, map, data visualizer), dashboards
+    resources_to_review_description = ["programs", "dataSets", "dataElements", "trackedEntityAttributes", "trackedEntityTypes", "indicators", "programIndicators", "validationRules", "predictors", "programRules", "visualizations", "dashboards"]
+    for resource_type in resources_to_review_description:
+        if resource_type not in package:
+            continue
+        for resource in package[resource_type]:
+            if "description" not in resource:
+                    logger.warning(f"ALL-MQ-8 No description in {resource_type} ({resource['id']})")
+
 
     logger.info('-------------------------------------Finished validation-------------------------------------')
 
-    # if there was any error, exit with code -1
-    if any_error:
-        sys.exit(-1)
+    #  See https://stackoverflow.com/questions/15435652/python-does-not-release-filehandles-to-logfile
+    handlers = logger.handlers[:]
+    for handler in handlers:
+        handler.close()
+        logger.removeHandler(handler)
+
+    return num_error
 
 
 if __name__ == '__main__':
-    main()
+    num_error = main()
+    # if the number of errors > 0, exit with code -1
+    if num_error:
+        sys.exit(-1)

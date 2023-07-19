@@ -4,10 +4,8 @@ import pandas as pd
 from tools.json import json_extract
 import argparse
 
-setup_logger()
 
-
-def build_analytics_payload(json_object):
+def build_analytics_payload(json_object, verbose=False):
 
     def get_group_set_dimensions(json_object, key): # parent_key, child_key):
         parent_key = key+'Set'
@@ -95,7 +93,9 @@ def build_analytics_payload(json_object):
                                     'thisBimonth': 'THIS_BI_MONTH',
                                     'lastBimonth': 'LAST_BI_MONTH',
                                     'lastSixMonth': 'LAST_SIX_MONTH',
-                                    'thisBiWeek': 'THIS_BI_WEEK'}
+                                    'thisBiWeek': 'THIS_BI_WEEK',
+                                    'last10Years': 'LAST_10_YEARS',
+                                    'last10FinancialYears': 'LAST_10_FINANCIAL_YEARS'}
             for relative_period in json_object['relativePeriods']:
                 if relative_period in pe_global_selections:
                     if json_object['relativePeriods'][relative_period]:
@@ -272,27 +272,28 @@ def build_analytics_payload(json_object):
     payload += "&skipData=false"
     params['skipData'] = 'false'
 
-    logger.info(payload)
+    if verbose:
+        logger.info(payload)
 
     return params
 
 
 def main():
 
-    my_parser = argparse.ArgumentParser(description='dashboard_instance_report')
+    my_parser = argparse.ArgumentParser(description='dashboard_checker')
     my_parser.add_argument('-i', '--instance', action="store", dest="instance", type=str,
                            help='URL of the instance to process')
     my_parser.add_argument('-df', '--dashboard_filter', action="store", dest="dashboard_filter", type=str,
                            help='Either a prefix or a list of comma separated UIDs')
-    my_parser.add_argument('-ond', '--omit_no_data_warning', action="store", dest="omit_no_data_warning", type=str,
-                           help='Do not give warnings for items not showing any data')
     my_parser.add_argument('--no_data_warning', dest='no_data_warning', action='store_true')
     my_parser.add_argument('--omit-no_data_warning', dest='no_data_warning', action='store_false')
+    my_parser.add_argument('-v', '--verbose', dest='verbose', action='store_true')
     my_parser.set_defaults(no_data_warning=True)
+    my_parser.set_defaults(verbose=False)
     args = my_parser.parse_args()
 
     if args.instance is not None:
-        instances = [{'name': args.instance.split('/')[-1],
+        instances = [{'name': args.instance.split('/')[-1].replace(':','_'),
                      'url': args.instance}]
     else:
         instances = [
@@ -301,6 +302,9 @@ def main():
             {'name': 'covid-19', 'url': 'https://demos.dhis2.org/covid-19', 'SQL_view_TRK': 'xfemQFHUTUV',
              'SQL_view_AGG': 'lg8lFbDMw2Z'}
         ]
+
+    log_file = "./dashboard_checker.log"
+    setup_logger(log_file)
 
     credentials_file = './auth.json'
 
@@ -317,11 +321,7 @@ def main():
         else:
             with open(credentials_file, 'r') as json_file:
                 credentials = json.load(json_file)
-            #api_source = Api('https://play.dhis2.org/2.34.6', 'admin', 'district')
             api_source = Api(instance['url'], credentials['dhis']['username'], credentials['dhis']['password'])
-
-        # Get views as dataframe
-
 
         # Get dashboards
         params = {
@@ -344,9 +344,8 @@ def main():
         dashboards = api_source.get('dashboards', params=params).json()['dashboards']
 
         dashboard_item_with_issues_row = dict()
+
         for dashboard in dashboards:
-            # if not ('REHAB.01 - Input' in dashboard['name']):
-            #     continue
             logger.info('Processing dashboard ' + dashboard['name'])
             dashboard_item_with_issues_row['dashboard_name'] = dashboard['name']
             if '2.33' not in api_source.version:
@@ -364,9 +363,8 @@ def main():
                         dashboard_item_with_issues_row['type'] = dashboard_item
                         dashboard_item_with_issues_row['uid'] = dashboardItem[dashboard_item]['id']
                         dashboard_item_with_issues_row['name'] = ""
-                        logger.info('Trying ' + dashboard_item + ' ' + dashboardItem[dashboard_item]['id'])
-                        # if dashboardItem[dashboard_item]['id'] != 'vFkbMQiABfj':
-                        #     continue
+                        if args.verbose:
+                            logger.info('Trying ' + dashboard_item + ' ' + dashboardItem[dashboard_item]['id'])
                         try:
                             api_endpoint = dashboard_item + 's/' + dashboardItem[dashboard_item]['id']
                             dashboard_item_with_issues_row['api_link'] = instance['url'] + '/api/' +  api_endpoint
@@ -383,14 +381,14 @@ def main():
                             try:
                                 if dashboard_item == 'map':
                                     for map_view in item['mapViews']:
-                                        params = build_analytics_payload(map_view)
+                                        params = build_analytics_payload(map_view, args.verbose)
                                         if params != {}:
                                             if 'layer' in map_view and map_view['layer'] == 'event' and 'program' in map_view:
                                                 data = api_source.get('analytics/events/query/' + map_view['program']['id'], params=params).json()
                                             else:
                                                 data = api_source.get('analytics', params=params).json()
                                 else:
-                                    data = api_source.get('analytics', params=build_analytics_payload(item)).json()
+                                    data = api_source.get('analytics', params=build_analytics_payload(item, args.verbose)).json()
                             except RequestException as e:
                                 logger.error(dashboard_item + ' ' + dashboardItem[dashboard_item]['id'] + " data cannot be retrieved with error " + str(e))
                                 dashboard_item_with_issues_row['issue'] = str(e)
@@ -423,9 +421,17 @@ def main():
 
     export_csv = df.to_csv(instance['name'] + '.csv', index=None, header=True)
 
-    if errors_found != 0:
-        exit(1)
+    # Release log handlers
+    handlers = logger.handlers[:]
+    for handler in handlers:
+        handler.close()
+        logger.removeHandler(handler)
+
+    return errors_found
 
 
 if __name__ == '__main__':
-    main()
+    num_error = main()
+    # if the number of errors > 0, exit with code -1
+    if num_error > 0:
+        exit(1)

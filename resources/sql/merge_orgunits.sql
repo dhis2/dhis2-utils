@@ -194,7 +194,7 @@ modifiedby,
 audittype,
 attributeoptioncomboid,
 created )
-SELECT nextval(''hibernate_sequence''::regclass),
+SELECT nextval(''datavalueaudit_sequence''::regclass),
 dataelementid,
 periodid,
 ( SELECT organisationunitid from organisationunit where uid = %L ) as organisationunitid,

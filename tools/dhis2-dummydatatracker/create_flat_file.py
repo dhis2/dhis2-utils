@@ -235,7 +235,7 @@ def create_google_spreadsheet(program, df, share_with):
 
         batch = batch_updater(sh)
         # Add header formatting
-        header = chr(65) + str(1) + ':' + chr(65 + df.shape[1] - 1) + str(1)
+        header = str(1)
         batch.format_cell_range(wks_dd, header, CellFormat(
             backgroundColor=Color(0.40, 0.65, 1),
             textFormat=TextFormat(bold=True, foregroundColor=Color(1, 1, 1), fontSize=11),
@@ -243,7 +243,7 @@ def create_google_spreadsheet(program, df, share_with):
         ))
         # Added alternative formatting
         for i in range(3, df.shape[0], 2):
-            even_row = chr(65) + str(i) + ':' + chr(65 + df.shape[1] - 1) + str(i)
+            even_row = str(i)
             batch.format_cell_range(wks_dd, even_row, CellFormat(
                 backgroundColor=Color(0.90, 0.95, 1)
             ))
@@ -251,7 +251,7 @@ def create_google_spreadsheet(program, df, share_with):
         # Add border to the stages
         stage_indexes = df.index[df['Stage'] != ''].tolist()
         for i in stage_indexes:
-            stage_row = chr(65) + str(i + 2) + ':' + chr(65 + df.shape[1] - 1) + str(i + 2)
+            stage_row = str(i + 2)
             batch.format_cell_range(wks_dd, stage_row, CellFormat(borders=Borders(top=b)))
         # Add formatting to spreadsheet
         batch.execute()
@@ -415,9 +415,8 @@ def main():
         if 'enrollmentDateLabel' in program:
             enrollmentDateLabel = program['enrollmentDateLabel']
         # Add the program UID as UID for enrollmentDate
-        df = df.append({"Stage": "Enrollment", "Section": "", "TEA / DE / eventDate": enrollmentDateLabel,
-                        "UID": program_uid, "valueType": "DATE", "optionSet": "", "mandatory": 'True'},
-                       ignore_index=True)
+        df = pd.concat([df, pd.DataFrame({"Stage": "Enrollment", "Section": "", "TEA / DE / eventDate": enrollmentDateLabel,
+                        "UID": program_uid, "valueType": "DATE", "optionSet": "", "mandatory": 'True'}, index=[0])], ignore_index=True)
         optionSetDict = dict()
         for TEA in program['programTrackedEntityAttributes']:
             tea_uid = TEA['trackedEntityAttribute']['id']
@@ -433,10 +432,10 @@ def main():
                     optionsList = json_extract(options, 'code')
                     optionSetDict[optionSet] = optionsList
                 optionSet_def = '\n'.join(optionSetDict[optionSet])
-            df = df.append({"Stage": "", "Section": "", "TEA / DE / eventDate": TEA['name'],
+            df = pd.concat([df, pd.DataFrame({"Stage": "", "Section": "", "TEA / DE / eventDate": TEA['name'],
                             "UID": tea_uid,
                             "valueType": TEA['valueType'], "optionSet": optionSet_def,
-                            "mandatory": TEA['mandatory']}, ignore_index=True)
+                            "mandatory": TEA['mandatory']}, index=[0])], ignore_index=True)
 
             # print("TEA: " + TEA['name'] + " (" + TEA['valueType'] + ")")
 
@@ -478,10 +477,9 @@ def main():
             event_date_label = 'Event Date'
             if 'executionDateLabel' in programStage:
                 event_date_label = programStage['executionDateLabel']
-            df = df.append({"Stage": programStage['name'], "Section": "",
+            df = pd.concat([df, pd.DataFrame({"Stage": programStage['name'], "Section": "",
                             "TEA / DE / eventDate": event_date_label,
-                            "UID": programStage['id'], "valueType": "DATE", "optionSet": "", "mandatory": 'True'},
-                           ignore_index=True)
+                            "UID": programStage['id'], "valueType": "DATE", "optionSet": "", "mandatory": 'True'}, index=[0])], ignore_index=True)
             des_uid = json_extract_nested_ids(programStage, 'dataElement')
 
             dataElements = api_source.get('dataElements',
@@ -540,11 +538,10 @@ def main():
                                 else:
                                     optionSet_def = '\n'.join(optionSetDict[optionSet][:20]) + '\n(...)'
 
-                            df = df.append({"Stage": "", "Section": section_label,
+                            df = pd.concat([df, pd.DataFrame({"Stage": "", "Section": section_label,
                                             "TEA / DE / eventDate": dataElement_def['name'],
                                             "UID": dataElement_id, "valueType": dataElement_def['valueType'],
-                                            "optionSet": optionSet_def, "mandatory": dataElement_PS['compulsory']},
-                                           ignore_index=True)
+                                            "optionSet": optionSet_def, "mandatory": dataElement_PS['compulsory']}, index=[0])], ignore_index=True)
                         if section_label != "":
                             section_label = ""
 
@@ -571,10 +568,9 @@ def main():
                             optionSet_def = '\n'.join(optionSetDict[optionSet][:20]) + '\n(...)'
 
                         # print('    with optionSet = ' + dataElement['optionSet']['id'])
-                    df = df.append({"Stage": "", "Section": "", "TEA / DE / eventDate": dataElement_def['name'],
+                    df = pd.concat([df, pd.DataFrame({"Stage": "", "Section": "", "TEA / DE / eventDate": dataElement_def['name'],
                                     "UID": dataElement_id, "valueType": dataElement_def['valueType'],
-                                    "optionSet": optionSet_def, "mandatory": dataElement['compulsory']},
-                                   ignore_index=True)
+                                    "optionSet": optionSet_def, "mandatory": dataElement['compulsory']}, index=[0])], ignore_index=True)
 
                 # Find out if it is used in programRuleVariable
                 # for PRV in programRuleVariables:
