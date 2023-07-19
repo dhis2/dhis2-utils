@@ -131,14 +131,6 @@ EXECUTE 'update eventreport_organisationunits set sort_order = -(sort_order+1) w
 END LOOP;
 EXECUTE 'TRUNCATE temp1';
 
-EXECUTE 'DELETE FROM organisationunit WHERE organisationunitid = $1 ' USING organisationunitid;
-
-RETURN 1;
-
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
 -- eventvisualization_organisationunits
 
 EXECUTE 'INSERT INTO temp1 SELECT DISTINCT eventvisualizationid from eventvisualization_organisationunits where organisationunitid = $1 'USING organisationunitid;
