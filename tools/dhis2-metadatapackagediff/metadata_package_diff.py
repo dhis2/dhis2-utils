@@ -18,6 +18,27 @@ import argparse
 import re
 import os
 
+keys_not_owned = {
+    'categories': ['items', 'categoryCombos'],
+    'categoryCombos': ['categoryOptionCombos', 'items'],
+    'categoryOptionCombos': ['sharing', 'shortName'],
+    'categoryOptionGroupSets': ['shortName', 'items'],
+    'categoryOptionGroups': ['groupSets'],
+    'categoryOptions': ['categories', 'categoryOptionGroups', 'categoryOptionCombos'],
+    'dataElements': ['dataSetElements', 'dataElementGroups'],
+    'dataElementGroups': ['aggregationType'],
+    'dataSets': ['formType', 'sections'],
+    'indicatorTypes': ['sharing'],
+    'indicators': ['indicatorGroups'],
+    'maps': ['subscribed'],
+    'sections': ['categoryCombos', 'sharing'],
+    'userRoles': ['users'],
+    'users': ['name', 'sharing'],
+    'validationRules': ['validationRuleGroups', 'displayInstruction'],
+    'visualizations': ['displayDomainAxisLabel', 'displayRangeAxisLabel', 'rangeAxisLabel', 'domainAxisLabel',
+                       'displayTitle', 'subscribed']
+}
+
 def reindex(json_object, key):
     new_json = dict()
     for elem in json_object:
@@ -55,9 +76,11 @@ def json_to_dict(obj):
     result_dict = dict()
     key = ""
 
-    skip_keys = ['translations', 'lastUpdated', 'lastUpdatedBy', 'href', 'access', 'created', 'allItems',
+    skip_keys = ['translations', 'lastUpdated', 'lastUpdatedBy', 'createdBy', 'sharing.owner', 'href', 'access', 'created', 'allItems',
                  'displayName', 'displayDescription', 'displayNumeratorDescription', 'displayDenominatorDescription',
-                 'displayFormName', 'displayShortName']
+                 'displayFormName', 'displayShortName', 'dimension', 'dimensionType', 'isDefault', 'itemCount',
+                 'user', 'dimensionItem', 'dimensionItemType', 'externalAccess', 'favorite', 'optionSetValue', 'periodOffset', 'publicAccess', 'externalAccess', 'userGroupAccesses'
+    ]
 
     def scan(obj, result_dict, key):
         if key == "":
@@ -355,16 +378,17 @@ if __name__ == '__main__':
                         update_list = []
                         for k in elem_keys:
                             if k in dict1 and k not in dict2:
-                                if isinstance(dict1[k], list):
-                                    #update_list.append("DELETED|" + k + " : " + 'list(' + str(len(dict1[k])) + ')')
-                                    update_list.append({"update_operation":"DELETED",
-                                                        "update_key": k + " : " + 'list(' + str(len(dict1[k])) + ')',
-                                                        "update_diff": ""})
-                                else:
-                                    #update_list.append("DELETED|" + k + " : " + str(dict1[k]))
-                                    update_list.append({"update_operation":"DELETED",
-                                                        "update_key": k + " : " + str(dict1[k]),
-                                                        "update_diff": ""})
+                                if key not in keys_not_owned or not [item for item in keys_not_owned[key] if item in k]:
+                                    if isinstance(dict1[k], list):
+                                        #update_list.append("DELETED|" + k + " : " + 'list(' + str(len(dict1[k])) + ')')
+                                        update_list.append({"update_operation":"DELETED",
+                                                            "update_key": k + " : " + 'list(' + str(len(dict1[k])) + ')',
+                                                            "update_diff": ""})
+                                    else:
+                                        #update_list.append("DELETED|" + k + " : " + str(dict1[k]))
+                                        update_list.append({"update_operation":"DELETED",
+                                                            "update_key": k + " : " + str(dict1[k]),
+                                                            "update_diff": ""})
                             # All elements have been created
                             elif k in dict2 and k not in dict1:
                                 if isinstance(dict2[k], list):
@@ -540,10 +564,7 @@ if __name__ == '__main__':
             for email in args.share_with:
                 gs.share(email[0], perm_type='user', role='writer')
 
-    gs.share('manuel@dhis2.org', perm_type='user', role='writer')
-    if args.share_with is not None:
-        for email in args.share_with:
-            gs.share(email[0], perm_type='user', role='writer')
+        google_spreadsheet_url = "https://docs.google.com/spreadsheets/d/%s" % gs.id
+        print('Google spreadsheet created/updated here: ' + google_spreadsheet_url)
 
-    google_spreadsheet_url = "https://docs.google.com/spreadsheets/d/%s" % gs.id
-    print('Google spreadsheet created/updated here: ' + google_spreadsheet_url)
+
