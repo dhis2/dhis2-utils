@@ -868,12 +868,12 @@ def from_df_to_TEI_json(df_replicas, tei_template, event_template, df_ou_ratio=N
                             new_event['dataValues'] = list()
                             first_row = False
                         else:
-                            # source: json.dumps() TypeError: Object of type int32 is not JSON serializable
-                            # np.int32 is not JSON serializable but python int is, what you have to do is just converting np.int32 to python int.
-                            # if isinstance(value, np.int32):
-                            #    new_event['dataValues'].append({'dataElement': row['UID'], 'value': int(value)})
                             if not pd.isnull(value) and value != "":
-                                new_event['dataValues'].append({'dataElement': row['UID'], 'value': value})
+                                # To fix error: Object of type int32/int64 is not JSON serializable
+                                if isinstance(value, np.int32) or isinstance(value, np.int64):
+                                    new_event['dataValues'].append({'dataElement': row['UID'], 'value': int(value)})
+                                else:
+                                    new_event['dataValues'].append({'dataElement': row['UID'], 'value': value})
 
                     current_enrollment["events"].append(new_event)
                 # else:
@@ -1233,7 +1233,7 @@ def main():
 
         if len(program_orgunits) == 0:
             logger.error('The program does not have OUs assigned or the selections made in PARAMETERS made impossible '
-                         'to build a list of organisation units where dummy data can be created') 
+                         'to build a list of organisation units where dummy data can be created')
             exit(1)
 
         df_ou_distrib = None
