@@ -1336,7 +1336,7 @@ def main():
                 replicas = from_df_to_TEI_json(
                     create_replicas_from_df(df, tei_id, start_date, end_date, row['NUMBER'], df_distrib, df_rules),
                     tei_template, event_template, df_ratio)
-                #post_chunked_data(api_source, replicas, 'trackedEntityInstances', chunk_size)
+                post_chunked_data(api_source, replicas, 'trackedEntityInstances', chunk_size)
                 # post_to_server(api_source, {'trackedEntityInstances': replicas}, 'trackedEntityInstances')
                 list_of_TEIs = list_of_TEIs + replicas
                 logger.info("--- Elapsed time = %s seconds ---" % (time.time() - start_time))
