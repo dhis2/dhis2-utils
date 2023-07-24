@@ -326,6 +326,38 @@ def get_periods(frequency, start_date, end_date):
     return periods
 
 
+def update_df_min_max(df_min_max, DE, coc_uid, dsDataElements):
+  """Updates the dataframe with the minimum and maximum values for the given data element.
+
+  Args:
+    df_min_max: The dataframe to update.
+    DE: The data element dictionary.
+    coc_uid: The COC UID.
+    dsDataElements: The data elements dictionary.
+
+  Returns:
+    The updated dataframe.
+  """
+
+  de_uid = DE[de]['id']
+  de_name = DE[de]['name']
+  coc_name = COC[coc]['name']
+  valueType = dsDataElements[de]['valueType']
+
+  row = {
+      'DE UID': de_uid,
+      'COC UID': coc_uid,
+      'DE Name': de_name,
+      'COC Name': coc_name,
+      'valueType': valueType,
+      'min': '',
+      'max': ''
+  }
+
+  df_min_max = pd.concat([df_min_max, pd.DataFrame.from_dict(row, orient='index')], ignore_index=True)
+
+  return df_min_max
+
 def main():
     import argparse
     global api_source
@@ -579,15 +611,15 @@ def main():
                             else:
                                 coc_code = ""
                             if str_pair not in greyedFields:
-                                df_min_max = df_min_max.append({"DE UID": DE[de]['id'], "COC UID": coc_uid,
+                                df_min_max = pd.concat([df_min_max, pd.DataFrame({"DE UID": DE[de]['id'], "COC UID": coc_uid,
                                                                 "DE Name": DE[de]['name'], "COC Name": COC[coc]['name'],
                                                                 "valueType": dsDataElements[de]['valueType'],
-                                                                "min": "", "max": ""}, ignore_index=True)
+                                                                "min": "", "max": ""}, index=[0])])
                     else:
-                        df_min_max = df_min_max.append({"DE UID": DE[de]['id'], "COC UID": "DEFAULT",
+                        df_min_max = pd.concat([df_min_max, pd.DataFrame({"DE UID": DE[de]['id'], "COC UID": "DEFAULT",
                                                         "DE Name": DE[de]['name'], "COC Name": "default",
                                                         "valueType": dsDataElements[de]['valueType'],
-                                                        "min": "", "max": ""}, ignore_index=True)
+                                                        "min": "", "max": ""}, index=[0])])
 
                 # Save csv file
                 # export_csv = df_min_max.to_csv(r'./ds_' + ds['name'].replace(' ', '_') + '_min_max.csv', index=None,
