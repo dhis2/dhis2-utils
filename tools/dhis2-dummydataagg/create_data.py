@@ -579,15 +579,15 @@ def main():
                             else:
                                 coc_code = ""
                             if str_pair not in greyedFields:
-                                df_min_max = df_min_max.append({"DE UID": DE[de]['id'], "COC UID": coc_uid,
+                                df_min_max = pd.concat([df_min_max, pd.DataFrame({"DE UID": DE[de]['id'], "COC UID": coc_uid,
                                                                 "DE Name": DE[de]['name'], "COC Name": COC[coc]['name'],
                                                                 "valueType": dsDataElements[de]['valueType'],
-                                                                "min": "", "max": ""}, ignore_index=True)
+                                                                "min": "", "max": ""}, index=[0])])
                     else:
-                        df_min_max = df_min_max.append({"DE UID": DE[de]['id'], "COC UID": "DEFAULT",
+                        df_min_max = pd.concat([df_min_max, pd.DataFrame({"DE UID": DE[de]['id'], "COC UID": "DEFAULT",
                                                         "DE Name": DE[de]['name'], "COC Name": "default",
                                                         "valueType": dsDataElements[de]['valueType'],
-                                                        "min": "", "max": ""}, ignore_index=True)
+                                                        "min": "", "max": ""}, index=[0])])
 
                 # Save csv file
                 # export_csv = df_min_max.to_csv(r'./ds_' + ds['name'].replace(' ', '_') + '_min_max.csv', index=None,
