@@ -1172,8 +1172,8 @@ def main():
             'legendSets',  # used in indicators, optionGroups, programIndicators and trackedEntityAttributes
             'optionGroups', 'options', 'optionSets',
             'sqlViews', 'reports', 'constants', 'documents', 'attributes',
-            'dataEntryForms', 'sections', 'dataSets',  # Some programs, like HIV, have dataSets
             'dataElements', 'dataElementGroups',
+            'dataEntryForms', 'sections', 'dataSets',
             'validationNotificationTemplates', 'validationRules', 'validationRuleGroups',
             'jobConfigurations',
             'predictors', 'predictorGroups',
