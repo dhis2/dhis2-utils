@@ -21,12 +21,15 @@ where datname = 'dhis2';
 
 -- Approximate count of largest tables
 
-select t.relname, s.nspname, t.reltuples::bigint as approximate_row_count
-from pg_catalog.pg_class t
-inner join pg_catalog.pg_namespace s on t.relnamespace=s.oid
-where relname !~ '^_?pg_.*$'
+
+select c.relname as table_name, s.nspname as table_schema, c.reltuples::bigint as approximate_row_count
+from pg_catalog.pg_class c
+inner join pg_catalog.pg_namespace s on c.relnamespace=s.oid
+inner join information_schema.tables t on c.relname = t.table_name and s.nspname = t.table_schema 
+where t.table_type = 'BASE TABLE'
+and c.relname !~ '^_?pg_.*$'
 order by approximate_row_count desc
-limit 500;
+limit 200;
 
 -- Approximate count of rows in datavalue table
 
