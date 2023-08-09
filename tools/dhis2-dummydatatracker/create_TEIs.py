@@ -689,9 +689,11 @@ def check_template_TEIs_in_cols(df, ws_dummy_data=None):
                                 except APIError as e:
                                     logger.error(e.code + ':' + e.message)
                                     pass
-                                df_validation_results = df_validation_results.append({"CELL": ws_col_row,
-                                                                                      "ERROR": error_message},
-                                                                                     ignore_index=True)
+                                else:
+                                    df_validation_results = pd.concat(
+                                        [df_validation_results, pd.DataFrame({"CELL": ws_col_row,
+                                                                              "ERROR": error_message},
+                                                                             index=[0])])
                         else:
                             df.at[index, tei_column] = value
                     else:
