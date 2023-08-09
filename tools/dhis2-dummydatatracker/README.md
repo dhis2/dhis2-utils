@@ -120,20 +120,20 @@ python delete_sh.py 1xOeOpz4lSTdtiAJTuLwx40GgC5n9fkH2gltiB-sHmwg
 		We can read this as follows: For TEI_0, 20% of the total TEIs to generate must have an age between 15 and 19, 30% an age between 20 and 24 and so forth.
                 If you want to distribute by organisation units you need to use the key words you can see in the example below. You can then distribute by Org Unit Group, by specific OUs given by UID or names, etc...
    		| UID         | NAME                  | VALUE              | TEI\_0 | TEI\_1 | TEI\_2 |
-		| :---------- | :-------------------: | :----------------: | :----: | -----: | -----: |
-                | orgUnitUIDs | Organisation Unit     |	OUG{aT5pkgRLbw5}   | 1      | 0      | 0      |
-                |             |                       | OUG{RbJ4hRSGQaH}   | 0      | 1      | 0      |
-                |             |                       | OUG{dV8Ec2zJrze}   | 0      | 0      | 1      |
+   		| :---------- | :-------------------: | :----------------: | :----: | -----: | -----: |
+   		| orgUnitUIDs | Organisation Unit     |	OUG{aT5pkgRLbw5}   | 1      | 0      | 0      |
+   		|             |                       |	OUG{RbJ4hRSGQaH}   | 0      | 1      | 0      |
+   		|             |                       |	OUG{dV8Ec2zJrze}   | 0      | 0      | 1      |
 	- Create a RULES tab: this can be sued to write simple expressions to force certain values when randomization could create abnormal situations. For example, to force Sex to be FEMALE if status is PREGNANT. These are some examples from HFA package:
-                | EXPRESSION	                                                |                                     |
-                | :-----------------------------------------------------------: | :---------------------------------: |
-                | if #{aa9ulv0QpC3} == 'false': #{WfmACfSH6Pl} = 'false'        | If no HIV service, no HIV details   |
-                | if #{aa9ulv0QpC3} == 'false': #{ee1ZTOL80hx} = 'false'        | If no HIV service, no HIV details   |
-                | if #{aa9ulv0QpC3} == 'false': #{tKatq8QO7WA} = 'false'        | If no HIV service, no HIV details   |
+   		| EXPRESSION	                                                |                                     |
+   		| :-----------------------------------------------------------: | :---------------------------------: |
+   		| if #{aa9ulv0QpC3} == 'false': #{WfmACfSH6Pl} = 'false'        | If no HIV service, no HIV details   |
+   		| if #{aa9ulv0QpC3} == 'false': #{ee1ZTOL80hx} = 'false'        | If no HIV service, no HIV details   |
+   		| if #{aa9ulv0QpC3} == 'false': #{tKatq8QO7WA} = 'false'        | If no HIV service, no HIV details   |
             Or from HIV package:
-                | EXPRESSION	                                                |                                     |
-                | :-----------------------------------------------------------: | :---------------------------------: |
-                | if #{CklPZdOd6H1} == 'MALE' : #{BfNZcj99yz4} = 'NOT_PREGNANT' | If Male, always not pregnant        |
+   		| EXPRESSION	                                                |                                     |
+   		| :-----------------------------------------------------------: | :---------------------------------: |
+   		| if #{CklPZdOd6H1} == 'MALE' : #{BfNZcj99yz4} = 'NOT_PREGNANT' | If Male, always not pregnant        |
 	- When the spreadsheet is ready please review the following parameters:
 		- NUMBER_REPLICAS: make sure the identifiers match the columns in DUMMY_DATA, i.e. if you have a primal TEI called TEI_1, TEI_1 must be present in the rows of NUMBER_REPLICAS if you want to create replicas of this TEI.
 		- PARAMETERS: verify server_url, orgUnit_level and metadata_version. Make sure server_url is empty if you want to simple use the server specified in auth.json or that the server url is correct. Make sure orgUnit_level corresponds to the facility level in your OU tree. **Remember that the spreadsheet is a collaborative tool and many users have access to it**, so somebody might have changed the parameters without warning the implementer.
