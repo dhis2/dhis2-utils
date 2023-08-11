@@ -1,4 +1,4 @@
---WARNING! ERRORS ENCOUNTERED DURING SQL PARSING!
+
 -- SQL script for moving data from one year to the next.
 -- Useful for updating demo databases with sample data.
 -- (Write) Move startdate and enddate in period to next year
@@ -7,9 +7,9 @@
 ------------------------------------------------------Part 1 move  all Data forward by one year ----------------------------------------------
 DROP FUNCTION
 
-IF EXISTS move_data_one_year_forward();
+IF EXISTS dhis2_timeshift_one_year_forward_core(update_event_dates BOOLEAN);
 	CREATE
-		OR replace FUNCTION move_data_one_year_forward (update_event_dates BOOLEAN DEFAULT FALSE)
+		OR replace FUNCTION dhis2_timeshift_one_year_forward_core (update_event_dates BOOLEAN DEFAULT FALSE)
 	RETURNS VOID LANGUAGE plpgsql AS $$
 
 DECLARE f record;
@@ -196,33 +196,49 @@ END IF;
 
 --This part to call the  FUNCTION to move forward all DHIS2 data by one year
 ----------------------------------only call at the begining of each year if needed-------------------------------------
-/*
+CREATE OR REPLACE FUNCTION dhis2_timeshift_one_year_forward()
+RETURNS VOID LANGUAGE plpgsql AS $$
 BEGIN
-		;
+    -- Call the dhis2_timeshift_one_year_forward_core function
+    PERFORM dhis2_timeshift_one_year_forward_core(TRUE);
 
-	SELECT move_data_one_year_forward();
+    -- Commit the transaction
+    COMMIT;
 
-	COMMIT;
+    -- Vacuum to remove dead tuples
+    EXECUTE 'VACUUM period';
+    EXECUTE 'VACUUM programstageinstance';
+    EXECUTE 'VACUUM programinstance';
+    EXECUTE 'VACUUM interpretation';
+    EXECUTE 'VACUUM mapview';
+    EXECUTE 'VACUUM eventreport';
+    EXECUTE 'VACUUM eventchart';
+    EXECUTE 'VACUUM trackedentitydatavalueaudit';
+END;
+$$;
 
-	-----------------------------------------------------------------------------------------------------------------------
-	-- Vacuum to remove dead tuples
-	------------------------------------------------------------
-	vacuum period;
+CREATE OR REPLACE FUNCTION dhis2_timeshift_one_year_forward_no_events()
+RETURNS VOID LANGUAGE plpgsql AS $$
+BEGIN
+    -- Call the dhis2_timeshift_one_year_forward_core function
+    PERFORM dhis2_timeshift_one_year_forward_core();
 
-	vacuum programstageinstance;
+    -- Commit the transaction
+    COMMIT;
 
-	vacuum programinstance;
+    -- Vacuum to remove dead tuples
+    EXECUTE 'VACUUM period';
+    EXECUTE 'VACUUM programstageinstance';
+    EXECUTE 'VACUUM programinstance';
+    EXECUTE 'VACUUM interpretation';
+    EXECUTE 'VACUUM mapview';
+    EXECUTE 'VACUUM eventreport';
+    EXECUTE 'VACUUM eventchart';
+    EXECUTE 'VACUUM trackedentitydatavalueaudit';
+END;
+$$;
 
-	vacuum interpretation;
 
-	vacuum mapview;
-
-	vacuum eventreport;
-
-	vacuum eventchart;
-
-	vacuum trackedentitydatavalueaudit;
-*/
 	------------------------------------End Part 1 of moved data forward by one Year ------------------------------------------------
 	-------------------------------- Part 2.1  Creating buffer  peroids -------------------------------------------------------------
 	--------------------------------------------------------------------------------------------------------------------------------
@@ -231,9 +247,9 @@ BEGIN
 	-- --------------------------------------------------------------------------------------------------------------------------
 	DROP FUNCTION
 
-	IF EXISTS generate_buffer_period_from_current_period();
+	IF EXISTS dhis2_timeshift_generate_buffer_from_current_core();
 		CREATE
-			OR replace FUNCTION generate_buffer_period_from_current_period ()
+			OR replace FUNCTION dhis2_timeshift_generate_buffer_from_current_core ()
 		RETURNS TABLE (
 				p_id BIGINT
 				,p_type INT
@@ -395,26 +411,27 @@ RETURN NEXT;END
 
 LOOP;END;$$;
 
---  run the below line  will delete empty peroid in the buffering year so we dont have dupliacted peroid ids 
-/*
-SELECT *
-FROM generate_buffer_period_from_current_period();
+--  the following function wraps calls to the dhis2_timeshift_generate_buffer_from_current_core() 
+CREATE OR REPLACE FUNCTION dhis2_timeshift_create_buffer_periods()
+RETURNS VOID LANGUAGE plpgsql AS $$
+BEGIN
+    -- Run the function to delete empty periods in the buffering year to avoid duplicated period IDs
+    PERFORM dhis2_timeshift_generate_buffer_from_current_core();
 
--- the below will create all buffer peroids
-INSERT INTO period
-SELECT p_id
-	,p_type
-	,p_start
-	,p_end
-FROM generate_buffer_period_from_current_period();
-*/
+    -- Create all buffer periods
+    INSERT INTO period
+    SELECT p_id, p_type, p_start, p_end
+    FROM dhis2_timeshift_generate_buffer_from_current_core();
+END;
+$$;
+
 ---------------------------------------------- end Part 2.1 ------------------------------------------------
 ----------------------------------------------Part 3 Move all future data to the buffer period-----------------
 -- Move all future data to the buffer period , Using today date as a baseline
 DROP FUNCTION
 
-IF EXISTS move_current_buffering();
-	CREATE FUNCTION move_current_buffering ()
+IF EXISTS dhis2_timeshift_move_current_to_buffer();
+	CREATE FUNCTION dhis2_timeshift_move_current_to_buffer ()
 	RETURNS boolean LANGUAGE plpgsql
 	AS
 	$$
@@ -484,14 +501,14 @@ IF EXISTS move_current_buffering();
 		RETURN TRUE;
 	END $$;
 /*
-	SELECT move_current_buffering();
+	SELECT dhis2_timeshift_move_current_to_buffer();
 */
 	-----------------------  end part 3 of moving future data to buffer year---------------------------------------------------------------------
 	------------------------part 4 Move data back from buffer year to current peroid ---------------------------------------------------------------
 	---- Move all buffer  data to the current period
 	-- to be used by corn each peroid 
-	Drop function if EXISTS move_buffering_to_current (period_type TEXT);
-	CREATE FUNCTION move_buffering_to_current (period_type TEXT)
+	Drop function if EXISTS dhis2_timeshift_move_buffer_to_current (period_type TEXT);
+	CREATE FUNCTION dhis2_timeshift_move_buffer_to_current (period_type TEXT)
 	RETURNS boolean LANGUAGE plpgsql
 	AS
 	$$
@@ -565,8 +582,8 @@ IF EXISTS move_current_buffering();
 	END $$;
 
 	-- passing peroid type name to the function  monthly , Daily, weekly 
-	--Please add the respective period and execute the function as below or create separate corns jobs
+	--Please add the respective period and execute the function as below or create separate cron jobs
 	-- you cand see readme file for more information
 /*
-SELECT move_buffering_to_current('monthly');
+SELECT dhis2_timeshift_move_buffer_to_current('monthly');
 */
