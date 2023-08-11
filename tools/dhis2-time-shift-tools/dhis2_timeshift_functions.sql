@@ -194,6 +194,151 @@ END IF;
 
 	END;$$;
 
+-- SQL script for moving data backward by one year
+-- Useful for updating demo databases with sample data.
+
+Drop function if EXISTS dhis2_timeshift_one_year_backward_core (update_event_dates BOOLEAN);
+create or replace function dhis2_timeshift_one_year_backward_core (update_event_dates BOOLEAN DEFAULT FALSE) RETURNS VOID 
+LANGUAGE plpgsql
+  AS
+
+$$
+
+declare
+
+    f record;
+	TABLE_RECORD record;
+
+begin
+   
+--This part  is  a query to get the list of all years in the current DHIS2 instance, which have  data values  to be moved backward by one year
+FOR f IN select   DISTINCT date_part('year',startdate) as years from period
+order by years asc
+
+loop 
+update period set
+startdate = (startdate + interval '-1 year')::date,
+enddate = (enddate + interval '-1 year')::date
+where date_part('year', startdate)::int = f.years;
+end loop;
+
+-- (Write) Move programstageinstance	
+update programstageinstance set
+duedate = (duedate + interval '-1 year'),
+executiondate = (executiondate + interval '-1 year'),
+completeddate = (completeddate + interval '-1 year');
+
+-- (Write) Move programinstance to next year
+update programinstance set
+incidentdate = (incidentdate + interval '-1 year'),
+enrollmentdate = (enrollmentdate + interval '-1 year'),
+enddate = (enddate + interval '-1 year');
+
+-- (Write) Move interpretations created / lastupdated to next year
+update interpretation set created = (created + interval '-1 year');
+update interpretation set lastupdated = created;
+-- (Write) Move favorite start/end dates to next year	
+update mapview set startdate = (startdate + interval '-1 year') where startdate is not null;
+update mapview set enddate = (enddate + interval '-1 year') where enddate is not null;
+
+update eventreport set startdate = (startdate + interval '-1 year') where startdate is not null;
+update eventreport set enddate = (enddate + interval '-1 year') where enddate is not null;
+
+update eventchart set startdate = (startdate + interval '-1 year') where startdate is not null;
+update eventchart set enddate = (enddate + interval '-1 year') where enddate is not null;
+
+-- Only required for Tracker: Update TEA values for enrollments
+  UPDATE trackedentityattributevalue teav
+     SET value = to_char((value::date + interval '-1 year'), 'YYYY-MM-dd')
+		 where trackedentityattributeid in (
+  select trackedentityattributeid from trackedentityattribute where valuetype in ('DATE','DATETIME') 
+);
+
+-- (Write) Move date event values to next year
+update trackedentitydatavalueaudit set value = to_char((value::date + interval '-1 year'), 'YYYY-MM-dd')
+where dataelementid in (
+  select dataelementid from dataelement where valuetype in ('DATE','DATETIME') and domaintype = 'TRACKER'
+);
+
+
+-- HAVING NAIVELY MOVED PERIOD DATES ONE YEAR FORWARD, WE NEED TO TWEAK THE DATES TO ALIGN PERIODS CORRECTLY
+
+-- Deal with all of the start dates first, then adjust the end dates at the end.
+-- Move the start day of all Weekly periods to Monday
+UPDATE period
+	SET startdate = startdate + 1 - cast(abs(extract(isodow from startdate)) as int)
+	FROM periodtype
+ 	WHERE period.periodtypeid = periodtype.periodtypeid AND periodtype.name LIKE ('Weekly');
+-- Move the start day of all WeeklyWednesday periods to Wednesday
+UPDATE period
+	SET startdate = startdate + 3 - cast(abs(extract(isodow from startdate)) as int)
+	FROM periodtype
+ 	WHERE period.periodtypeid = periodtype.periodtypeid AND periodtype.name LIKE ('WeeklyWednesday');
+-- Move the start day of all WeeklyThursday periods to Thursday
+UPDATE period
+	SET startdate = startdate + 4 - cast(abs(extract(isodow from startdate)) as int)
+	FROM periodtype
+ 	WHERE period.periodtypeid = periodtype.periodtypeid AND periodtype.name LIKE ('WeeklyThursday');
+-- Move the start day of all WeeklySaturday periods to Saturday
+UPDATE period
+	SET startdate = startdate + 6 - cast(abs(extract(isodow from startdate)) as int)
+	FROM periodtype
+ 	WHERE period.periodtypeid = periodtype.periodtypeid AND periodtype.name LIKE ('WeeklySaturday');
+-- Move the start day of all WeeklySunday periods to Sunday
+UPDATE period
+	SET startdate = startdate + 7 - cast(abs(extract(isodow from startdate)) as int)
+	FROM periodtype
+ 	WHERE period.periodtypeid = periodtype.periodtypeid AND periodtype.name LIKE ('WeeklySunday');
+-- Set all weeks to one week long :)
+UPDATE period
+	SET enddate = to_char(startdate + interval '6 days', 'YYYY-MM-DD')::date
+	FROM periodtype
+ 	WHERE period.periodtypeid = periodtype.periodtypeid AND periodtype.name LIKE ('%Weekly%');
+-- Ensure all months are correct length
+-- Monthly
+UPDATE period
+	SET enddate = (period.startdate + (interval '1 month') - (interval '1 day'))::date
+	FROM periodtype
+ 	WHERE period.periodtypeid = periodtype.periodtypeid AND periodtype.name LIKE ('Monthly');
+-- BiMonthly
+UPDATE period
+	SET enddate = (period.startdate + (interval '2 months') - (interval '1 day'))::date
+	FROM periodtype
+ 	WHERE period.periodtypeid = periodtype.periodtypeid AND periodtype.name LIKE ('BiMonthly');
+-- SixMonthly
+UPDATE period
+	SET enddate = (period.startdate + (interval '6 months') - (interval '1 day'))::date
+	FROM periodtype
+ 	WHERE period.periodtypeid = periodtype.periodtypeid AND periodtype.name LIKE ('SixMonthly%');
+	
+-- Update event dates if update_event_dates set to TRUE, the below part will take time 
+IF update_event_dates THEN
+	FOR TABLE_RECORD IN SELECT
+	psi.programstageinstanceid,
+	( '{' || js.KEY || ',value}' ) :: TEXT [] AS PATH,
+	('"'||TEXT(DATE(to_timestamp(replace(js_value.value::TEXT, '"', ''), 'YYYY-MM-DD')))||'"')::jsonb as old_date ,
+	(
+		'"' || TEXT ( DATE ( to_timestamp( REPLACE ( js_value.VALUE :: TEXT, '"', '' ), 'YYYY-MM-DD' ) + ( '-1 year' ) :: INTERVAL ) ) || '"' 
+	) :: jsonb AS VALUE
+		
+	FROM
+		programstageinstance psi,
+		jsonb_each ( eventdatavalues :: jsonb ) AS js,
+		jsonb_each ( js.VALUE ) AS js_value 
+	WHERE
+		js.KEY IN ( SELECT uid FROM dataelement WHERE valuetype = 'DATE' ) 
+		AND js_value.KEY = 'value'
+
+		LOOP
+		UPDATE programstageinstance psi 
+		SET eventdatavalues = jsonb_set ( eventdatavalues, TABLE_RECORD.PATH, TABLE_RECORD.VALUE ) 
+	WHERE	psi.programstageinstanceid = TABLE_RECORD.programstageinstanceid;
+	END LOOP;	
+END IF;	
+	end;
+$$;
+
+
 --This part to call the  FUNCTION to move forward all DHIS2 data by one year
 ----------------------------------only call at the begining of each year if needed-------------------------------------
 CREATE OR REPLACE FUNCTION dhis2_timeshift_one_year_forward()
@@ -238,9 +383,50 @@ BEGIN
 END;
 $$;
 
+--This part to call the  FUNCTION to move backward all DHIS2 data by one year
+----------------------------------only call at the begining of each year if needed-------------------------------------
+CREATE OR REPLACE FUNCTION dhis2_timeshift_one_year_backward()
+RETURNS VOID LANGUAGE plpgsql AS $$
+BEGIN
+    -- Call the dhis2_timeshift_one_year_backward_core function
+    PERFORM dhis2_timeshift_one_year_backward_core(TRUE);
 
-	------------------------------------End Part 1 of moved data forward by one Year ------------------------------------------------
-	-------------------------------- Part 2.1  Creating buffer  peroids -------------------------------------------------------------
+    -- Commit the transaction
+    COMMIT;
+
+    -- Vacuum to remove dead tuples
+    EXECUTE 'VACUUM period';
+    EXECUTE 'VACUUM programstageinstance';
+    EXECUTE 'VACUUM programinstance';
+    EXECUTE 'VACUUM interpretation';
+    EXECUTE 'VACUUM mapview';
+    EXECUTE 'VACUUM eventreport';
+    EXECUTE 'VACUUM eventchart';
+    EXECUTE 'VACUUM trackedentitydatavalueaudit';
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION dhis2_timeshift_one_year_backward_no_events()
+RETURNS VOID LANGUAGE plpgsql AS $$
+BEGIN
+    -- Call the dhis2_timeshift_one_year_backward_core function
+    PERFORM dhis2_timeshift_one_year_backward_core();
+
+    -- Commit the transaction
+    COMMIT;
+
+    -- Vacuum to remove dead tuples
+    EXECUTE 'VACUUM period';
+    EXECUTE 'VACUUM programstageinstance';
+    EXECUTE 'VACUUM programinstance';
+    EXECUTE 'VACUUM interpretation';
+    EXECUTE 'VACUUM mapview';
+    EXECUTE 'VACUUM eventreport';
+    EXECUTE 'VACUUM eventchart';
+    EXECUTE 'VACUUM trackedentitydatavalueaudit';
+END;
+$$;
+
 	--------------------------------------------------------------------------------------------------------------------------------
 	--generating  buffer periods from the future/current  year to be used as a buffering period 
 	--the buffering periods will be the same periodId for the future/current year with an extra two digits from  the buffering year
@@ -411,27 +597,14 @@ RETURN NEXT;END
 
 LOOP;END;$$;
 
---  the following function wraps calls to the dhis2_timeshift_generate_buffer_from_current_core() 
-CREATE OR REPLACE FUNCTION dhis2_timeshift_create_buffer_periods()
-RETURNS VOID LANGUAGE plpgsql AS $$
-BEGIN
-    -- Run the function to delete empty periods in the buffering year to avoid duplicated period IDs
-    PERFORM dhis2_timeshift_generate_buffer_from_current_core();
 
-    -- Create all buffer periods
-    INSERT INTO period
-    SELECT p_id, p_type, p_start, p_end
-    FROM dhis2_timeshift_generate_buffer_from_current_core();
-END;
-$$;
 
----------------------------------------------- end Part 2.1 ------------------------------------------------
-----------------------------------------------Part 3 Move all future data to the buffer period-----------------
+---------------------------------------------- Move all future data to the buffer period-----------------
 -- Move all future data to the buffer period , Using today date as a baseline
 DROP FUNCTION
 
-IF EXISTS dhis2_timeshift_move_current_to_buffer();
-	CREATE FUNCTION dhis2_timeshift_move_current_to_buffer ()
+IF EXISTS dhis2_timeshift_move_future_to_buffer_core();
+	CREATE FUNCTION dhis2_timeshift_move_future_to_buffer_core ()
 	RETURNS boolean LANGUAGE plpgsql
 	AS
 	$$
@@ -500,15 +673,28 @@ IF EXISTS dhis2_timeshift_move_current_to_buffer();
 
 		RETURN TRUE;
 	END $$;
-/*
-	SELECT dhis2_timeshift_move_current_to_buffer();
-*/
-	-----------------------  end part 3 of moving future data to buffer year---------------------------------------------------------------------
-	------------------------part 4 Move data back from buffer year to current peroid ---------------------------------------------------------------
+
+--  the following function wraps calls to the create and fill the buffer period 
+CREATE OR REPLACE FUNCTION dhis2_timeshift_buffer_future_periods()
+RETURNS VOID LANGUAGE plpgsql AS $$
+BEGIN
+    -- Run the function to delete empty periods in the buffering year to avoid duplicated period IDs
+    PERFORM dhis2_timeshift_generate_buffer_from_current_core();
+
+    -- Create all buffer periods
+    INSERT INTO period
+    SELECT p_id, p_type, p_start, p_end
+    FROM dhis2_timeshift_generate_buffer_from_current_core();
+
+	PERFORM dhis2_timeshift_move_future_to_buffer_core();
+END;
+$$;
+
+	------------------------ Move data back from buffer year to current peroid ---------------------------------------------------------------
 	---- Move all buffer  data to the current period
 	-- to be used by corn each peroid 
-	Drop function if EXISTS dhis2_timeshift_move_buffer_to_current (period_type TEXT);
-	CREATE FUNCTION dhis2_timeshift_move_buffer_to_current (period_type TEXT)
+	Drop function if EXISTS dhis2_timeshift_buffer_to_current (period_type TEXT);
+	CREATE FUNCTION dhis2_timeshift_buffer_to_current (period_type TEXT)
 	RETURNS boolean LANGUAGE plpgsql
 	AS
 	$$
@@ -585,5 +771,5 @@ IF EXISTS dhis2_timeshift_move_current_to_buffer();
 	--Please add the respective period and execute the function as below or create separate cron jobs
 	-- you cand see readme file for more information
 /*
-SELECT dhis2_timeshift_move_buffer_to_current('monthly');
+SELECT dhis2_timeshift_buffer_to_current('monthly');
 */
