@@ -9,7 +9,7 @@ DROP FUNCTION
 
 IF EXISTS move_data_one_year_forward();
 	CREATE
-		OR replace FUNCTION move_data_one_year_forward ()
+		OR replace FUNCTION move_data_one_year_forward (update_event_dates BOOLEAN DEFAULT FALSE)
 	RETURNS VOID LANGUAGE plpgsql AS $$
 
 DECLARE f record;
@@ -166,34 +166,37 @@ SET enddate = (period.startdate + (interval '6 months') - (interval '1 day'))::D
 FROM periodtype
 WHERE period.periodtypeid = periodtype.periodtypeid
 	AND periodtype.name LIKE ('SixMonthly%');
-	-- uncomment the below section to Update event dates , the below part will take time 
-	/*	
-FOR TABLE_RECORD IN SELECT
-psi.programstageinstanceid,
-( '{' || js.KEY || ',value}' ) :: TEXT [] AS PATH,
-('"'||TEXT(DATE(to_timestamp(replace(js_value.value::TEXT, '"', ''), 'YYYY-MM-DD')))||'"')::jsonb as old_date ,
-(
-	'"' || TEXT ( DATE ( to_timestamp( REPLACE ( js_value.VALUE :: TEXT, '"', '' ), 'YYYY-MM-DD' ) + ( '1 year' ) :: INTERVAL ) ) || '"' 
-) :: jsonb AS VALUE
-	
-FROM
-	programstageinstance psi,
-	jsonb_each ( eventdatavalues :: jsonb ) AS js,
-	jsonb_each ( js.VALUE ) AS js_value 
-WHERE
-	js.KEY IN ( SELECT uid FROM dataelement WHERE valuetype = 'DATE' ) 
-	AND js_value.KEY = 'value'
+    
+-- Update event dates if update_event_dates set to TRUE, the below part will take time 
+IF update_event_dates THEN		
+    FOR TABLE_RECORD IN SELECT
+    psi.programstageinstanceid,
+    ( '{' || js.KEY || ',value}' ) :: TEXT [] AS PATH,
+    ('"'||TEXT(DATE(to_timestamp(replace(js_value.value::TEXT, '"', ''), 'YYYY-MM-DD')))||'"')::jsonb as old_date ,
+    (
+        '"' || TEXT ( DATE ( to_timestamp( REPLACE ( js_value.VALUE :: TEXT, '"', '' ), 'YYYY-MM-DD' ) + ( '1 year' ) :: INTERVAL ) ) || '"' 
+    ) :: jsonb AS VALUE
 
-	LOOP
-	UPDATE programstageinstance psi 
-	SET eventdatavalues = jsonb_set ( eventdatavalues, TABLE_RECORD.PATH, TABLE_RECORD.VALUE ) 
-WHERE	psi.programstageinstanceid = TABLE_RECORD.programstageinstanceid;
-END LOOP;	
-*/
+    FROM
+        programstageinstance psi,
+        jsonb_each ( eventdatavalues :: jsonb ) AS js,
+        jsonb_each ( js.VALUE ) AS js_value 
+    WHERE
+        js.KEY IN ( SELECT uid FROM dataelement WHERE valuetype = 'DATE' ) 
+        AND js_value.KEY = 'value'
+
+        LOOP
+        UPDATE programstageinstance psi 
+        SET eventdatavalues = jsonb_set ( eventdatavalues, TABLE_RECORD.PATH, TABLE_RECORD.VALUE ) 
+    WHERE	psi.programstageinstanceid = TABLE_RECORD.programstageinstanceid;
+    END LOOP;
+END IF;	
+
 	END;$$;
 
 --This part to call the  FUNCTION to move forward all DHIS2 data by one year
 ----------------------------------only call at the begining of each year if needed-------------------------------------
+/*
 BEGIN
 		;
 
@@ -219,7 +222,7 @@ BEGIN
 	vacuum eventchart;
 
 	vacuum trackedentitydatavalueaudit;
-
+*/
 	------------------------------------End Part 1 of moved data forward by one Year ------------------------------------------------
 	-------------------------------- Part 2.1  Creating buffer  peroids -------------------------------------------------------------
 	--------------------------------------------------------------------------------------------------------------------------------
@@ -254,12 +257,12 @@ BEGIN
 
 	BEGIN
 		---this part of the query will return a minimum year which has data values 
-		min_p_year : = (
+		min_p_year := (
 				SELECT date_part('year', min(pp.startdate)) - 1 AS bufferyear_no_p
 				FROM period pp
 				);
 
-		min_p_datavalue_year : = (
+		min_p_datavalue_year := (
 				SELECT date_part('year', min(pp.startdate)) - 1 AS bufferyear_no_pv
 				FROM datavalue dv
 				LEFT JOIN period pp ON dv.periodid = pp.periodid
@@ -373,19 +376,19 @@ IF ;FOR
 					)
 			SELECT *
 			FROM new_Buffer_peroid
-			) LOOP p_id : = var_r.new_buffer_Peroidid;
+			) LOOP p_id := var_r.new_buffer_Peroidid;
 
-p_type : = var_r.new_buffer_periodtypeid;
+p_type := var_r.new_buffer_periodtypeid;
 
-p_start : = var_r.new_startdate;
+p_start := var_r.new_startdate;
 
-p_end : = var_r.new_enddate;
+p_end := var_r.new_enddate;
 
-p_old_startdate : = var_r.startdate_old;
+p_old_startdate := var_r.startdate_old;
 
-p_old_enddate : = var_r.enddate_old;
+p_old_enddate := var_r.enddate_old;
 
-p_name2 : = var_r.ptname;
+p_name2 := var_r.ptname;
 
 --	p_month_no  := var_r.month_no;
 RETURN NEXT;END
@@ -393,6 +396,7 @@ RETURN NEXT;END
 LOOP;END;$$;
 
 --  run the below line  will delete empty peroid in the buffering year so we dont have dupliacted peroid ids 
+/*
 SELECT *
 FROM generate_buffer_period_from_current_period();
 
@@ -403,10 +407,10 @@ SELECT p_id
 	,p_start
 	,p_end
 FROM generate_buffer_period_from_current_period();
-
+*/
 ---------------------------------------------- end Part 2.1 ------------------------------------------------
-----------------------------------------------Part 3 Move all feature data to the buffer period-----------------
--- Move all feature data to the buffer period , Using today date as a baseline
+----------------------------------------------Part 3 Move all future data to the buffer period-----------------
+-- Move all future data to the buffer period , Using today date as a baseline
 DROP FUNCTION
 
 IF EXISTS move_current_buffering();
@@ -479,14 +483,14 @@ IF EXISTS move_current_buffering();
 
 		RETURN TRUE;
 	END $$;
-
+/*
 	SELECT move_current_buffering();
-
-	-----------------------  end part 3 of moving feature data to buffer year---------------------------------------------------------------------
+*/
+	-----------------------  end part 3 of moving future data to buffer year---------------------------------------------------------------------
 	------------------------part 4 Move data back from buffer year to current peroid ---------------------------------------------------------------
 	---- Move all buffer  data to the current period
 	-- to be used by corn each peroid 
-	--Drop function if EXISTS move_buffering_to_current (period_type text);
+	Drop function if EXISTS move_buffering_to_current (period_type TEXT);
 	CREATE FUNCTION move_buffering_to_current (period_type TEXT)
 	RETURNS boolean LANGUAGE plpgsql
 	AS
@@ -563,4 +567,6 @@ IF EXISTS move_current_buffering();
 	-- passing peroid type name to the function  monthly , Daily, weekly 
 	--Please add the respective period and execute the function as below or create separate corns jobs
 	-- you cand see readme file for more information
-	SELECT move_buffering_to_current('monthly');
+/*
+SELECT move_buffering_to_current('monthly');
+*/
