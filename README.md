@@ -19,3 +19,4 @@ Resources, tools and utils for DHIS 2
 | Tool | Summary |
 | :---------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [Metadata Package Validator](tools/dhis2-metadata-package-validator) | A command line tool to validate a metadata package.|
+| [Metadata Translator](/tools/dhis2-metadata-translator) | A command line tool to push package strings to and from Transifex. |
