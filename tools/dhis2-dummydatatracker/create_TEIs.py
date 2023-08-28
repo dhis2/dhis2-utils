@@ -1156,7 +1156,7 @@ def main():
                     if not is_valid_uid(OU):
                         logger.error("orgUnit UID " + OU + " is not valid... Omitting")
                     else:
-                        the_good_OU_UIDs.append(OU)
+                        the_good_OU_UIDs.append({'id':OU})
                 if len(the_good_OU_UIDs) == 0:
                     custom_orgunits = None
                 else:
