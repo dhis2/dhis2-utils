@@ -220,5 +220,6 @@ select delete_rows_from_tables(array[
 'fileresource',
 'trackedentitycomment',
 'reservedvalue',
-'sequentialnumbercounter'
+'sequentialnumbercounter',
+'jobconfiguration'
 ]);
