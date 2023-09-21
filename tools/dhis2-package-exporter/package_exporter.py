@@ -2172,10 +2172,10 @@ def main():
                 if len(organisationUnits) > 0:
                     logger.warning('There are organisationUnits assgined to the dataSet... Removing')
                     metadata['dataSets'] = remove_subset_from_set(metadata['dataSets'], 'organisationUnits')
-                sections_uids = list()
                 categoryCombos_uids = list()
                 for ds in metaobject:
-                    sections_uids += json_extract_nested_ids(ds, 'sections')
+                    if ds['id'] not in dataset_uids:
+                        dataset_uids.append(ds['id'])
                     if 'dataEntryForm' in ds:
                         dataEntryForms_uids += json_extract_nested_ids(ds, 'dataEntryForm')
                     if 'categoryCombo' in ds and is_valid_uid(ds['categoryCombo']['id']):
