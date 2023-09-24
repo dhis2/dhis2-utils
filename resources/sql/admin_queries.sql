@@ -466,7 +466,7 @@ order by yr;
 
 select de.name as de, count(*) as c
 from datavalue dv
-inner join dataelement de on dv.dataelementid=dv.dataelementid
+inner join dataelement de on dv.dataelementid=de.dataelementid
 group by de
 order by c;
 
