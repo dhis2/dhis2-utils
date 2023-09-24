@@ -464,11 +464,11 @@ order by yr;
 
 -- Get count of datavalues by data element
 
-select de.name as de, count(*) as c
+select de.name as de, count(*) as dv_count
 from datavalue dv
 inner join dataelement de on dv.dataelementid=de.dataelementid
-group by de
-order by c;
+group by de.name
+order by dv_count desc;
 
 -- Drop and recreate foreign keys on data values for faster delete operations
 
