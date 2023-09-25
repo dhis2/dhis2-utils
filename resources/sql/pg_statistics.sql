@@ -19,6 +19,8 @@ select datname, temp_files, temp_bytes as temp_files_size_bytes, pg_size_pretty(
 from pg_stat_database db
 where datname = 'dhis2';
 
+-- COUNT
+
 -- Approximate count of largest tables
 
 select c.relname as table_name, s.nspname as table_schema, c.reltuples::bigint as approximate_row_count
@@ -65,8 +67,6 @@ from pg_catalog.pg_class rl
 inner join pg_catalog.pg_namespace ns on rl.relnamespace = ns.oid
 where ns.nspname not in ('information_schema', 'pg_catalog', 'pg_toast')
 order by schema_name, table_name;
-
--- ANALYTICS
 
 -- Approximate count of rows in analytics tables
 
