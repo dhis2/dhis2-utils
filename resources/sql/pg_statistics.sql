@@ -36,6 +36,14 @@ select reltuples::bigint as approximate_row_count
 from pg_class 
 where relname = 'datavalue';
 
+-- Count of data values by year
+
+select extract(year from pe.startdate)::integer as yr, count(*) as row_count
+from datavalue dv
+inner join period pe on dv.periodid = pe.periodid
+group by yr
+order by yr;
+
 -- Approximate count of rows in tracker data tables
 
 select relname, reltuples::bigint as approximate_row_count 
