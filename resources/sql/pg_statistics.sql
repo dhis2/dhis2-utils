@@ -56,9 +56,8 @@ where relname in ('trackedentityinstance', 'trackedentityattributevalue', 'progr
 
 select relname as table_name, reltuples::bigint as approximate_row_count 
 from pg_class 
-where relname in ('completedatasetregistration', 'dataset', 'datavalue', 'datavalueaudit',
-  'program', 'programinstance', 'programstageinstance'
-	'trackedentityinstance', 'trackedentityattributevalue', 'trackedentitydatavalueaudit');
+where relname in ('completedatasetregistration', 'dataset', 'datavalue', 'datavalueaudit', 'program', 'programinstance', 
+  'programstageinstance' 'trackedentityinstance', 'trackedentityattributevalue', 'trackedentitydatavalueaudit');
 
 -- Approximate count of rows for all relations by schema
 
