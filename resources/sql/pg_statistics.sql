@@ -72,7 +72,7 @@ order by schema_name, table_name;
 
 select relname as table_name, reltuples::bigint as approximate_row_count
 from pg_class
-where relname like 'analytics_%'
+where relname like 'analytics%'
 order by approximate_row_count desc;
 
 -- Count of indexes and columns by analytics table
