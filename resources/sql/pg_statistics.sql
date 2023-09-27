@@ -74,18 +74,23 @@ from pg_class
 where relname like 'analytics%'
 order by approximate_row_count desc;
 
--- Count of indexes and columns by analytics table
+-- Count of indexes and columns and completion by analytics table
 
-select t.table_schema, t.table_name, (
-  select count(i.indexname)
-  from pg_catalog.pg_indexes i
-  where i.schemaname = t.table_schema
-  and i.tablename = t.table_name) as index_count, (
-  select count(c.column_name)
-  from information_schema.columns c
-  where c.table_schema = t.table_schema
-  and c.table_name = t.table_name) as column_count
-from information_schema.tables t
+with table_data as (
+  select t.table_schema, t.table_name, (
+    select count(i.indexname)
+    from pg_catalog.pg_indexes i
+    where i.schemaname = t.table_schema
+    and i.tablename = t.table_name) as index_count, (
+    select count(c.column_name)
+    from information_schema.columns c
+    where c.table_schema = t.table_schema
+    and c.table_name = t.table_name) as column_count
+  from information_schema.tables t)
+select table_schema, table_name, index_count, column_count, 
+  round((index_count::numeric / column_count::numeric * 100), 2) as percentage_completed
+from table_data t
 where t.table_schema = 'public'
 and t.table_name like 'analytics%'
 order by t.table_schema, t.table_name;
+
