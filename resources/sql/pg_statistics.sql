@@ -46,6 +46,16 @@ inner join period pe on dv.periodid = pe.periodid
 group by yr
 order by yr;
 
+-- Count of events by program
+
+select p.uid, p.name, (
+  select count(*)
+  from programstageinstance psi
+  inner join programinstance pi on psi.programinstanceid = pi.programinstanceid
+  where pi.programid = p.programid) as event_count
+from program p
+order by event_count desc;
+
 -- Approximate count of rows in tracker data tables
 
 select relname, reltuples::bigint as approximate_row_count 
