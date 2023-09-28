@@ -48,7 +48,7 @@ order by yr;
 
 -- Count of events by program
 
-select p.uid, p.name, (
+select p.uid, p.shortname, (
   select count(*)
   from programstageinstance psi
   inner join programinstance pi on psi.programinstanceid = pi.programinstanceid
