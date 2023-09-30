@@ -171,7 +171,6 @@ select delete_rows_from_tables(array[
 'trackedentityattributevalueaudit',
 'trackedentitytypeattribute',
 'trackedentityattribute',
-'trackedentityinstancereminder',
 'trackedentityinstanceaudit',
 'trackedentityinstance',
 'trackedentitytype',
