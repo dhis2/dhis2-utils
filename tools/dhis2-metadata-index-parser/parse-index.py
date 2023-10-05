@@ -8,7 +8,7 @@ def get_input_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument('--service-account-file', required=True, type=str, help='Google Service Account file. (more details at https://docs.gspread.org/en/latest/oauth2.html#for-bots-using-service-account)')
     parser.add_argument('--spreadsheet-id', required=True, type=str, help='Google Spreadsheet ID.')
-    parser.add_argument('--worksheet-name', type=str, default='Copy of DHIS2 packages', help='Google Spreadsheet Worksheet name.')
+    parser.add_argument('--worksheet-name', type=str, default='DHIS2 packages', help='Google Spreadsheet Worksheet name.')
     parser.add_argument('--toggle-column', type=str, default='Enabled', help='Packages toggle column.')
     parser.add_argument('--readiness-column', type=str, default='Ready For Export', help='Packages readiness column.')
     parser.add_argument('--input-columns', type=str, default='["Package Code", "Package Type",  "Source Instance", "Component Name", "Supported DHIS2 Versions", "Health Area", "Health Area Code"]', help='Packages input columns.')
