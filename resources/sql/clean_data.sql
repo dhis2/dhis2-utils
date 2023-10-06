@@ -32,8 +32,9 @@ select delete_rows_from_tables(array[
 'programstageinstancecomments',
 'programinstancecomments',
 'programstageinstance',
-'programinstance',
 'trackedentityattributevalue',
 'trackedentityprogramowner',
 'trackedentityinstance'
 ]);
+
+-- Delete programinstance rows except default
