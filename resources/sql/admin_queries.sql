@@ -357,7 +357,7 @@ where dv.periodid in (
   select pe.periodid
   from period pe
   where pe.startdate < '1960-01-01'
-  or pe.enddate > '2020-01-01');
+  or pe.enddate > '2100-01-01');
 
 -- (Write) Delete all data values for category combo
 
@@ -492,13 +492,13 @@ alter table datavalue add constraint fk_datavalue_periodid foreign key (periodid
 select count(*)
 from programstageinstance psi
 where psi.executiondate < '1960-01-01'
-or psi.executiondate > '2023-01-01';
+or psi.executiondate > '2100-01-01';
 
 -- Delete events out of reasonable time range
 
 delete from programstageinstance psi
 where psi.executiondate < '1960-01-01'
-or psi.executiondate > '2020-01-01';
+or psi.executiondate > '2100-01-01';
 
 -- Get count of events by year and month by executiondate
 
