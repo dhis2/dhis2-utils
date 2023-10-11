@@ -33,20 +33,23 @@ or p.startdate > '2100-01-01';
 
 -- Delete events and releted entities
 
+create or replace view events_out_of_range as
+select psi.programstageinstanceid
+from programstageinstance psi
+where psi.duedate < '1960-01-01'
+or psi.duedate > '2100-01-01'
+or (psi.status = 'SCHEDULE' and (psi.duedate < '1960-01-01' or psi.duedate > '2100-01-01'));
+
 delete from trackedentitydatavalueaudit tdva
 where tdva.programstageinstanceid in (
-  select psi.programstageinstanceid
-  from programstageinstance psi
-  where psi.executiondate < '1960-01-01'
-  or psi.executiondate > '2100-01-01');
+  select programstageinstanceid from events_out_of_range);
  
 delete from programmessage pm
 where pm.programstageinstanceid in (
-  select psi.programstageinstanceid
-  from programstageinstance psi
-  where psi.executiondate < '1960-01-01'
-  or psi.executiondate > '2100-01-01'); 
+  select programstageinstanceid from events_out_of_range);
 
 delete from programstageinstance psi
-where psi.executiondate < '1960-01-01'
-or psi.executiondate > '2100-01-01';
+where psi.programstageinstanceid in (
+  select programstageinstanceid from events_out_of_range);
+
+drop view if exists events_out_of_range;
