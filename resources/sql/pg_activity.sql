@@ -1,6 +1,5 @@
-
 --
--- PostgreSQL queries for monitoring performance, slow queries and locks.
+-- Queries for monitoring performance, slow queries and locks for PostgreSQL
 --
 -- Enable slow query logging in postgresql.conf:
 --

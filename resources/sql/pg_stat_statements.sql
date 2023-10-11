@@ -1,4 +1,6 @@
--- PG_STAT_STATEMENTS
+--
+-- Queries for the pg_stat_statements PostgreSQL extension
+--
 
 -- Enable 'pg_stat_statements' extension in 'postgresql.conf'
 

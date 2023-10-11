@@ -1,3 +1,6 @@
+--
+-- Statistics queries for PostgreSQL
+--
 
 -- SIZE
 

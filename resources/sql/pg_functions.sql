@@ -1,6 +1,5 @@
-
 --
--- PostgreSQL utility functions
+-- Utility functions for PostgreSQL
 --
 
 -- Get approximate row count of table in a performant way
