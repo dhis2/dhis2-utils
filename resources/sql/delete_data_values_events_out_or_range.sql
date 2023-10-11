@@ -37,7 +37,7 @@ delete from trackedentitydatavalueaudit tdva
 where tdva.programstageinstanceid in (
   select psi.programstageinstanceid
   from programstageinstance psi
-  where psi.executiondate 
+  where psi.executiondate < '1960-01-01'
   or psi.executiondate > '2100-01-01');
  
 delete from programmessage pm
