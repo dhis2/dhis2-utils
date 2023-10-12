@@ -31,7 +31,7 @@ delete from period p
 where p.enddate < '1960-01-01'
 or p.startdate > '2100-01-01';
 
--- Delete events and releted entities
+-- Delete events and related entities
 
 create or replace view events_out_of_range as
 select psi.programstageinstanceid
