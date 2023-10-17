@@ -1,48 +1,52 @@
 #!/bin/bash
 
 # Installs YourKit Java Profiler
+#
 # Run as root with 'sudo ./install_yjp.sh'
 #
-# Requires 'wget' and 'unzip'
+# Requires 'unzip'
 #
-# Enable with:
+# Enable for Tomcat with:
 # JAVA_OPTS="$JAVA_OPTS -agentpath:/path/to/libyjpagent.so"
 #
-# The YJP URL refers to a Linux YourKit profiler compressed archive where the root folder is named 'yjp'
-# See https://www.yourkit.com/java/profiler/download/
+# Manual steps
+#
+# Download the Linux x64 distribution from https://www.yourkit.com/java/profiler/download/.
+#
+# $ wget https://download.yourkit.com/yjp/2023.9/YourKit-JavaProfiler-2023.9-b97-x64.zip
+#
+# Unzip the archive.
+#
+# $ unzip YourKit-JavaProfiler-2023.9-b97-x64.zip
+#
+# Rename the directory to 'yjp'.
+#
+# $ mv YourKit-JavaProfiler-2023.9-b97-x64 yjp
 
-YJP_URL="https://s3-eu-west-1.amazonaws.com/content.dhis2.org/development/yjp/yjp.zip" 
-YJP_FILE="yjp.zip"
+YJP_DIR="yjp"
 INSTALL_DIR="/var/lib"
 AGENT_FILE="${INSTALL_DIR}/yjp/bin/linux-x86-64/libyjpagent.so"
 TOMCAT_CONF_DIR="/etc/tomcat/conf.d"
 TOMCAT_CONF_FILE="${TOMCAT_CONF_DIR}/yjp.conf"
 
-echo "Dowloading YourKit archive.."
+# Verify YJP
 
-rm -f ${YJP_FILE}
-rm -rf /tmp/yjp
-
-wget ${YJP_URL}
-
-if [ -f "${YJP_FILE}" ]; then
-  echo "Downloaded file: ${YJP_FILE}"
+if [ -d "${YJP_DIR}" ]; then
+  echo "YJP directory found: ${YJP_DIR}"
 else
-  echo "File not found: ${YJP_URL}"
+  echo "YJP directory not found: ${YJP_DIR}"
   exit 1
 fi
 
-echo "Extracting archive.."
-
-unzip -q ${YJP_FILE} -d /tmp
-
 echo "Installing YourKit.."
 
-chown root:root /tmp/yjp -R
-mv /tmp/yjp ${INSTALL_DIR}
+chown root:root ${YJP_DIR} -R
+mv ${YJP_DIR} ${INSTALL_DIR}
+
+# Verify agent file
 
 if [ -f "${AGENT_FILE}" ]; then
-  echo "Agent installed: ${AGENT_FILE}"
+  echo "Agent installed: '${AGENT_FILE}'"
 else
   echo "Could not install agent"
   exit 1
@@ -60,11 +64,9 @@ if [ -d "${TOMCAT_CONF_DIR}" ]; then
     echo "Tomcat conf file could not be created"
   fi
 else
-  echo "Could not install Tomcat config, install manuall by adding to JAVA_OPTS:"
+  echo "Could not install Tomcat config, install manuall by adding to JAVA_OPTS."
   echo "-agentpath:${AGENT_FILE}"
 fi
-
-rm -f ${YJP_FILE}
 
 echo "Installation done, restart Tomcat for changes to take effect"
 echo ""
