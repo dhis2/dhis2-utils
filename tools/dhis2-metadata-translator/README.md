@@ -56,6 +56,7 @@ package options:
  -t token           [TX_TOKEN] Transifex token
  --project slug     [TRANSIFEX_PROJECT] Transifex project slug
  -r slug            [TRANSIFEX_RESOURCE] Transifex resource slug
+ -e object-list     objects to exclude from translation e.g. `-e programRuleVariables,categoryOptionGroupSets`
 
 ```
 
