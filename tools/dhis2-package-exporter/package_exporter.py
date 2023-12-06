@@ -1170,7 +1170,7 @@ def main():
             'categoryOptions', 'categories', 'categoryCombos', 'categoryOptionCombos',
             'legendSets',  # used in indicators, optionGroups, programIndicators and trackedEntityAttributes
             'optionGroups', 'options', 'optionSets',
-            'sqlViews', 'reports', 'constants', 'documents', 'attributes',
+            'sqlViews', 'reports', 'constants', 'documents', 'attributes', 'aggregateDataExchanges'
             'dataElements', 'dataElementGroups',
             'dataEntryForms', 'sections', 'dataSets',
             'validationNotificationTemplates', 'validationRules', 'validationRuleGroups',
@@ -1365,6 +1365,7 @@ def main():
 
     if any(x in package_type_or_uid for x in ['TRK', 'EVT']):
         metadata_filters.update({
+            "aggregateDataExchanges": "code:$like:" + package_prefix,
             "programs": "id:in:[" + ','.join(program_uids) + "]",
             "programIndicatorGroups": "",
             "programIndicators": "program.id:in:[" + ','.join(program_uids) + "]",
@@ -2066,31 +2067,9 @@ def main():
                                 package_prefix + "_DATA_CAPTURE")
                             count_standard_naming_ug |= 1  # Set first bit to 1
                     if count_standard_naming_ug != 7:  # First 3 bits are not 1 1 1?
-                        for ug_default_code in found_default_user_groups:
-                            # Try user groups of subpackages. For example, MAL_CS has userGroups MAL_CS_IND and MAL_CS_FOCI
-                            if ug_default_code.startswith(package_prefix) and ug_default_code.endswith('_ADMIN'):
-                                metadata_default_user_group_sharing[ug_default_code] = \
-                                    metadata_default_user_group_sharing[package_prefix + "_ADMIN"]
-                                count_standard_naming_ug |= 4  # Set third bit to 1
-                            elif ug_default_code.startswith(package_prefix) and ug_default_code.endswith('_ACCESS'):
-                                metadata_default_user_group_sharing[ug_default_code] = \
-                                    metadata_default_user_group_sharing[package_prefix + "_ACCESS"]
-                                count_standard_naming_ug |= 2  # Set second bit to 1
-                            elif ug_default_code.startswith(package_prefix) and ug_default_code.endswith('_DATA_CAPTURE'):
-                                metadata_default_user_group_sharing[ug_default_code] = \
-                                    metadata_default_user_group_sharing[package_prefix + "_DATA_CAPTURE"]
-                                count_standard_naming_ug |= 1  # Set first bit to 1
-                        if count_standard_naming_ug != 7:  # First 3 bits are not 1 1 1?
-                            logger.error(
-                                "Could not found any of the default UGs with standard naming convention... Aborting")
-                            exit(1)
-                        else:
-                            # Pop the user groups of the parent which are no longer needed
-                            # They would have been captured earlier in this process
-                            metadata_default_user_group_sharing.pop(package_prefix + "_ADMIN")
-                            metadata_default_user_group_sharing.pop(package_prefix + "_ACCESS")
-                            metadata_default_user_group_sharing.pop(package_prefix + "_DATA_CAPTURE")
-
+                        logger.error(
+                            "Could not found any of the default UGs with standard naming convention... Aborting")
+                        exit(1)
                 if len(non_standard_ug_codes) > 0:
                     for ug_non_standard_code in non_standard_ug_codes:
                         logger.warning(
