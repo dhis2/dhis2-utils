@@ -1190,6 +1190,13 @@ def main():
             metadata_import_order.remove('trackedEntityTypes')
             metadata_import_order.remove('trackedEntityInstanceFilters')
 
+        # aggregateDataExchanges not compatible with 2.38 and below.
+        if not any(version in api_source.version for version in ['2.38']):
+            # Find the index of 'attributes' in the list
+            attributes_index = metadata_import_order.index('attributes')
+            # Insert 'aggregateDataExchanges' after 'attributes'
+            metadata_import_order.insert(attributes_index + 1, 'aggregateDataExchanges')
+
     elif package_type_or_uid == 'DSH' or args.only_dashboards:
         metadata_import_order = [
             'categoryOptionGroupSets', 'categoryOptionGroups',
@@ -1365,6 +1372,7 @@ def main():
 
     if any(x in package_type_or_uid for x in ['TRK', 'EVT']):
         metadata_filters.update({
+            "aggregateDataExchanges": "code:$like:" + package_prefix,
             "programs": "id:in:[" + ','.join(program_uids) + "]",
             "programIndicatorGroups": "",
             "programIndicators": "program.id:in:[" + ','.join(program_uids) + "]",
