@@ -2458,7 +2458,6 @@ def main():
     return name_label + '.json'
 
 
-
 if __name__ == "__main__":
     package_file = main()
     # if the number of errors > 0, exit with code -1
