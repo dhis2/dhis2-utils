@@ -11,9 +11,9 @@
 #
 # Manual steps
 #
-# Download the Linux x64 distribution from https://www.yourkit.com/java/profiler/download/.
+# Download the Linux x64 distribution from https://www.yourkit.com/java/profiler/download/. Note that the URL changes over time.
 #
-# $ wget https://download.yourkit.com/yjp/2023.9/YourKit-JavaProfiler-2023.9-b97-x64.zip
+# $ wget https://download.yourkit.com/yjp/2023.9/YourKit-JavaProfiler-2023.9-b103-x64.zip
 #
 # Unzip the archive.
 #
