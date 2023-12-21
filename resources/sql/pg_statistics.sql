@@ -13,7 +13,7 @@ select pg_size_pretty(pg_database_size('dhis2'));
 select tb.table_schema as table_schema, tb.table_name, pg_size_pretty(pg_relation_size(quote_ident(tb.table_name))) as table_size
 from information_schema.tables tb
 where tb.table_schema = 'public'
-order by table_size desc
+order by pg_relation_size(quote_ident(tb.table_name)) desc
 limit 500;
 
 -- Size of temp files being created since database was created
