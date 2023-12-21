@@ -13,15 +13,15 @@
 #
 # Download the Linux x64 distribution from https://www.yourkit.com/java/profiler/download/. Note that the URL changes over time.
 #
-# $ wget https://download.yourkit.com/yjp/2023.9/YourKit-JavaProfiler-2023.9-b103-x64.zip
+# $ wget -O yjp.zip https://download.yourkit.com/yjp/2023.9/YourKit-JavaProfiler-2023.9-b103-x64.zip
 #
 # Unzip the archive.
 #
-# $ unzip YourKit-JavaProfiler-2023.9-b97-x64.zip
+# $ unzip yjp.zip
 #
 # Rename the directory to 'yjp'.
 #
-# $ mv YourKit-JavaProfiler-2023.9-b97-x64 yjp
+# $ mv YourKit-JavaProfiler-2023.9 yjp
 
 YJP_DIR="yjp"
 INSTALL_DIR="/var/lib"
