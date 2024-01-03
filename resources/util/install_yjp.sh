@@ -24,6 +24,9 @@
 # Rename the directory to 'yjp'.
 #
 # $ mv YourKit-JavaProfiler-2023.9 yjp
+#
+# Run this script as sudo.
+#
 
 YJP_DIR="yjp"
 INSTALL_DIR="/var/lib"
