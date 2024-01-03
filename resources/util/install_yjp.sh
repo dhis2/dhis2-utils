@@ -1,6 +1,8 @@
 #!/bin/bash
 
-# Installs YourKit Java Profiler
+# Installs YourKit Java Profiler.
+#
+# Installs the YourKit library under `INSTALL_DIR` and adds Tomcat conf file under `TOMCAT_CONF_DIR`.
 #
 # Run as root with 'sudo ./install_yjp.sh'
 #
@@ -64,7 +66,7 @@ if [ -d "${TOMCAT_CONF_DIR}" ]; then
     echo "Tomcat conf file could not be created"
   fi
 else
-  echo "Could not install Tomcat config, install manuall by adding to JAVA_OPTS."
+  echo "Could not install Tomcat config, install manually by adding to JAVA_OPTS."
   echo "-agentpath:${AGENT_FILE}"
 fi
 
