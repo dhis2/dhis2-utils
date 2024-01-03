@@ -1,5 +1,5 @@
 #!/bin/bash
-
+#
 # Installs YourKit Java Profiler.
 #
 # Installs the YourKit library under `INSTALL_DIR` and adds Tomcat conf file under `TOMCAT_CONF_DIR`.
