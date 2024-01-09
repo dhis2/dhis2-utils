@@ -347,18 +347,6 @@ BEGIN
     -- Call the dhis2_timeshift_one_year_forward_core function
     PERFORM dhis2_timeshift_one_year_forward_core(TRUE);
 
-    -- Commit the transaction
-    COMMIT;
-
-    -- Vacuum to remove dead tuples
-    EXECUTE 'VACUUM period';
-    EXECUTE 'VACUUM programstageinstance';
-    EXECUTE 'VACUUM programinstance';
-    EXECUTE 'VACUUM interpretation';
-    EXECUTE 'VACUUM mapview';
-    EXECUTE 'VACUUM eventreport';
-    EXECUTE 'VACUUM eventchart';
-    EXECUTE 'VACUUM trackedentitydatavalueaudit';
 END;
 $$;
 
@@ -368,18 +356,6 @@ BEGIN
     -- Call the dhis2_timeshift_one_year_forward_core function
     PERFORM dhis2_timeshift_one_year_forward_core();
 
-    -- Commit the transaction
-    COMMIT;
-
-    -- Vacuum to remove dead tuples
-    EXECUTE 'VACUUM period';
-    EXECUTE 'VACUUM programstageinstance';
-    EXECUTE 'VACUUM programinstance';
-    EXECUTE 'VACUUM interpretation';
-    EXECUTE 'VACUUM mapview';
-    EXECUTE 'VACUUM eventreport';
-    EXECUTE 'VACUUM eventchart';
-    EXECUTE 'VACUUM trackedentitydatavalueaudit';
 END;
 $$;
 
@@ -391,18 +367,6 @@ BEGIN
     -- Call the dhis2_timeshift_one_year_backward_core function
     PERFORM dhis2_timeshift_one_year_backward_core(TRUE);
 
-    -- Commit the transaction
-    COMMIT;
-
-    -- Vacuum to remove dead tuples
-    EXECUTE 'VACUUM period';
-    EXECUTE 'VACUUM programstageinstance';
-    EXECUTE 'VACUUM programinstance';
-    EXECUTE 'VACUUM interpretation';
-    EXECUTE 'VACUUM mapview';
-    EXECUTE 'VACUUM eventreport';
-    EXECUTE 'VACUUM eventchart';
-    EXECUTE 'VACUUM trackedentitydatavalueaudit';
 END;
 $$;
 
@@ -412,18 +376,6 @@ BEGIN
     -- Call the dhis2_timeshift_one_year_backward_core function
     PERFORM dhis2_timeshift_one_year_backward_core();
 
-    -- Commit the transaction
-    COMMIT;
-
-    -- Vacuum to remove dead tuples
-    EXECUTE 'VACUUM period';
-    EXECUTE 'VACUUM programstageinstance';
-    EXECUTE 'VACUUM programinstance';
-    EXECUTE 'VACUUM interpretation';
-    EXECUTE 'VACUUM mapview';
-    EXECUTE 'VACUUM eventreport';
-    EXECUTE 'VACUUM eventchart';
-    EXECUTE 'VACUUM trackedentitydatavalueaudit';
 END;
 $$;
 
@@ -766,10 +718,3 @@ $$;
 
 		RETURN TRUE;
 	END $$;
-
-	-- passing peroid type name to the function  monthly , Daily, weekly 
-	--Please add the respective period and execute the function as below or create separate cron jobs
-	-- you cand see readme file for more information
-/*
-SELECT dhis2_timeshift_buffer_to_current('monthly');
-*/
