@@ -469,7 +469,6 @@ def apply_formatting_to_worksheet(worksheet, metadata_types_supported, worksheet
                             "range": {
                                 "sheetId": sheetId,
                                 "startRowIndex": 1,
-                                "endRowIndex": worksheet.row_count,
                                 "startColumnIndex": col_index,
                                 "endColumnIndex": col_index+1
                             },
@@ -506,7 +505,6 @@ def apply_formatting_to_worksheet(worksheet, metadata_types_supported, worksheet
                         "range": {
                             "sheetId": sheetId,
                             "startRowIndex": 1,
-                            "endRowIndex": worksheet.row_count,
                             "startColumnIndex": col_index,
                             "endColumnIndex": col_index + 1
                         },
@@ -557,7 +555,6 @@ def apply_formatting_to_worksheet(worksheet, metadata_types_supported, worksheet
                     "range": {
                         "sheetId": sheetId,
                         "startRowIndex": 1,
-                        "endRowIndex": worksheet.row_count,
                         "startColumnIndex": col_index,
                         "endColumnIndex": col_index + 1
                     },
@@ -595,7 +592,6 @@ def apply_formatting_to_worksheet(worksheet, metadata_types_supported, worksheet
                                         {
                                             "sheetId": sheetId,
                                             "startRowIndex": 1,
-                                            "endRowIndex": worksheet.row_count,
                                             "startColumnIndex": col_index,
                                             "endColumnIndex": col_index + 1
                                         }],
