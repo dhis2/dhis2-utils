@@ -9,18 +9,63 @@ pip install -r requirements.txt
 ```
 
 Configure instances.conf with the URLs of your working instances where metadata will be imported/exported
-You will need to create a Google API Key as documented [here](https://support.google.com/googleapi/answer/6158862?hl=en)
+You will need to create a Google API Key json token:
+You will need to create a Google API Key json token:
+1. Go to the API Console in Google Cloud: [https://console.developers.google.com/](https://console.developers.google.com/)
+
+   <img src="https://github.com/dhis2/dhis2-utils/assets/5999135/b37c3d63-971a-47ef-8efc-27964e991247" style="width: 50%; height: auto;"/>
+
+2. From the projects list, select a project or create a new one.
+
+   <img src="https://github.com/dhis2/dhis2-utils/assets/5999135/41039838-979a-4b21-a272-63fa0310d063" style="width: 100%; height: auto;"/>
+   
+   <img src="https://github.com/dhis2/dhis2-utils/assets/5999135/04d13e0a-8d57-4f6f-ab51-0b9f200d4473" style="width: 50%; height: auto;"/>
+
+3. The message "You don’t have any APIs available to use yet. To get started, click “Enable APIs and services” or go to the API library"
+
+4. Enable Google Drive API and Google Spreadsheets API
+
+   <img src="https://github.com/dhis2/dhis2-utils/assets/5999135/c296b505-d45e-489d-8e16-a0d442295d1f" style="width: 50%; height: auto;"/>
+
+5. Click on Create Credentials
+
+   <img src="https://github.com/dhis2/dhis2-utils/assets/5999135/f713107f-dc38-488d-bb19-e9b640dc84e1" style="width: 70%; height: auto;"/>
+
+6. In Credential Type, select Application data and click on NEXT
+
+   <img src="https://github.com/dhis2/dhis2-utils/assets/5999135/a4a26e0f-58ae-4f57-a674-e9830e3e018f" style="width: 50%; height: auto;"/>
+
+7. In Service account details, choose a name for the account and click on CREATE AND CONTINUE
+
+   <img src="https://github.com/dhis2/dhis2-utils/assets/5999135/f2b73c7d-b642-4e7e-a579-c2ace75a1279" style="width: 50%; height: auto;"/>
+
+8. On the left menu, select Credentials and then select the Service Account which was created
+
+   <img src="https://github.com/dhis2/dhis2-utils/assets/5999135/0eb7e78b-6c75-4fdf-bdef-b0bda54f2f8e" style="width: 90%; height: auto;"/>
+
+9. Select KEYS on the top menu and then click on ADD KEY
+
+<img src="https://github.com/dhis2/dhis2-utils/assets/5999135/81813249-2c07-41a4-b40a-9b6e23765f49" style="width: 50%; height: auto;"/>
+
+10. Select JSON key type
+
+<img src="https://github.com/dhis2/dhis2-utils/assets/5999135/8d3a6af1-18f9-45f7-b9d7-3519228f0aeb" style="width: 50%; height: auto;"/>
+
+11. The google private key is saved in your computer as a json file
+
+<img src="https://github.com/dhis2/dhis2-utils/assets/5999135/e9c4e66d-fbfc-424a-b6b8-6a9920608530" style="width: 35%; height: auto;"/>
+
 
 ## Usage
 
 You can run the backend using the following command (it will use metadata_types.conf). Parameter -a, -auth is a mandatory parameter used to provide the Google API Key.
 ```bash
-python metadata_ff_syncer.py -a google_auth_file.json
+python metadata_ff_syncer.py -a google_private_key.json
 ```
 
 If you want to use a different conf file, you can use parameter -c, -conf:
 ```bash
-python metadata_ff_syncer.py -a google_auth_file.json -c my_configuration.conf
+python metadata_ff_syncer.py -a google_private_key.json -c my_configuration.conf
 ```
 
 Once the backend is running, please open templates/index.html in Google Chrome or your preferred browser.
