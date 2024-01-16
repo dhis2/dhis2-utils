@@ -1246,6 +1246,15 @@ def export_metadata(metadata_type_selection: str):
                             if len(keys) == 2:
                                 for i in range(0, len(metaobject[keys[0]])):
                                     v = metaobject[keys[0]][i]
+                                    # We capture here a possible error when an Option Set has None options which
+                                    # makes the app crash
+                                    if v == None:
+                                        result['type'] = 'error'
+                                        if 'name' in metaobject:
+                                            result['msg'] = 'Metadata object ' + metaobject['name'] + ' has None values'
+                                        else:
+                                            result['msg'] = 'Metadata object has None values'
+                                        return flask.jsonify(result)
                                     if keys[1] in v:
                                         if i == 0:
                                             new_row[column] = v[keys[1]]
