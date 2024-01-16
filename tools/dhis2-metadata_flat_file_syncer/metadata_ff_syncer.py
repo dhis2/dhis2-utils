@@ -1288,7 +1288,25 @@ def export_metadata(metadata_type_selection: str):
                             #         new_row[column] = metadata_field[keys[1]]
 
                 new_row_df = pd.DataFrame([new_row], columns=df.columns)
+                # Match the data types of new_row_df to df
+                for column in new_row_df.columns:
+                    if column in df:
+                        new_row_df[column] = new_row_df[column].astype(df[column].dtype)
+
+                # Function to convert all object columns with all-bool values to bool dtype
+                def convert_bool_columns(df):
+                    for col in df.columns:
+                        if df[col].dtype == 'object' and all(df[col].dropna().apply(lambda x: isinstance(x, bool))):
+                            df[col] = df[col].astype(bool)
+                    return df
+
+                # Convert bool columns for both DataFrames
+                df = convert_bool_columns(df)
+                new_row_df = convert_bool_columns(new_row_df)
+
+                # Concatenate the DataFrames
                 df = pd.concat([df, new_row_df], ignore_index=True)
+
                 if len(new_row_list) > 0:
                     for new_row in new_row_list:
                         new_row_df = pd.DataFrame([new_row], columns=df.columns)
@@ -1393,10 +1411,14 @@ def export_metadata(metadata_type_selection: str):
                     for request in requests:
                         try:
                             sh.batch_update({"requests": [request]})
+                        except googleapiclient.errors.HttpError as e:
+                            # Check if the error is due to the row size issue
+                            if e.resp.status == 400 and 'beyond the last requested row' in str(e):
+                                pass
                         except gspread.exceptions.APIError as e:
                             print(str(e))
-                            print('IN THIS REQUEST')
-                            print(request)
+                            # print('IN THIS REQUEST')
+                            # print(request)
                             pass
                         # else:
                         #     print('OK')
