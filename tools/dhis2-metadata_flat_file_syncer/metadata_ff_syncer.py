@@ -1431,28 +1431,25 @@ def export_metadata(metadata_type_selection: str):
         while True:
             try:
                 sh.batch_update({"requests": requests})
+                break  # Break out of the loop if successful
             except gspread.exceptions.APIError as e:
-                if "'code': 400" in str(e) or "'code': 500" in str(e):
-                    for request in requests:
-                        try:
-                            sh.batch_update({"requests": [request]})
-                        except googleapiclient.errors.HttpError as e:
-                            # Check if the error is due to the row size issue
-                            if e.resp.status == 400 and 'beyond the last requested row' in str(e):
-                                pass
-                        except gspread.exceptions.APIError as e:
-                            print(str(e))
-                            # print('IN THIS REQUEST')
-                            # print(request)
-                            pass
-                        # else:
-                        #     print('OK')
-                        #     pprint.pprint(request)
+                error_message = str(e)
+
+                # Handle Quota exceeded error
+                if "Quota exceeded" in error_message and "'code': 400" in error_message:
+                    print("Quota exceeded, retrying in 10 seconds...")
+                    time.sleep(10)
+
+                # Ignore errors related to "beyond the last requested row"
+                elif "'code': 400" in error_message and "beyond the last requested row" in error_message:
+                    print('API is trying to access or modify a row that is outside the existing bounds of the sheet... Ignoring ')
                     break
-                time.sleep(10)
-                pass
-            else:
-                break
+
+                # Notify user of other errors
+                else:
+                    result['type'] = 'error'
+                    result['msg'] = error_message
+                    break
 
     return flask.jsonify(result)
 
