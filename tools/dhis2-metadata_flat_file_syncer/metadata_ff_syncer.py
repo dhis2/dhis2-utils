@@ -18,6 +18,7 @@ from os.path import exists
 import validators
 import sys
 from argparse import ArgumentParser
+from datetime import datetime
 
 
 def authorize_google_sheets(auth_file):
@@ -866,7 +867,7 @@ def import_metadata(metadata_type_selection: str):
         if ws.title in metadata_type_user_selection:
             sheets_to_process.append(ws.title)
 
-        multilevel_identifiers = ['programStageDataElements', 'programTrackedEntityAttributes', 'dataSetElements', 'attributeValues']
+        multilevel_identifiers = ['programStageDataElements', 'programTrackedEntityAttributes', 'dataSetElements', 'attributeValues', 'dataInputPeriods']
 
     if len(sheets_to_process) == 0:
         return { 'msg': 'Metadata type not found in gspreadsheet, nothing to do', 'type':'warning'}
@@ -911,6 +912,9 @@ def import_metadata(metadata_type_selection: str):
             if metadata_type in ['optionSets', 'legendSets']:
                 _df = df.copy()
             column_index = 0
+            # identifier_names contains a list of field names which are multi level
+            # multi level means the field references a list which contains inside objects and other nested levels
+            identifier_names = list()
             for column in df.columns:
                 if '[' in column and ']' in column:
                     # Add a tmp column
@@ -928,11 +932,27 @@ def import_metadata(metadata_type_selection: str):
                             id = df.at[indexes[i], 'id']
                             if id not in df_multilevel_dict:
                                 df_multilevel_dict[id] = pd.DataFrame({})
-                            df_multilevel_dict[id][column] = column_list
+                            # Check if the column name ends with 'id]' or 'name]'
+                            if column.endswith('id]') or column.endswith('name]'):
+                                # Process each item in the column_list for 'id' or 'name'
+                                new_column_list = [str(int(item)) if isinstance(item, float) else str(item) for item in
+                                                   column_list]
+                                df_multilevel_dict[id][column] = new_column_list
+
+                            # Check if the column name ends with 'Date]'
+                            elif column.endswith('Date]'):
+                                # Process each item in the column_list for 'Date'
+                                new_column_list = [datetime.strptime(str(item), '%Y-%m-%d %H:%M:%S').isoformat() for
+                                                   item in column_list]
+                                df_multilevel_dict[id][column] = new_column_list
+
+                            else:
+                                # If the column does not end with 'id]', 'name]', or 'Date]', keep the original list
+                                df_multilevel_dict[id][column] = column_list
                             # Get the keyword
                             tmp = column.replace('[', '').replace(']', '').split('-')
-                            if identifier_name == "":
-                                identifier_name = tmp[0]
+                            if tmp[0] not in identifier_names:
+                                identifier_names.append(tmp[0])
                         else:
                             # Otherwise expand into a list
                             # This call will fail if the column is not of type object
@@ -1033,8 +1053,13 @@ def import_metadata(metadata_type_selection: str):
                     for i in range(0, len(json_payload)):
                         element = json_payload[i]
                         if 'id' in element and element['id'] == id:
-                            json_payload[i] = {**json_payload[i],
-                                            **extract_multi_level(df_multilevel_dict[id], identifier_name)}
+                            for name in identifier_names:
+                                # Create a new DataFrame with just the columns containing each multi level identifer which was found
+                                # Selecting columns that contain the keyword
+                                selected_columns = [col for col in df_multilevel_dict[id].columns if name in col]
+                                new_df = df_multilevel_dict[id][selected_columns]
+                                json_payload[i] = {**json_payload[i],
+                                                **extract_multi_level(new_df, name)}
 
             # We are going to consider that json export will only work with what exists on the file
             if not gen_json:
