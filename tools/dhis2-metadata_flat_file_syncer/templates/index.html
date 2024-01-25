@@ -108,6 +108,7 @@ LABEL.indented-checkbox-text
     <select id="selectAction" onchange="handleActionChange()">
       <option value="exportmeta">EXPORT instance METADATA to a flat file</option>
       <option value="updatemeta">UPDATE instance METADATA from flat file</option>
+      <option value="generateUIDs">GENERATE missing UIDs for flat file</option>
       <option value="openfile">OPEN existing flat file</option>
       <option value="jsonfile">CREATE json from existing flat file</option>
       <option value="sharefile">SHARE existing flat file with user</option>
@@ -242,6 +243,23 @@ LABEL.indented-checkbox-text
                 }
                 else
                     await updateGoogleSpreadsheet();
+            break;
+            case 'generateUIDs':
+                try {
+                    var result = await axios.post('http://127.0.0.1:5000/openSpreadsheet',
+                                        { gs_file: document.getElementById("selectFlatFile").value });
+                    log_message(result.data.msg, result.data.type);
+                    if(result.data.type != 'error') {
+                        try {
+                            var result = await axios.get('http://127.0.0.1:5000/genMissingUIDs');
+                            log_message(result.data.msg, result.data.type);
+                        } catch (e) {
+                            log_message(e, 'error');
+                        }
+                    }
+                } catch (e) {
+                    log_message(e, 'error');
+                }
             break;
             case 'openfile':
                 try {
@@ -563,7 +581,7 @@ LABEL.indented-checkbox-text
         else
             createFileCheckbox.style.display = "none";
 
-        if (action === "deletefile" || action === "openfile" || action === 'sharefile' || action === "jsonfile") {
+        if (action === "deletefile" || action === "openfile" || action === 'sharefile' || action === "jsonfile" || action === "generateUIDs") {
             selectInstanceWrapper.style.display = "none";
             selectMetadataTypeWrapper.style.display = "none";
             textInputWrapper.style.display = "none";

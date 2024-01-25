@@ -7,7 +7,7 @@ import re
 import os
 import pandas as pd
 import numpy as np
-from dhis2 import RequestException, Api, setup_logger, logger
+from dhis2 import RequestException, Api, setup_logger, logger, generate_uid
 from urllib.request import urlopen
 from oauth2client.service_account import ServiceAccountCredentials
 import gspread
@@ -1035,9 +1035,9 @@ def import_metadata(metadata_type_selection: str):
                                             element[key_pairs[0]][key_pairs[1]] = json.loads(element[key])
                                         else:
                                             element[key_pairs[0]][key_pairs[1]] = element[key]
-
-                # Use case: when a json object is provided as free text a flat file cell, convert it to json
-                element[key] = convert_json_if_needed(element, key)
+                                            
+                        # Use case: when a json object is provided as free text a flat file cell, convert it to json
+                        element[key] = convert_json_if_needed(element, key)
 
                 # Remove the old keys
                 for k in keys_to_delete:
@@ -1469,6 +1469,71 @@ def export_metadata(metadata_type_selection: str):
                     break
 
     return flask.jsonify(result)
+
+
+@app.route('/genMissingUIDs', methods=["GET"])
+def gen_missing_uids():
+    
+    def has_data(row):
+        # Check if the next two cells (B and C columns) have data
+        return row[1] and row[2]
+
+    # Variable to store result of the operation
+    result = dict()
+
+    # Process each worksheet
+    requests = []
+    for worksheet in sh.worksheets():
+        worksheet_data = worksheet.get_all_values()
+        if worksheet_data and len(worksheet_data[0]) > 2 and worksheet_data[0][
+            0] == 'id':  # Ensure there are at least three columns and the first is 'id'
+            for i, row in enumerate(worksheet_data[1:], start=2):  # Start from row 2 (index 1) to skip header
+                if not row[0] and has_data(row):  # Check for missing 'id' and if the adjacent cells have data
+                    new_uid = generate_uid()
+                    requests.append({
+                        "updateCells": {
+                            "range": {
+                                "sheetId": worksheet.id,
+                                "startRowIndex": i - 1,
+                                "endRowIndex": i,
+                                "startColumnIndex": 0,
+                                "endColumnIndex": 1
+                            },
+                            "rows": [{
+                                "values": [{
+                                    "userEnteredValue": {"stringValue": new_uid}
+                                }]
+                            }],
+                            "fields": "userEnteredValue"
+                        }
+                    })
+
+    # Perform batch update if there are updates to be made
+    if requests:
+        print('UPDATES!')
+        print(requests)
+        while True:
+            try:
+                sh.batch_update({'requests': requests})
+            except gspread.exceptions.APIError as e:
+                print(e)
+                # Check if error is due to quota exceeded
+                if "Quota exceeded" in str(e) or "Rate Limit Exceeded" in str(e):
+                    print("Quota exceeded, retrying in 10 seconds...")
+                    time.sleep(10)
+                    pass
+                else:
+                    result['type'] = 'error'
+                    result['msg'] = str(e)
+                    return flask.jsonify(result)
+            else:
+                result['type'] = 'info'
+                result['msg'] = 'UIDs generated successfully'
+                return flask.jsonify(result)
+    else:
+        result['type'] = 'info'
+        result['msg'] = 'No empty UIDs found. Nothing to do'
+        return flask.jsonify(result)
 
 
 if __name__ == '__main__':
