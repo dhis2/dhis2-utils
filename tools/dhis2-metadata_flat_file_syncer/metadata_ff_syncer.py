@@ -823,6 +823,20 @@ def share_spreadsheet_with_email():
 
 @app.route('/importMetadata/<string:metadata_type_selection>', methods=["GET"])
 def import_metadata(metadata_type_selection: str):
+    # This function is used to define our rules regarding what string provided as value can be interpreted
+    # as a json object. If the json payload is not correct, it returns the value as a string and nothing is done
+    def convert_json_if_needed(element, key):
+        value = element.get(key, "")
+        # Support lists/arrays and objects/dictionaries
+        if isinstance(value, str) and \
+                ((value.startswith("[") and value.endswith("]")) or (value.startswith("{") and value.endswith("}"))):
+            try:
+                return json.loads(value)
+            except json.JSONDecodeError:
+                # Return original value if JSON conversion fails
+                return value
+        else:
+            return value
 
     metadata_types_supported = list()
     with open(app.config['CONFIG_FILE'], 'r') as f:
@@ -1021,6 +1035,9 @@ def import_metadata(metadata_type_selection: str):
                                             element[key_pairs[0]][key_pairs[1]] = json.loads(element[key])
                                         else:
                                             element[key_pairs[0]][key_pairs[1]] = element[key]
+
+                # Use case: when a json object is provided as free text a flat file cell, convert it to json
+                element[key] = convert_json_if_needed(element, key)
 
                 # Remove the old keys
                 for k in keys_to_delete:
