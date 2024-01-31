@@ -333,16 +333,6 @@ def apply_formatting_to_worksheet(worksheet, metadata_types_supported, worksheet
         else:
             break
 
-    # Clear current data validation rules and formatting
-    # while True:
-    #     try:
-    #         worksheet.clear()
-    #     except gspread.exceptions.APIError as e:
-    #         time.sleep(30)
-    #         pass
-    #     else:
-    #         break
-
     conditional_formatting_rule_index = 0
 
     # Create a list of requests to apply formatting to the first row
@@ -470,6 +460,7 @@ def apply_formatting_to_worksheet(worksheet, metadata_types_supported, worksheet
                             "range": {
                                 "sheetId": sheetId,
                                 "startRowIndex": 1,
+                                "endRowIndex": worksheet.row_count,
                                 "startColumnIndex": col_index,
                                 "endColumnIndex": col_index+1
                             },
@@ -1384,7 +1375,14 @@ def export_metadata(metadata_type_selection: str):
                 while True:
                     try:
                         ws = sh.worksheet(metadata_type)
+                        # Clear conditional formatting rules
+                        rules = get_conditional_format_rules(ws)
+                        rules.clear()
+                        rules.save()
+                        # Clear data validation rule by using None
+                        set_data_validation_for_cell_range(ws, 'A2:' + str(chr(64 + ws.col_count)), None)
                     except gspread.exceptions.APIError as e:
+                        logger.error('Quota exceeded... retrying in 30s')
                         time.sleep(30)
                         pass
                     else:
@@ -1474,40 +1472,47 @@ def export_metadata(metadata_type_selection: str):
 @app.route('/genMissingUIDs', methods=["GET"])
 def gen_missing_uids():
     
-    def has_data(row):
-        # Check if the next two cells (B and C columns) have data
-        return row[1] and row[2]
+    def has_data(row, col_index):
+        # Check if there's data in the adjacent cell
+        return col_index + 1 < len(row) and row[col_index + 1]
 
     # Variable to store result of the operation
     result = dict()
+
+    # Variable to store the elements which also have a uid and might be nested,
+    # meaning that the id is not in column A but it can be any other
+    nested_id_identifiers = ['[options-id]', '[legends-id]']
 
     # Process each worksheet
     requests = []
     for worksheet in sh.worksheets():
         worksheet_data = worksheet.get_all_values()
-        if worksheet_data and len(worksheet_data[0]) > 2 and worksheet_data[0][
-            0] == 'id':  # Ensure there are at least three columns and the first is 'id'
-            for i, row in enumerate(worksheet_data[1:], start=2):  # Start from row 2 (index 1) to skip header
-                if not row[0] and has_data(row):  # Check for missing 'id' and if the adjacent cells have data
-                    new_uid = generate_uid()
-                    requests.append({
-                        "updateCells": {
-                            "range": {
-                                "sheetId": worksheet.id,
-                                "startRowIndex": i - 1,
-                                "endRowIndex": i,
-                                "startColumnIndex": 0,
-                                "endColumnIndex": 1
-                            },
-                            "rows": [{
-                                "values": [{
-                                    "userEnteredValue": {"stringValue": new_uid}
-                                }]
-                            }],
-                            "fields": "userEnteredValue"
-                        }
-                    })
+        if worksheet_data and len(worksheet_data[0]) > 2 and 'id' in worksheet_data[0]:
+            # Find the indices of the additional columns to check
+            additional_columns_to_check = [worksheet_data[0].index(header) for header in nested_id_identifiers if
+                                           header in worksheet_data[0]]
 
+            for i, row in enumerate(worksheet_data[1:], start=2):  # Start from row 2 (index 1) to skip header
+                for col_index in [0] + additional_columns_to_check:
+                    if col_index < len(row) and not row[col_index] and has_data(row, col_index):
+                        new_uid = generate_uid()
+                        requests.append({
+                            "updateCells": {
+                                "range": {
+                                    "sheetId": worksheet.id,
+                                    "startRowIndex": i - 1,
+                                    "endRowIndex": i,
+                                    "startColumnIndex": col_index,
+                                    "endColumnIndex": col_index + 1
+                                },
+                                "rows": [{
+                                    "values": [{
+                                        "userEnteredValue": {"stringValue": new_uid}
+                                    }]
+                                }],
+                                "fields": "userEnteredValue"
+                            }
+                        })
     # Perform batch update if there are updates to be made
     if requests:
         print('UPDATES!')
