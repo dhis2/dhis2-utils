@@ -872,7 +872,7 @@ def import_metadata(metadata_type_selection: str):
         if ws.title in metadata_type_user_selection:
             sheets_to_process.append(ws.title)
 
-        multilevel_identifiers = ['programStageDataElements', 'programTrackedEntityAttributes', 'dataSetElements', 'attributeValues', 'dataInputPeriods']
+        multilevel_identifiers = ['trackedEntityTypeAttributes', 'programStageDataElements', 'programTrackedEntityAttributes', 'dataSetElements', 'attributeValues', 'dataInputPeriods']
 
     if len(sheets_to_process) == 0:
         return { 'msg': 'Metadata type not found in gspreadsheet, nothing to do', 'type':'warning'}
