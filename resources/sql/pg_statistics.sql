@@ -107,7 +107,7 @@ where t.table_schema = 'public'
 and t.table_name like 'analytics%'
 order by t.table_schema, t.table_name;
 
--- List of indexes and usage including number of scans
+-- Count of scans for indexes
 
 select
   relname as table_name,
@@ -121,3 +121,14 @@ inner join
   pg_indexes on pg_stat_user_indexes.indexrelname = pg_indexes.indexname
 order by
   idx_scan desc;
+
+-- Time of last vacuum by table
+
+select
+  relname as table_name,
+  last_vacuum,
+  last_autovacuum
+from
+  pg_stat_user_tables
+where
+  relname = 'datavalue';
