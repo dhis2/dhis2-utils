@@ -107,3 +107,17 @@ where t.table_schema = 'public'
 and t.table_name like 'analytics%'
 order by t.table_schema, t.table_name;
 
+-- List of indexes and usage including number of scans
+
+select
+  relname as table_name,
+  indexrelname as index_name,
+  idx_scan as number_of_scans,
+  idx_tup_read as tuples_read,
+  idx_tup_fetch as tuples_fetched
+from
+  pg_stat_user_indexes
+inner join
+  pg_indexes on pg_stat_user_indexes.indexrelname = pg_indexes.indexname
+order by
+  idx_scan desc;
