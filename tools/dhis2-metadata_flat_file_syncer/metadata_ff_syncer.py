@@ -318,10 +318,10 @@ def apply_formatting_to_worksheet(worksheet, metadata_types_supported, worksheet
         config_values = list()
     else:
         config_values = list(df_conf.iloc[:,0])
-    formatting_rules = {'id': ['=COUNTIF(*:*, *2) > 1'],
-                        'name': ['=COUNTIF(*:*, *2) > 1'],
-                        'shortName': ['=COUNTIF(*:*, *2) > 1', '=LEN(*2) > 50'],
-                        'code': ['=COUNTIF(*:*, *2) > 1']}
+    formatting_rules = {'id': ['=AND(*2 <> "", ARRAYFORMULA(SUM(N(*:* = *2))) > 1)'],
+                        'name': ['=AND(*2 <> "", ARRAYFORMULA(SUM(N(*:* = *2))) > 1)'],
+                        'shortName': ['=AND(*2 <> "", ARRAYFORMULA(SUM(N(*:* = *2))) > 1)', '=LEN(*2) > 50'],
+                        'code': ['=AND(*2 <> "", ARRAYFORMULA(SUM(N(*:* = *2))) > 1)']}
 
     # Get all the column names in the worksheet
     while True:
