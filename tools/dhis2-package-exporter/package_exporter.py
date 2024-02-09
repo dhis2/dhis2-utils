@@ -585,7 +585,7 @@ def check_and_apply_sharing(json_object, metadata_type=None, omit=[], verbose=Fa
                             if userGroupId in userGroup_sharing_object:
                                 source_sharing = item['sharing']['userGroups'][userGroupId]['access']
                                 target_sharing = userGroup_sharing_object[userGroupId]['access']
-                                if source_sharing != target_sharing:
+                                if source_sharing != target_sharing and target_sharing != "":
                                     logger.warning(uid + " " + name + " shared with user group " +
                                                    userGroups_codes[userGroupId] + " with wrong access: " +
                                                    source_sharing + " (Expected " + target_sharing + ") ... Correcting")
@@ -599,7 +599,7 @@ def check_and_apply_sharing(json_object, metadata_type=None, omit=[], verbose=Fa
                                 if default_found:
                                     target_sharing = metadata_default_user_group_sharing.get(default_found, "")
                                     source_sharing = item['sharing']['userGroups'][userGroupId]['access']
-                                    if source_sharing != target_sharing:
+                                    if source_sharing != target_sharing and target_sharing != "":
                                         logger.warning(uid + " " + name + " shared with user group " +
                                                        userGroups_codes[userGroupId] + " with wrong access: " +
                                                        source_sharing + " (Expected " + target_sharing + ") ... Correcting")
@@ -1190,6 +1190,13 @@ def main():
             metadata_import_order.remove('trackedEntityTypes')
             metadata_import_order.remove('trackedEntityInstanceFilters')
 
+        # aggregateDataExchanges not compatible with 2.38 and below.
+        if not any(version in api_source.version for version in ['2.38']):
+            # Find the index of 'attributes' in the list
+            attributes_index = metadata_import_order.index('attributes')
+            # Insert 'aggregateDataExchanges' after 'attributes'
+            metadata_import_order.insert(attributes_index + 1, 'aggregateDataExchanges')
+
     elif package_type_or_uid == 'DSH' or args.only_dashboards:
         metadata_import_order = [
             'categoryOptionGroupSets', 'categoryOptionGroups',
@@ -1365,6 +1372,7 @@ def main():
 
     if any(x in package_type_or_uid for x in ['TRK', 'EVT']):
         metadata_filters.update({
+            "aggregateDataExchanges": "code:$like:" + package_prefix,
             "programs": "id:in:[" + ','.join(program_uids) + "]",
             "programIndicatorGroups": "",
             "programIndicators": "program.id:in:[" + ','.join(program_uids) + "]",
@@ -1456,12 +1464,17 @@ def main():
                 continue
 
             # Adjust sharing
-            if metadata_type in metadata_types_supporting_data_capture:
-                metadata_default_user_group_sharing[package_prefix + "_ACCESS"] = "r-r-----"
-                metadata_default_user_group_sharing[package_prefix + "_DATA_CAPTURE"] = "r-rw----"
-            else:
-                metadata_default_user_group_sharing[package_prefix + "_ACCESS"] = "r-------"
-                metadata_default_user_group_sharing[package_prefix + "_DATA_CAPTURE"] = "r-------"
+            for key in list(metadata_default_user_group_sharing.keys()):
+                if "_ACCESS" in key:
+                    if metadata_type in metadata_types_supporting_data_capture:
+                        metadata_default_user_group_sharing[key] = "r-r-----"
+                    else:
+                        metadata_default_user_group_sharing[key] = "r-------"
+                elif "_DATA_CAPTURE" in key:
+                    if metadata_type in metadata_types_supporting_data_capture:
+                        metadata_default_user_group_sharing[key] = "r-rw----"
+                    else:
+                        metadata_default_user_group_sharing[key] = "r-------"
 
             # --- Get the stuff -------------------------------------------------------------
             if 'code:$like' in metadata_filters[metadata_type]:

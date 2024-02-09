@@ -1,0 +1,703 @@
+<html>
+<head>
+<style>
+body {
+    margin-bottom: 15px;
+    padding: 10px;
+    font-family: sans-serif;
+    #display: flex;
+    #flex-direction: row;
+    #align-items: center;
+    #justify-content: space-between;
+    background-color: rgb(44, 102, 147);
+    border-bottom: 1px solid rgba(32, 32, 32, 0.15);
+    color: rgb(255, 255, 255);
+}
+h1 {
+  font-size: 20px;
+}
+#logo {
+    position: absolute;
+    top: 15;
+    right: 20;
+    width: 100px; /* adjust the width and height as needed */
+<!--    height: 100px;-->
+}
+div {
+  margin-top: 10px;
+}
+#textBox {
+    overflow: scroll;
+    height: 100%;
+    width: 100%;
+    background-color: white;
+    font-size:13;
+    font-family: courier;
+    font-weight: bold;
+    padding: 10px;
+}
+textarea {
+    overflow: hidden;
+    height: 100%;
+    width: 100%;
+    readonly;
+}
+input {
+    vertical-align: top;
+    margin: 5;
+    display: block;
+}
+label {
+  display: block;
+}
+#selectAction, #selectFlatFile, #selectInstance select {
+  display: block;
+}
+#gspreadTittle {
+    display: block;
+    vertical-align: top;
+    width: 300px;
+    margin: 0;
+}
+#clearButton {
+    top: 0;
+    right: 0;
+    padding: 5px;
+    background-color: #f1f1f1;
+    border: none;
+    cursor: pointer;
+    float: right;
+}
+.spinner {
+    border: 16px solid #f3f3f3;
+    border-top: 16px solid #3498db;
+    border-radius: 50%;
+    width: 120px;
+    height: 120px;
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+.centered {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  /* bring your own prefixes */
+  transform: translate(-50%, -50%);
+}
+LABEL.indented-checkbox-text
+{
+  margin-left: 2em;
+  display: block;
+  position: relative;
+  margin-top: -1.4em;  /* make this margin match whatever your line-height is */
+  line-height: 1.4em;  /* can be set here, or elsewehere */
+}
+</style>
+</head>
+<header>
+    <title>Meta Flat File Syncer</title>
+</header>
+<body>
+    <img id="logo" src="dhis2.png" alt="DHIS2">
+    <h1>Meta Flat File Syncer</h1>
+    <div>Select an action:</div>
+    <select id="selectAction" onchange="handleActionChange()">
+      <option value="exportmeta">EXPORT instance METADATA to a flat file</option>
+      <option value="updatemeta">UPDATE instance METADATA from flat file</option>
+      <option value="generateUIDs">GENERATE missing UIDs for flat file</option>
+      <option value="openfile">OPEN existing flat file</option>
+      <option value="jsonfile">CREATE json from existing flat file</option>
+      <option value="sharefile">SHARE existing flat file with user</option>
+      <option value="deletefile">DELETE existing flat file</option>
+    </select>
+
+    <div id="createFileCheckbox" onchange="handleCheckboxChange()" style="display:block;">
+      <input type="checkbox" id="createNewFileCheckbox" name="createNewFileCheckbox" value="createNewFile">
+      <label for="createNewFileCheckbox" class="indented-checkbox-text">Create a NEW flat file</label>
+    </div>
+    <div id="selectFlatFileWrapper" style="display:block">
+        <label for="selectFlatFile">Flat File Google Spreadsheet</label>
+        <select id="selectFlatFile">
+            <option>Choose a flat file</option>
+        </select>
+        <input id="emailInput" type="email" placeholder="Your Email" style="display: none;">
+    </div>
+    <div id="textInputWrapper" style="display:none">
+        <label for="gspreadTittle">Enter the title of the new spreadsheet ("Flat File" will be added at the end)</label>
+        <input type="text" id="gspreadTittle">
+    </div>
+    <div id="selectInstanceWrapper" style="display:block">
+        <label for="selectInstance">Target instance URL</label>
+        <select id="selectInstance" style="margin-bottom: 5">
+            <option>Choose an instance</option>
+        </select>
+        <input class="input is-large" type="username" name="username" placeholder="Your Username" autofocus="">
+        <input class="input is-large" type="password" name="password" placeholder="Your Password">
+    </div>
+    <div id="selectMetadataTypeWrapper" style="display:block">
+      Metadata type to process
+                <select id="selectMetadataType">
+                    <option>All</option>
+                </select>
+    </div>
+    <div>
+        <button type="button" onclick="start_action()">START</button>
+    </div>
+    <div id="loading" class="centered" style="display:none">
+        <div class="spinner"></div>
+        <div style="color:#808080;">Work in progress...</div>
+    </div>
+    <br>
+    <br>
+    <div><span>Last update: </span><span id="time-container"></span></div>
+    <br>
+    <button id="clearButton" onclick="clear_log()">Clear log</button>
+    <div name="textBox" id="textBox"></div>
+</body>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script>
+    let selectMetadataTypeUpdateMetadataState = []
+
+    function log_message(msgObj, type) {
+        console.log(msgObj);
+        const textarea = document.getElementById('textBox');
+        const paragraph = document.createElement('p');
+        const content = document.createTextNode(msgObj);
+        const lines = msgObj.split('<br>');
+        switch(type) {
+            case 'info': color = 'green'; break;
+            case 'warning': color = 'orange'; break;
+            case 'error': color = 'red'; break;
+            default: color = 'black'; break;
+        }
+        for (const line of lines) {
+            const content = document.createTextNode(line);
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            const lineWithLink = line.replace(urlRegex, '<a href="$1" target="_blank">$1</a>');
+            const lineNode = document.createElement('span');
+            lineNode.innerHTML = lineWithLink;
+            paragraph.appendChild(lineNode);
+            paragraph.appendChild(document.createElement('br'));
+        }
+        paragraph.style.color = (color ? color : 'black');
+        paragraph.style.display = 'inline'
+        textarea.appendChild(paragraph);
+        return true;
+    }
+
+    function makeGetRequest(path) {
+        return new Promise(function (resolve, reject) {
+            axios.get(path).then(
+                (response) => {
+                    var result = response.data;
+                    console.log('Processing Request');
+                    resolve(result);
+                },
+                    (error) => {
+                    reject(error);
+                }
+            );
+        });
+    }
+    function makePostRequest(path, json) {
+        return new Promise(function (resolve, reject) {
+            axios.post(path, json).then(
+                (response) => {
+                    var result = response.data;
+                    console.log('Processing POST');
+                    console.log(result);
+                    log_message(result.msg, result.type);
+                    if(result.type == 'error')
+                        reject(result.msg);
+                },
+                    (error) => {
+                    reject(error);
+                }
+            );
+        });
+    }
+
+    async function start_action() {
+        document.getElementById('loading').style.display = 'block';
+        var action = document.getElementById("selectAction").value;
+        var createFileCheckbox = document.getElementById("createNewFileCheckbox");
+
+        switch(action) {
+            case 'updatemeta':
+               const confirm_update = confirm("Are you sure you want to OVERWRITE the metadata in instance " + document.getElementById("selectInstance").value + "?");
+               if (confirm_update) {
+                    await importMetadataSequentially();
+               }
+            break;
+            case 'exportmeta':
+                if(createFileCheckbox.checked) {
+                    await createGoogleSpreadsheet();
+                    document.getElementById("createNewFileCheckbox").checked = false;
+                    textInputWrapper.style.display = "none";
+                    document.getElementById("gspreadTittle").value = "";
+                    selectFlatFileWrapper.style.display = "block";
+                }
+                else
+                    await updateGoogleSpreadsheet();
+            break;
+            case 'generateUIDs':
+                try {
+                    var result = await axios.post('http://127.0.0.1:5000/openSpreadsheet',
+                                        { gs_file: document.getElementById("selectFlatFile").value });
+                    log_message(result.data.msg, result.data.type);
+                    if(result.data.type != 'error') {
+                        try {
+                            var result = await axios.get('http://127.0.0.1:5000/genMissingUIDs');
+                            log_message(result.data.msg, result.data.type);
+                        } catch (e) {
+                            log_message(e, 'error');
+                        }
+                    }
+                } catch (e) {
+                    log_message(e, 'error');
+                }
+            break;
+            case 'openfile':
+                try {
+                    var result = await axios.post('http://127.0.0.1:5000/openSpreadsheet',
+                                        { gs_file: document.getElementById("selectFlatFile").value });
+                    log_message(result.data.msg, result.data.type);
+                    if(result.data.type != 'error') {
+                        try {
+                            var result = await axios.get('http://127.0.0.1:5000/getSpreadsheetID');
+                            if(result.data.type != 'error') {
+                                const urlRegex = /(https?:\/\/[^\s]+)/g;
+                                const msg = result.data.msg;
+                                const url = msg.match(urlRegex)[0];
+                                window.open(url, '_blank');
+                            }
+                        } catch (e) {
+                            log_message(e, 'error');
+                        }
+                    }
+                } catch (e) {
+                    log_message(e, 'error');
+                }
+            break;
+            case 'jsonfile':
+                try {
+                    var result = await axios.post('http://127.0.0.1:5000/openSpreadsheet',
+                                        { gs_file: document.getElementById("selectFlatFile").value });
+                    log_message(result.data.msg, result.data.type);
+                    if(result.data.type == 'error') {
+                        return;
+                    }
+                    else {
+                        try {
+                            var res = await log_message('Exporting ALL metadata to json file', 'info');
+                            var result = await axios.get('http://127.0.0.1:5000/importMetadata/All-json');
+                            var res = await log_message(result.data.msg, result.data.type);
+                            if(result.data.type == 'error') {
+                                return;
+                            }
+                            else {
+                                log_message('<a href="../metadata-all.json" download="metadata-all.json">Download metadata-all json file</a>', 'info');
+                            }
+                        } catch (e) {
+                            log_message(e, 'error');
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    log_message(e, 'error');
+                }
+            break;
+            case 'deletefile':
+                const selected_flat_file = document.getElementById("selectFlatFile").value;
+                const confirm_delete = confirm("Are you sure you want to DELETE spreadsheet " + selected_flat_file + "?");
+                if(confirm_delete) {
+                    try {
+                        var result = await axios.post('http://127.0.0.1:5000/delSpreadsheetByName',
+                                            { gs_file: selected_flat_file });
+                        log_message(result.data.msg, result.data.type);
+                        if(result.data.type != 'error') {
+                            let select = document.getElementById("selectFlatFile");
+                            let valueToRemove = document.getElementById("selectFlatFile").value;
+
+                            for (let i = 0; i < select.options.length; i++) {
+                              if (select.options[i].value === valueToRemove) {
+                                select.remove(i);
+                                break;
+                              }
+                            }
+                        }
+                    } catch (e) {
+                        log_message(e, 'error');
+                    }
+                }
+            break;
+            case 'sharefile':
+                try {
+                    var result = await axios.post('http://127.0.0.1:5000/shareSpreadsheetWithEmail',
+                                        { gs_file: document.getElementById("selectFlatFile").value,
+                                          user_email: document.getElementById("emailInput").value } );
+                    log_message(result.data.msg, result.data.type);
+                } catch (e) {
+                    log_message(e, 'error');
+                }
+            break;
+        }
+        document.getElementById('loading').style.display = 'none';
+    }
+
+    async function importMetadataSequentially() {
+        const selected_instance = document.getElementById("selectInstance").value;
+        const selected_flat_file = document.getElementById("selectFlatFile").value;
+        const selected_metadata_type = document.getElementById("selectMetadataType").value;
+        const usernameInput = document.querySelector(`input[name="username"]`);
+        const passwordInput = document.querySelector(`input[name="password"]`);
+        const username = usernameInput.value;
+        const password = passwordInput.value;
+
+        const json_payload = {
+            user: username,
+            password: password,
+            url: selected_instance,
+            gs_file: selected_flat_file,
+            metadata_type: selected_metadata_type
+        }
+        try {
+            var result = await axios.post('http://127.0.0.1:5000/connectToApi', json_payload);
+            log_message(result.data.msg, result.data.type);
+            if(result.data.type == 'error') {
+                return;
+            }
+        } catch (e) {
+            log_message(e, 'error');
+            return;
+        }
+        try {
+            var result = await axios.post('http://127.0.0.1:5000/openSpreadsheet', json_payload);
+            log_message(result.data.msg, result.data.type);
+            if(result.data.type == 'error') {
+                return;
+            }
+        } catch (e) {
+            log_message(e, 'error');
+        }
+        if(selected_metadata_type != 'All') {
+            try {
+                var res = await log_message('Importing ' + selected_metadata_type, 'info');
+                var result = await axios.get('http://127.0.0.1:5000/importMetadata/' + selected_metadata_type);
+                var res = await log_message(result.data.msg, result.data.type);
+                if(result.data.type == 'error') {
+                    return;
+                }
+            } catch (e) {
+                log_message(e, 'error');
+                return;
+            }
+        }
+        else {
+            var x= document.getElementById("selectMetadataType");
+
+            for(i=0; i<x.options.length;i++){
+                option_value = x.options[i].value;
+                if(option_value != 'All') {
+                    try {
+                        var res = await log_message('Importing ' + option_value, 'info');
+                        var result = await axios.get('http://127.0.0.1:5000/importMetadata/' + option_value);
+                        var res = await log_message(result.data.msg, result.data.type);
+                        if(result.data.type == 'error') {
+                            return;
+                        }
+                    } catch (e) {
+                        log_message(e, 'error');
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    async function createSpreadsheet() {
+        let new_flat_file_tittle = document.getElementById("gspreadTittle").value + ' Flat File';
+        try {
+            var createResult = await axios.post('http://127.0.0.1:5000/createSpreadsheet',
+                    { gs_file: new_flat_file_tittle });
+            log_message(createResult.data.msg, createResult.data.type);
+            if(createResult.data.type == 'error') {
+                return;
+            }
+            else {
+                // Update drop down menu with new file
+                let select = document.getElementById("selectFlatFile");
+                let option = document.createElement("option");
+                option.text = new_flat_file_tittle;
+                for (let i = 0; i < select.options.length; i++) {
+                  if (option.text < select.options[i].text) {
+                    select.insertBefore(option, select.options[i]);
+                    break;
+                  }
+                  else if (i === select.options.length - 1) {
+                    select.appendChild(option);
+                    break;
+                  }
+                }
+                select.value = new_flat_file_tittle;
+            }
+        } catch (e) {
+            log_message(e, 'error');
+        }
+    }
+
+    async function getSpreadsheetID() {
+        try {
+            var getResult = await axios.get('http://127.0.0.1:5000/getSpreadsheetID');
+            log_message(getResult.data.msg, getResult.data.type);
+            if(getResult.data.type == 'error') {
+                return;
+            }
+        } catch (e) {
+            log_message(e, 'error');
+        }
+    }
+
+    async function shareSpreadsheet() {
+        try {
+            var getResult = await axios.get('http://127.0.0.1:5000/shareSpreadsheet');
+            log_message(getResult.data.msg, getResult.data.type);
+            if(getResult.data.type == 'error') {
+                return;
+            }
+        } catch (e) {
+            log_message(e, 'error');
+        }
+    }
+
+    async function exportMetadataSequentially() {
+        const selected_instance = document.getElementById("selectInstance").value;
+        const action = document.getElementById("selectAction").value;
+        const selected_flat_file = document.getElementById("selectFlatFile").value;
+        const created_flat_file = document.getElementById("gspreadTittle").value;
+        const is_a_new_file = document.getElementById("createNewFileCheckbox").checked;
+        const selected_metadata_type = document.getElementById("selectMetadataType").value;
+        const usernameInput = document.querySelector(`input[name="username"]`);
+        const passwordInput = document.querySelector(`input[name="password"]`);
+        const username = usernameInput.value;
+        const password = passwordInput.value;
+
+        const json_payload = {
+            user: username,
+            password: password,
+            url: selected_instance,
+            gs_file: action === 'is_a_new_file' ? created_flat_file : selected_flat_file,
+            metadata_type: selected_metadata_type
+        }
+        try {
+            var result = await axios.post('http://127.0.0.1:5000/connectToApi', json_payload);
+            log_message(result.data.msg, result.data.type);
+            if(result.data.type == 'error') {
+                return;
+            }
+        } catch (e) {
+            log_message(e, 'error');
+            return;
+        }
+        if(!is_a_new_file) {
+            try {
+                var result = await axios.post('http://127.0.0.1:5000/openSpreadsheet', json_payload);
+                log_message(result.data.msg, result.data.type);
+                if(result.data.type == 'error') {
+                    return;
+                }
+            } catch (e) {
+                log_message(e, 'error');
+            }
+        }
+        if(selected_metadata_type != 'All') {
+            try {
+                var res = await log_message('Exporting ' + selected_metadata_type + ' from instance', 'info');
+                var result = await axios.get('http://127.0.0.1:5000/exportMetadata/' + selected_metadata_type);
+                var res = await log_message(result.data.msg, result.data.type);
+                if(result.data.type == 'error') {
+                    return;
+                }
+            } catch (e) {
+                log_message(e, 'error');
+                return;
+            }
+        }
+        else {
+            var x= document.getElementById("selectMetadataType");
+
+            for(i=0; i<x.options.length;i++){
+                option_value = x.options[i].value;
+                if(option_value != 'All') {
+                    try {
+                        var res = await log_message('Exporting ' + option_value + ' from instance', 'info');
+                        var result = await axios.get('http://127.0.0.1:5000/exportMetadata/' + option_value);
+                        var res = await log_message(result.data.msg, result.data.type);
+                        if(result.data.type == 'error') {
+                            return;
+                        }
+                    } catch (e) {
+                        log_message(e, 'error');
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    async function createGoogleSpreadsheet() {
+        await createSpreadsheet();
+        await exportMetadataSequentially();
+        await getSpreadsheetID();
+        await shareSpreadsheet();
+    }
+
+    async function updateGoogleSpreadsheet() {
+        await exportMetadataSequentially();
+        await getSpreadsheetID();
+        await shareSpreadsheet();
+    }
+
+    function getDate() {
+        date = new Date().toString();
+        document.getElementById('time-container').textContent
+            = date;
+    }
+
+    function handleActionChange() {
+        var action = document.getElementById("selectAction").value;
+        var selectFlatFileWrapper = document.getElementById("selectFlatFileWrapper");
+        var selectInstanceWrapper = document.getElementById("selectInstanceWrapper");
+        var textInputWrapper = document.getElementById("textInputWrapper");
+        var selectMetadataTypeWrapper = document.getElementById("selectMetadataTypeWrapper");
+        var createFileCheckbox = document.getElementById("createFileCheckbox");
+
+        if (action == "exportmeta")
+            createFileCheckbox.style.display = "block";
+        else
+            createFileCheckbox.style.display = "none";
+
+        if (action === "deletefile" || action === "openfile" || action === 'sharefile' || action === "jsonfile" || action === "generateUIDs") {
+            selectInstanceWrapper.style.display = "none";
+            selectMetadataTypeWrapper.style.display = "none";
+            textInputWrapper.style.display = "none";
+            document.getElementById("gspreadTittle").value = "";
+            createFileCheckbox.style.display = "none";
+            document.getElementById("createNewFileCheckbox").checked = false;
+            selectFlatFileWrapper.style.display = "block";
+        } else {
+            selectInstanceWrapper.style.display = "block";
+            selectMetadataTypeWrapper.style.display = "block";
+        }
+        let selectMetadataType = document.getElementById("selectMetadataType");
+        if (action == 'exportmeta') {
+            for (let i = 0; i < selectMetadataType.options.length; i++) {
+                  let optionText = selectMetadataType.options[i].text;
+                  if (optionText.includes("+")) {
+                    let splitText = optionText.split("+");
+                    let leftOption = document.createElement("option");
+                    leftOption.text = splitText[0];
+                    let rightOption = document.createElement("option");
+                    rightOption.text = splitText[1];
+                    selectMetadataType.remove(i);
+                    selectMetadataType.add(leftOption, i);
+                    selectMetadataType.add(rightOption, i + 1);
+                  }
+            }
+        }
+        else {
+            selectMetadataType.innerHTML = "";
+            for (const metadata_type of selectMetadataTypeUpdateMetadataState) {
+                  var objOption = document.createElement("option");
+                  objOption.text = metadata_type;
+                  objOption.value = metadata_type;
+                  selectMetadataType.add(objOption);
+            }
+        }
+        var emailInput = document.getElementById("emailInput");
+        if(action === 'sharefile') {
+            emailInput.style.display = "block";
+        }
+        else {
+            emailInput.style.display = "none";
+        }
+
+    }
+
+    function handleCheckboxChange() {
+        var createFileCheckbox = document.getElementById("createNewFileCheckbox");
+
+        if (createFileCheckbox.checked) {
+          selectFlatFileWrapper.style.display = "none";
+          selectInstanceWrapper.style.display = "block";
+          textInputWrapper.style.display = "block";
+        } else {
+          selectFlatFileWrapper.style.display = "block";
+          selectInstanceWrapper.style.display = "block";
+          textInputWrapper.style.display = "none";
+        }
+    }
+
+    function clear_log() {
+      const textBox = document.getElementById("textBox");
+      const clearButton = document.getElementById("clearButton");
+      textBox.innerHTML = "";
+      // Add a click event listener to the clear button
+<!--      clearButton.addEventListener("click", () => {-->
+<!--        // Set the innerHTML of the textbox to an empty string to clear its content-->
+<!--        textBox.innerHTML = "";-->
+<!--      });-->
+    }
+
+    async function populate_selectors() {
+        document.getElementById('time-container').textContent
+            = "Please wait while loading data...";
+        var instancesArray = await makeGetRequest('http://127.0.0.1:5000/instances');
+        for (const instance of instancesArray){
+              var objOption = document.createElement("option");
+              objOption.text = instance;
+              objOption.value = instance;
+              selectInstance.options.add(objOption);
+        }
+        var gspreadArray = await makeGetRequest('http://127.0.0.1:5000/flatFiles');
+        // Sort the list alphabetically
+        gspreadArray.sort(function(a, b) {
+            var nameA = a.name.toUpperCase();
+            var nameB = b.name.toUpperCase();
+            if (nameA < nameB) {
+                return -1;
+            }
+            if (nameA > nameB) {
+                return 1;
+            }
+            return 0;
+        });
+        for (const google_spreadsheet of gspreadArray) {
+              if (google_spreadsheet.name.includes('Flat File')) {
+                  var objOption = document.createElement("option");
+                  objOption.text = google_spreadsheet.name;
+                  objOption.value = google_spreadsheet.name;
+                  selectFlatFile.options.add(objOption);
+              }
+        }
+        var metadataTypesArray = await makeGetRequest('http://127.0.0.1:5000/metadataTypes');
+        selectMetadataTypeUpdateMetadataState.push('All');
+        for (const metadata_type of metadataTypesArray) {
+              var objOption = document.createElement("option");
+              objOption.text = metadata_type;
+              objOption.value = metadata_type;
+              selectMetadataType.options.add(objOption);
+              selectMetadataTypeUpdateMetadataState.push(metadata_type);
+        }
+        handleActionChange();
+        document.getElementById('time-container').textContent = new Date().toString();
+    }
+    (function () {
+        populate_selectors();
+    })();
+</script>
+</html>

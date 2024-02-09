@@ -36,8 +36,8 @@ or p.startdate > '2100-01-01';
 create or replace view events_out_of_range as
 select psi.programstageinstanceid
 from programstageinstance psi
-where psi.duedate < '1960-01-01'
-or psi.duedate > '2100-01-01'
+where psi.executiondate < '1960-01-01'
+or psi.executiondate > '2100-01-01'
 or (psi.status = 'SCHEDULE' and (psi.duedate < '1960-01-01' or psi.duedate > '2100-01-01'));
 
 delete from trackedentitydatavalueaudit tdva

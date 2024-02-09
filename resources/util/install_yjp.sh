@@ -1,6 +1,8 @@
 #!/bin/bash
-
-# Installs YourKit Java Profiler
+#
+# Installs YourKit Java Profiler.
+#
+# Installs the YourKit library under `INSTALL_DIR` and adds Tomcat conf file under `TOMCAT_CONF_DIR`.
 #
 # Run as root with 'sudo ./install_yjp.sh'
 #
@@ -11,17 +13,20 @@
 #
 # Manual steps
 #
-# Download the Linux x64 distribution from https://www.yourkit.com/java/profiler/download/.
+# Download the Linux x64 distribution from https://www.yourkit.com/java/profiler/download/. Note that the URL changes over time.
 #
-# $ wget https://download.yourkit.com/yjp/2023.9/YourKit-JavaProfiler-2023.9-b97-x64.zip
+# $ wget -O yjp.zip https://download.yourkit.com/yjp/2023.9/YourKit-JavaProfiler-2023.9-b103-x64.zip
 #
 # Unzip the archive.
 #
-# $ unzip YourKit-JavaProfiler-2023.9-b97-x64.zip
+# $ unzip yjp.zip
 #
 # Rename the directory to 'yjp'.
 #
-# $ mv YourKit-JavaProfiler-2023.9-b97-x64 yjp
+# $ mv YourKit-JavaProfiler-2023.9 yjp
+#
+# Run this script as sudo.
+#
 
 YJP_DIR="yjp"
 INSTALL_DIR="/var/lib"
@@ -64,7 +69,7 @@ if [ -d "${TOMCAT_CONF_DIR}" ]; then
     echo "Tomcat conf file could not be created"
   fi
 else
-  echo "Could not install Tomcat config, install manuall by adding to JAVA_OPTS."
+  echo "Could not install Tomcat config, install manually by adding to JAVA_OPTS."
   echo "-agentpath:${AGENT_FILE}"
 fi
 

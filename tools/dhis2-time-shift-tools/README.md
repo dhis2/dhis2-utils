@@ -1,133 +1,109 @@
-# DB Time Shift Utilities
+# DHIS2 Database Time Shift Utilities  (Work in Progress!)
 
-This guide is composed of steps to achieve the primary goal of keeping the demos/tests database up to date.
+This guide outlines the steps required to keep the demo/test database current.
 
-Features of the system:
+**Features**:
 
-• Ensure data is not in the future.
+- Ensure data isn't projected into the future.
+- Ensure data remains recent.
+- The script can be run periodically to update data.
+- The script can be applied to any DB post data import.
 
-• Ensure data is recent
+To initialize the tools, load the functions into PostgreSQL using the following command:
 
-• Script will be able to run periodically to bring data up to date
-
-• Script will be able to apply to any DB following data import
-
-------
-
-**DB Time Shift Utilities -Work Flow** 
-
-![](./img/DHIS2_Shifting_tool_workflow.png)
-
-------
-
-## Step 1 : move moving data from one year to the next / back
-
-##### **Moving data might be used at the beginning of each year**
-
-- Using the function  **move_data_one _year_forward()**  from the SQL file **move_feature_data_script_all_steps.sql**  ; By  executing the below statement all DHIS2 data will sifted by one year ex data values of 2022 will sifted to 2023 and data values of 2021 will be sifted to 2022 …...
-
-Execution example:
-
-```sql
-    select move_data_one_year_forward ( );
 ```
-
-The below step is not necessary unless you need to rollback the move forward data
-
-  - Move data backward by using SQL file: `1.2-shift-all-data-one-year-backward.sql`
-
-    Using function **move_data_one_year_backward ()** which will move all data, including Aggregate data and Tracker/Event data in the dhis2 database, backward by one year and tweak the dates to align periods correctly
-
-    Execution example:
-
-```sql
-    select move_data_one_year_backward ( );
+psql -d <dhis2_db> -a -f dhis2_timeshift_functions.sql 
 ```
 
 ------
 
-## Step 2: Generating buffer periods from the future/current year to be used as a buffering period
+## Shifting Data Between Years
 
-The buffering periods will be the same **periodId** for the future/current year with an extra two digits from the buffering year.
+##### **Consider moving data at the start of each year.**
+
+- To move data forward, use the function `dhis2_timeshift_one_year_forward()`. This function shifts all data, including Aggregate and Tracker/Event data in the DHIS2 database, forward by one year, adjusting dates to align periods correctly.
+
+    **Execution**:
 
 ```sql
-Example :
-
-Future year is : 2022
-
-Buffering year is : 2010
-
-periodid for month like October 2022 is : 6171618
-
-the new buffering periodid October 2010 will be : 617161810
+    select dhis2_timeshift_one_year_forward();  
 ```
 
-  - **Generate buffering periods ids**
+To exclude events (which can be time-consuming):
 
-    Using function **generate_buffer_period_from_current_period( )** in the SQL file **move_feature_data_script_all_steps.sql**
-
-    1. ```sql
-       Select generate_buffer_period_from_current_period();
-       ```
-    
-        The Above  will check the duplicated **periodid** and will remove the empty **periodId** which have no data in the buffering year.
-    
-    2. ```sql
-       INSERT into period select p_id, p_type,p_start,p_end from generate_buffer_period_from_current_period();
-       ```
-    
-       The above SQL line  will insert  all generated **periodid** from **feature year** to **buffering year**
-
-------
-
-## STEP 3 Move all feature data to the buffering year 
-
-  - Using function **move_current_buffering ()**  in the SQL file **move_feature_data_script_all_steps.sql**
-By  executing the below function will update all records in the  datavalues table by replacing the  periodid form future/current year using new generated  **periodid**  in the **STEP 2** related to **buffering year**  :  
-    
 ```sql
-    select move_current_buffering ();
+    select dhis2_timeshift_one_year_forward_no_events();  
 ```
 
-------
+If you need to reverse the "move forward" operation:
 
-## STEP 4: **Move data back from buffering year to the current period** 
+- Use the function `dhis2_timeshift_one_year_backward()` to shift all data, including Aggregate and Tracker/Event data in the DHIS2 database, backward by one year, adjusting dates to align periods correctly.
 
-  - Using the function  **move_buffering_to_current**(***peroid_Name***)  from   **move_feature_data_script_all_steps.sql**  ; by executing the below function and passing the period name as an augments such as **Daily**, **Weekly**   ,**Monthly** , **Yearly** etc 
+    **Execution**:
 
-    **Example**
+```sql
+    select dhis2_timeshift_one_year_backward();
+```
 
-    Create cron job for monthly period to move data from period of September 2010 to September 2022
+To exclude events:
+
+```sql
+    select dhis2_timeshift_one_year_backward_no_events();
+```
+
+
+## Buffering Future Data
+
+Buffering periods will retain the same **periodId** for the upcoming/current year but will append an extra two digits from the buffering year.
+
+> **Example**
+>
+> Future year: 2022
+> Buffering year: 2010
+> PeriodId for a month like October 2022: `6171618`
+> The new buffering periodId for October 2010 will be: `617161810`
+
+
+### Shift all future data to the buffer period
+
+    The following SQL command updates all data values by replacing the future year's periodId with the buffering year's periodId:
 
     ```sql
-    select move_buffering_to_current('monthly');
+    select dhis2_timeshift_buffer_future_periods();
     ```
 
+### Shift data from the buffering year to the current period
 
-### Setting up a cron to keep your data up to date
+    Use the function `dhis2_timeshift_buffer_to_current(period_type text)` in cron jobs for each period type to shift data from the buffering year/period to the current year/period.  
+    For instance, to shift monthly data:
 
-An example below on how to make sure your data is updated when it corresponds by setting up a cronjob. We assume that you have data already in your system up to today's date. If that is not the case, you need to invoke the aforementioned functions to move it so it covers any date in the past until today.
+    ```sql
+    select dhis2_timeshift_buffer_to_current('monthly');
+    ```
 
-First thing is to edit your crontab for user postgres, which is the one who has access to the DB. You need to run the following as superuser:
+## Automating Data Shifts with Cron
+
+Below is an example of how to ensure your data is updated periodically by setting up a cron job. This assumes your system already contains data up to the current date. If not, you'll need to use the previously mentioned functions to shift it to cover past dates up to today.
+
+First, edit the crontab for the `postgres` user (who has DB access). Execute the following as a superuser:
 
 ```shell
 sudo crontab -e -u postgres
 ```
 
-Add the following lines:
+Append these lines:
 
 ```shell
-15 0 * * * psql -d covid-19 -c "SELECT move_buffering_to_current('Daily');" 2>&1 >/dev/null | ts >> ~/shift_dates.log
-20 0 * * MON psql -d covid-19 -c "SELECT move_buffering_to_current('Weekly');" 2>&1 >/dev/null | ts >> ~/shift_dates.log
-25 0 1 * * psql -d covid-19 -c "SELECT move_buffering_to_current('Monthly');" 2>&1 >/dev/null | ts >> ~/shift_dates.log
-30 0 1 */3 * psql -d covid-19 -c "SELECT move_buffering_to_current('Quarterly');" 2>&1 >/dev/null | ts >> ~/shift_dates.log
+15 0 * * * psql -d covid-19 -c "SELECT dhis2_timeshift_buffer_to_current('Daily');" 2>&1 >/dev/null | ts >> ~/shift_dates.log
+20 0 * * MON psql -d covid-19 -c "SELECT dhis2_timeshift_buffer_to_current('Weekly');" 2>&1 >/dev/null | ts >> ~/shift_dates.log
+25 0 1 * * psql -d covid-19 -c "SELECT dhis2_timeshift_buffer_to_current('Monthly');" 2>&1 >/dev/null | ts >> ~/shift_dates.log
+30 0 1 */3 * psql -d covid-19 -c "SELECT dhis2_timeshift_buffer_to_current('Quarterly');" 2>&1 >/dev/null | ts >> ~/shift_dates.log
 ```
 
-Once your crontab is modified, please save and restart the service to make sure your changes take effect
-
+After modifying your crontab, save and restart the service to apply the changes:
 
 ```shell
 sudo systemctl restart cron
 ```
 
-Note: I have used ts to add a timestamp to the log. It can be installed by running "sudo apt install moreutils", but using it is optional. 2>&1 >/dev/null makes sure we only get the errors in the log, shift_dates.log which is saved in the home folder of user postgres
+**Note**: The `ts` command adds a timestamp to the log. It can be installed with `sudo apt install moreutils`, but its use is optional. The `2>&1 >/dev/null` ensures only errors are logged in `shift_dates.log`, which is saved in the home directory of the `postgres` user.

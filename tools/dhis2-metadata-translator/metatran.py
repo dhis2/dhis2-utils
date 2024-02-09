@@ -35,7 +35,7 @@ mt_logger.addHandler(console)
 
 class d2t():
 
-    def __init__(self,server, user, password, project, resource, base, tx_org='', tx_token=''):
+    def __init__(self,server, user, password, project, resource, base, tx_org='', tx_token='', object_filter=''):
 
         mt_logger.setLevel(20)
         # DHIS2 connection details
@@ -50,6 +50,7 @@ class d2t():
 
         # package details
         self.package_filter = None
+        self.object_filter  = object_filter.split(',')
 
         # set the default format to STRUCTURED_JSON
         self.tx_i18n_type = "STRUCTURED_JSON"
@@ -115,6 +116,9 @@ class d2t():
        
         # return false if not set
         return False
+    
+    def set_object_filter(self,object_filter):
+        self.object_filter = object_filter.split(',')
         
     def __find_ids__(self, key, var, parent=""):
         """
@@ -149,6 +153,12 @@ class d2t():
             sys.exit("DHIS2 user not authorised! Aborting transifex synchronisation.")
 
         for schema in dhis2_schemas.json()["schemas"]:
+
+            # if the schema is in the exclude_objects list, skip it
+            if self.object_filter:
+                if schema['collectionName'] in self.object_filter:
+                    continue
+
             # mt_logger.debug(schema['name'])
             if schema['translatable'] == True and 'apiEndpoint' in schema:
                 # print("\t",schema['name'])
@@ -174,6 +184,7 @@ class d2t():
         locales={}
         locales["source"]={}
         for resource in copy.deepcopy(self.translatable_fields):
+
             # print(resource, translatable_fields[resource])
             tfs = ''
             for transField in self.translatable_fields[resource]:
@@ -732,8 +743,8 @@ class d2t():
 
 
 class f2t(d2t):
-    def __init__(self, project, resource, package_url, base='', include='', exclude='', tx_org='', tx_token=''):
-        d2t.__init__(self,"","","",project, resource, base, tx_org=tx_org, tx_token=tx_token)
+    def __init__(self, project, resource, package_url, base='', include='', exclude='', tx_org='', tx_token='', object_filter=''):
+        d2t.__init__(self,"","","",project, resource, base, tx_org=tx_org, tx_token=tx_token, object_filter=object_filter)
         self.package = {}
         self.set_package(package_url)
         if not self.__valid_package__():
@@ -777,8 +788,15 @@ class f2t(d2t):
                 transfields = json.load(sfile)
             sfile.close()
 
-        self.translatable_fields = transfields['translatable_fields']
-        self.translatable_max_chars = transfields['translatable_max_chars']
+        self.translatable_fields = {}
+        self.translatable_max_chars = {}
+
+        self.translatable_fields = {r:transfields['translatable_fields'][r] for r in transfields['translatable_fields'] if r not in self.object_filter}
+        self.translatable_max_chars = {r:transfields['translatable_max_chars'][r] for r in transfields['translatable_max_chars'] if r not in self.object_filter}
+
+
+        print(self.translatable_fields)
+
 
 
     def set_package(self,package_url):
@@ -899,6 +917,13 @@ class f2t(d2t):
         # We will modify the copy to make it easy to pull out the custom form strings
         package = copy.deepcopy(self.package)
         for resource in package:
+
+            # skip the resource if it is in the exclude_objects list
+            if self.object_filter:
+                if resource in self.object_filter:
+                    print("Skipping",resource,"(in exclude-objects list)")
+                    continue
+
             # skip the object that contains the packages own metadata
             if resource != "package":
 
@@ -1229,9 +1254,13 @@ if __name__ == "__main__":
     p.add('-r', '--resource', required='--push' in sys.argv or '--pull' in sys.argv, help='Transifex resource slug', env_var='TRANSIFEX_RESOURCE') 
     p.add('--org', required='--push' in sys.argv or '--pull' in sys.argv, help='Transifex organisation', env_var='TX_ORGANISATION', default='hisp-uio') 
     p.add('-t', '--token', required='--push' in sys.argv or '--pull' in sys.argv, help='Transifex token', env_var='TX_TOKEN')
+    # list of object types to exclude
+    p.add('-e', '--exclude-objects', required=False, help='Comma-separated list of object types to exclude')
 
 
     options = p.parse_args()
+
+    print(options)
 
 
 
@@ -1264,7 +1293,8 @@ if __name__ == "__main__":
                             include=options.include,
                             exclude=options.exclude,
                             tx_org=options.org,
-                            tx_token=options.token
+                            tx_token=options.token,
+                            object_filter=options.exclude_objects
                             )
 
                 # get the translations from the input package file
@@ -1299,6 +1329,9 @@ if __name__ == "__main__":
                         tx_org=options.org,
                         tx_token=options.token
                     )
+            
+            if options.exclude_objects:
+                d2t.set_object_filter(options.exclude_objects)
 
             if (options.file):
                 print("setting package file as object filter.")

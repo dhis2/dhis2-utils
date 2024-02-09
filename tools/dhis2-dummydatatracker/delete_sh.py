@@ -1,14 +1,14 @@
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 import sys
+import gspread
 
-scope = ['https://spreadsheets.google.com/feeds',
-         'https://www.googleapis.com/auth/drive']
-credentials = ServiceAccountCredentials.from_json_keyfile_name('dummy-data-297922-97b90db83bdc.json', scope)
+# Load the credentials from the JSON file
+google_spreadshseet_credentials = 'd2pack-token-e9bbfebebff6c66afd061ceb4b7e3b1a2bc68471.json'
+gc = gspread.service_account(filename=google_spreadshseet_credentials)
 
-docid = sys.argv[1]
+# Specify the ID of the spreadsheet to delete
+spreadsheet_id = sys.argv[1]
 
-client = gspread.authorize(credentials)
+# Delete the spreadsheet
+gc.del_spreadsheet(spreadsheet_id)
 
-gc = gspread.authorize(credentials)
-gc.del_spreadsheet(docid)
+print("Spreadsheet with ID {spreadsheet_id} has been deleted.")
