@@ -131,14 +131,18 @@ where relname = 'datavalue';
 
 -- Time of last vacuum and analyze for largest tables
 
-select s.nspname as table_schema, c.relname as table_name,
-  c.reltuples::bigint as approximate_row_count, 
+select
+  s.nspname as table_schema,
+  c.relname as table_name,
+  c.reltuples::bigint as approximate_row_count,
   u.n_dead_tup as dead_tuples,
-  u.last_vacuum as last_vacuum, u.last_autovacuum as last_auto_vacuum,
-  u.last_analyze as last_analyze, u.last_autoanalyze as last_auto_analyze
+  u.last_vacuum::timestamp(0) as last_vacuum,
+  u.last_autovacuum::timestamp(0) as last_auto_vacuum,
+  u.last_analyze::timestamp(0) as last_analyze,
+  u.last_autoanalyze::timestamp(0) as last_auto_analyze
 from pg_catalog.pg_class c
 inner join pg_catalog.pg_namespace s on c.relnamespace = s.oid
-inner join information_schema.tables t on c.relname = t.table_name and s.nspname = t.table_schema 
+inner join information_schema.tables t on c.relname = t.table_name and s.nspname = t.table_schema
 inner join pg_stat_user_tables u on c.relname = u.relname and s.nspname = u.schemaname
 where t.table_type = 'BASE TABLE'
 and c.relname !~ '^_?pg_.*$'
