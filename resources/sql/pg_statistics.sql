@@ -124,11 +124,6 @@ order by
 
 -- Time of last vacuum by table
 
-select
-  relname as table_name,
-  last_vacuum,
-  last_autovacuum
-from
-  pg_stat_user_tables
-where
-  relname = 'datavalue';
+select relname as table_name, last_vacuum, last_autovacuum
+from pg_stat_user_tables
+where relname = 'datavalue';
