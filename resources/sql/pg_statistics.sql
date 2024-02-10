@@ -122,17 +122,20 @@ inner join
 order by
   idx_scan desc;
 
--- Time of last vacuum by table
+-- Time of last vacuum and analyze by table
 
-select relname as table_name, last_vacuum, last_autovacuum
+select relname as table_name, n_dead_tup as dead_tuples, 
+  last_vacuum, last_autovacuum, last_analyze, last_autoanalyze
 from pg_stat_user_tables
 where relname = 'datavalue';
 
 -- Time of last vacuum for largest tables
 
-select c.relname as table_name, s.nspname as table_schema, 
+select s.nspname as table_schema, c.relname as table_name,
   c.reltuples::bigint as approximate_row_count, 
-  u.last_vacuum as last_vauum, u.last_autovacuum as last_auto_vacuum
+  u.n_dead_tup as dead_tuples,
+  u.last_vacuum as last_vauum, u.last_autovacuum as last_auto_vacuum,
+  u.last_analyze as last_analyze, u.last_autoanalyze as last_auto_analyze
 from pg_catalog.pg_class c
 inner join pg_catalog.pg_namespace s on c.relnamespace = s.oid
 inner join information_schema.tables t on c.relname = t.table_name and s.nspname = t.table_schema 
