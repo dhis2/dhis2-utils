@@ -129,7 +129,7 @@ select relname as table_name, n_dead_tup as dead_tuples,
 from pg_stat_user_tables
 where relname = 'datavalue';
 
--- Time of last vacuum for largest tables
+-- Time of last vacuum and analyze for largest tables
 
 select s.nspname as table_schema, c.relname as table_name,
   c.reltuples::bigint as approximate_row_count, 
