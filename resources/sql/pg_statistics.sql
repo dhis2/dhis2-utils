@@ -28,7 +28,7 @@ where datname = 'dhis2';
 
 select c.relname as table_name, s.nspname as table_schema, c.reltuples::bigint as approximate_row_count
 from pg_catalog.pg_class c
-inner join pg_catalog.pg_namespace s on c.relnamespace=s.oid
+inner join pg_catalog.pg_namespace s on c.relnamespace = s.oid
 inner join information_schema.tables t on c.relname = t.table_name and s.nspname = t.table_schema 
 where t.table_type = 'BASE TABLE'
 and c.relname !~ '^_?pg_.*$'
@@ -127,3 +127,17 @@ order by
 select relname as table_name, last_vacuum, last_autovacuum
 from pg_stat_user_tables
 where relname = 'datavalue';
+
+-- Time of last vacuum for largest tables
+
+select c.relname as table_name, s.nspname as table_schema, 
+  c.reltuples::bigint as approximate_row_count, 
+  u.last_vacuum as last_vauum, u.last_autovacuum as last_auto_vacuum
+from pg_catalog.pg_class c
+inner join pg_catalog.pg_namespace s on c.relnamespace = s.oid
+inner join information_schema.tables t on c.relname = t.table_name and s.nspname = t.table_schema 
+inner join pg_stat_user_tables u on c.relname = u.relname and s.nspname = u.schemaname
+where t.table_type = 'BASE TABLE'
+and c.relname !~ '^_?pg_.*$'
+order by approximate_row_count desc
+limit 200;
