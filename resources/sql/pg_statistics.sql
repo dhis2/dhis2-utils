@@ -134,7 +134,7 @@ where relname = 'datavalue';
 select s.nspname as table_schema, c.relname as table_name,
   c.reltuples::bigint as approximate_row_count, 
   u.n_dead_tup as dead_tuples,
-  u.last_vacuum as last_vauum, u.last_autovacuum as last_auto_vacuum,
+  u.last_vacuum as last_vacuum, u.last_autovacuum as last_auto_vacuum,
   u.last_analyze as last_analyze, u.last_autoanalyze as last_auto_analyze
 from pg_catalog.pg_class c
 inner join pg_catalog.pg_namespace s on c.relnamespace = s.oid
