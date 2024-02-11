@@ -209,11 +209,4 @@ alter system set log_min_duration_statement = -1;
 select pg_reload_conf();
 show log_statement;
 
--- List tables by size
-
-select table_name, pg_relation_size(quote_ident(table_name))
-from information_schema.tables
-where table_schema = 'public'
-order by 2 desc;
-
 
