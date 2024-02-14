@@ -148,14 +148,6 @@ from pg_stat_user_tables
 where n_dead_tup > 10
 order by n_dead_tup desc;
 
--- Cancel query
-
-select pg_cancel_backend(_pid_);
-
--- Terminate query
-
-select pg_terminate_backend(_pid_);
-
 -- Blocked and blocking activity
 
 select blocked_locks.pid as blocked_pid, blocked_activity.usename as blocked_user, blocking_locks.pid as blocking_pid, 
