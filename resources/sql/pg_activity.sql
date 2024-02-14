@@ -6,6 +6,8 @@
 -- log_statement = none
 -- log_min_duration_statement = 200
 --
+-- Log settings can be enabled with $ select pg_reload_conf();
+--
 -- Increase size of captured query:
 --
 -- track_activity_query_size = 8192
@@ -187,26 +189,3 @@ show synchronous_commit;
 show wal_writer_delay;
 show random_page_cost;
 show track_activity_query_size;
-
--- Enable full logging
-
-alter system set log_statement = 'all';
-select pg_reload_conf();
-show log_statement;
-
--- Enable slow query logging (in ms)
-
-alter system set log_statement = 'ddl';
-alter system set log_min_duration_statement = 500;
-select pg_reload_conf();
-show log_statement;
-show log_min_duration_statement;
-
--- Disable logging
-
-alter system set log_statement = 'none';
-alter system set log_min_duration_statement = -1;
-select pg_reload_conf();
-show log_statement;
-
-
