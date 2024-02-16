@@ -19,15 +19,15 @@ and query !~* ('pg_catalog|information_schema|pg_temp|pg_toast');
 create or replace function dhis_cancel_slow_queries()
 returns integer as $$
 declare
-  q record;
-  c integer := 0;
+    q record;
+    c integer := 0;
 begin
-  for q in select * from dhis_slow_queries
-  loop
-    raise notice 'Cancelling query with PID: %', q.pid;
-    perform pg_cancel_backend(q.pid);
-    c := c + 1;
-  end loop;
-  return c;
+    for q in select * from dhis_slow_queries
+    loop
+        raise notice 'Cancelling query with PID: %', q.pid;
+        perform pg_cancel_backend(q.pid);
+        c := c + 1;
+    end loop;
+    return c;
 end;
 $$ language plpgsql;
