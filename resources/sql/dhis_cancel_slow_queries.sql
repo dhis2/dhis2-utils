@@ -5,15 +5,18 @@
 
 -- Adjust username filter as necessary, set to 'dhis' by default
 
+-- Can be scheduled to run every 2 minutes during day with a cron expression: */2 6-23 * * *
+
 -- To invoke run $ select dhis_cancel_slow_queries();
 
 -- Create view
 
-create or replace view dhis_slow_queries as 
-select * from pg_catalog.pg_stat_activity 
-where usename = 'dhis' 
-and application_name not in ('psql', 'pg_dump') 
-and query ilike 'select%' 
+create or replace view dhis_slow_queries as
+select * from pg_catalog.pg_stat_activity
+where (now() - pg_stat_activity.query_start) > interval '2 minutes'
+and usename = 'dhis'
+and application_name not in ('psql', 'pg_dump')
+and query ilike 'select%'
 and query !~* ('pg_catalog|information_schema|pg_temp|pg_toast');
 
 -- Create function
