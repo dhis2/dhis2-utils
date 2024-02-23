@@ -26,7 +26,7 @@ Create auth.json file containing the credentials of the default server to use. T
 }
 ```
 
-To be able to work in Google Spreadsheets, the script needs a token in the form of credentials.json. Please contact manuel@dhis2.org to get a token
+To be able to work in Google Spreadsheets, the script needs a API token for authentication. Please follow the steps here to create one: https://github.com/dhis2/dhis2-utils/tree/master/tools/dhis2-metadata_flat_file_syncer
 
 ## Usage
 
@@ -83,8 +83,8 @@ python delete_sh.py 1xOeOpz4lSTdtiAJTuLwx40GgC5n9fkH2gltiB-sHmwg
 
 - Make sure your local files are up to date and contain the latest version in master. See [git pull](https://bit.ly/3uGypaO)
 - First time dummy data is going to be injected
-	- Call create_flat_file to generate the spreadsheet. Please communicate the ID of the spreadsheet to the team and save it here: https://docs.google.com/spreadsheets/d/1YcP829U70qIqPcU8mQACkPLP2PzwPB-s6RnbVQaMubQ/edit#gid=0
-	-  Create the primal TEIs or Events: 
+	- Call create_flat_file to generate the spreadsheet.
+	- Create the primal TEIs or Events: 
 		-  Using DHIS2 UI by creating them in ONE OU and using parameter -wtf / -wte when you can create_flat_file
 		-  Using the spreadsheet. Make sure the mandatory fields are filled and pay special attention to the value type of the data you enter.
 	- Create a DISTRIBUTION Sheet if needed. It allows customizing the way the values for Data Elements and Tracked Entity Attributes are created. It also allows controlling the enrollment date of the TEIs created as well as the OU where they are enrolled and subsequent events are registered. The sheet must contains the columns: UID, NAME (optional), VALUE, TEI_1, TEI_2.... Columns TEI_X contain the ratio to apply for each possible value (options) or value range (number)
