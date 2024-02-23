@@ -82,3 +82,10 @@ For every metadata_type imported in the instance, **a json file is created** in 
 - When exporting metadata to a flat file, the fields (columns) that will be exported are configured in metadata_types.conf. It is possible to redefine these fields by working with your own custom conf file.<br>
 - When updating the metadata in an instance, **only the fields present in the spreadsheet will be updated or created**. For the case of metadata already existing in the instance which it is updated, the tool first GETs all owned fields and only updates those in the spreadsheet, preserving the rest. This means, for example, that if you just want to update an specific fields using a quick find and replace, you could just have id, shortName and name as columns. Even though some mandatory fields are missing, the tool will POST the json payload filling the gaps with the what is available in the instance.<br>
 
+## Troubleshooting
+
+On Windows systems, when executing
+```
+pip install -r requirements.txt
+```
+you could encounter an ERROR during the installation of the numpy==1.23.4 library. As a workaround, consider modifying the "requirements.txt" file. Locate the line with numpy==1.23.4 and replace it with simply numpy. This adjustment will prompt pip to install the most recent version of the library, addressing the encountered ERROR. It's important to note that the Flat File tool hasn't undergone comprehensive testing with the latest version, although no issues have been reported thus far.
