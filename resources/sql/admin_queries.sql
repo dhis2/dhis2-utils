@@ -345,7 +345,24 @@ and di.dashboarditemid not in (
   select dashboarditemid from dashboarditem_resources)
 and di.dashboarditemid not in (
   select dashboarditemid from dashboarditem_users);
-  
+
+-- METADATA
+
+-- Count of metadata entities
+
+with metadata as (
+  select 'CATEGORY' as e, count(*) as c from category
+  union all select 'CATEGORY_OPTION' as e, count(*) as c from categoryoption
+  union all select 'CATEGORY_COMBO' as e, count(*) as c from categorycombo
+  union all select 'DATA_ELEMENT' as e, count(*) as c from dataelement
+  union all select 'DATA_SET' as e, count(*) as c from dataset
+  union all select 'INDICATOR' as e, count(*) as c from indicator
+  union all select 'ORG_UNIT' as e, count(*) as c from organisationunit
+  union all select 'PROGRAM' as e, count(*) as c from program
+)
+select e as entity, c as object_count
+from metadata;
+
   
 -- DATA VALUES
 
