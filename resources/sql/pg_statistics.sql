@@ -35,11 +35,16 @@ and c.relname !~ '^_?pg_.*$'
 order by approximate_row_count desc
 limit 200;
 
--- Approximate count of rows in datavalue table
+-- Approximate count of rows in key tables
 
-select reltuples::bigint as approximate_row_count 
-from pg_class 
-where relname = 'datavalue';
+select c.relname as table_name, c.reltuples::bigint as approximate_row_count
+from pg_catalog.pg_class c
+where c.relname in (
+  'completedatasetregistration', 'dataelement', 'dataelementcategory', 
+  'dataset', 'period', 'datavalue', 'datavalueaudit', 'program',
+  'programinstance', 'programstageinstance', 'trackedentityattributevalue', 
+  'trackedentitydatavalueaudit', 'trackedentityinstance')
+order by c.relname;
 
 -- Count of data values by year
 
