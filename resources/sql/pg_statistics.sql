@@ -37,7 +37,7 @@ limit 200;
 
 -- Approximate count of rows in key tables
 
-select c.relname as table_name, c.reltuples::bigint as approximate_row_count
+select c.relname as table_name, to_char(c.reltuples::bigint, 'FM999G999G999G999') as approximate_row_count
 from pg_catalog.pg_class c
 where c.relname in (
   'completedatasetregistration', 'dataelement', 'dataelementcategory', 
