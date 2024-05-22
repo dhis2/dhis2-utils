@@ -26,19 +26,17 @@ h1 {
 	font-size: 2.5em;
 	margin-bottom: 10px;
 	margin: 0;
-	padding: 0;
+	padding: 0.5em;
 }
 
 #btn-area {
 	padding: 1em 0;
 }
 
-.spacer {
-	padding: 0 0.7em;
-}
-
 .main-btn {
 	font-size: 1.2em;
+	padding: 0.2em 0.5em;
+	margin-right: 0.4em;
 }
 
 </style>
@@ -99,9 +97,15 @@ app.getQueryResponse = function() {
 	window.location.href = unFormattedQuery;
 };
 
+app.copyToClipboard = function() {
+	const query = document.getElementById('query').value;
+	navigator.clipboard.writeText(query);
+}
+
 app.clearQuery = function() {
 	document.getElementById('query').value = '';
 };
+
 
 </script>
 </head>
@@ -113,9 +117,8 @@ app.clearQuery = function() {
 		<input type="button" class="main-btn" onclick="app.formatQuery()" value="Format">
 		<input type="button" class="main-btn" onclick="app.unFormatQuery()" value="Un-format">
 		<input type="button" class="main-btn" onclick="app.urlDecodeQuery()" value="URL decode">
-		<span class="spacer"/>
 		<input type="button" class="main-btn" onclick="app.getQueryResponse()" value="Get response">
-		<span class="spacer"/>
+		<input type="button" class="main-btn" onclick="app.copyToClipboard()" value="Copy">
 		<input type="button" class="main-btn" onclick="app.clearQuery()" value="Clear">
 	</div>
 </div>
