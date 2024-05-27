@@ -233,8 +233,8 @@ def main():
     # -------------------------------------
 
     # code
-    PATTERN_OPTION_CODE = re.compile("^([0-9A-Z_\|\-\.]+)+$")
-    PATTERN_CODE = re.compile("^([0-9A-Z_]+)+$")
+    PATTERN_OPTION_CODE = re.compile("^([0-9A-Z_\|\-\.])+$")
+    PATTERN_CODE = re.compile("^([0-9A-Z_])+$")
     resources_with_code = ['dashboards', 'dataSets', 'programs', 'indicatorGroups', 'dataElementGroups', 'predictorGroups', 'validationRuleGroups', 'userGroups', 'options']
     for resource_type in resources_with_code:
         if resource_type not in package:
