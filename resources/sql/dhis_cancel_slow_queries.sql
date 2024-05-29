@@ -7,7 +7,9 @@
 
 -- Can be scheduled to run every 2 minutes during day with a cron expression: */2 6-23 * * *
 
--- To invoke run $ select dhis_cancel_slow_queries();
+-- Execute as SQL statement with $ select dhis_cancel_slow_queries();
+
+-- Execute with psql with $ psql -d db_name -c "select dhis_cancel_slow_queries();"
 
 -- Create view
 
