@@ -3,7 +3,7 @@
 --
 -- Excludes queries from psql, pg_dump (backup), PostgreSQL maintenance and DHIS 2 analytics table generation
 --
--- Adjust username filter as necessary, set to 'dhis' by default
+-- Adjust username filter to environment, set to 'dhis' by default
 --
 -- This script could alternatively use the `pg_terminate_backend`
 --
