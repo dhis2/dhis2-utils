@@ -15,7 +15,7 @@ pg_stat_statements.track = all
 
 -- Restart PostgreSQL and create extension
 
-create extension pg_stat_statements
+create extension pg_stat_statements;
 
 -- Get queries ordered by mean time desc (times are in ms)
 
