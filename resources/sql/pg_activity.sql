@@ -6,11 +6,13 @@
 -- log_statement = none
 -- log_min_duration_statement = 200
 --
--- Log settings can be enabled with $ select pg_reload_conf();
+-- These log settings can be enabled with $ select pg_reload_conf();
 --
 -- Increase size of captured query:
 --
 -- track_activity_query_size = 8192
+--
+-- This log setting requires a server restart.
 --
 
 -- Current queries
