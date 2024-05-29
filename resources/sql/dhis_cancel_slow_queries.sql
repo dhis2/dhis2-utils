@@ -7,15 +7,13 @@
 --
 -- This script could alternatively use the `pg_terminate_backend`
 --
--- Can be scheduled to run every 2 minutes during day with a cron expression: */2 6-23 * * *
---
 -- Execute as SQL statement with $ select dhis_cancel_slow_queries();
 --
 -- Execute with psql with $ psql -d database -c "select dhis_cancel_slow_queries();"
 --
--- Create cron job with expression:
+-- Create cron job to run every 2 minutes during day
 --
--- /bin/bash -c 'psql -d database -c "select dhis_cancel_slow_queries();"'
+-- */2 9-23 * * *   /bin/bash -c 'psql -d database -c "select dhis_cancel_slow_queries();"'
 --
 
 -- Create view
