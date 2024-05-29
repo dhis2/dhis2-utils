@@ -56,13 +56,21 @@ order by yr;
 
 -- Count of events by program
 
-select p.uid, p.shortname, (
-  select count(*)
-  from programstageinstance psi
-  inner join programinstance pi on psi.programinstanceid = pi.programinstanceid
-  where pi.programid = p.programid) as event_count
-from program p
+select p.shortname, count(psi.uid) as event_count
+from programstageinstance psi
+inner join programinstance pi on psi.programinstanceid = pi.programinstanceid 
+inner join program p on pi.programid = p.programid
+group by p.shortname
 order by event_count desc;
+
+-- Latest event per program
+
+select p.shortname, max(psi.created) as latest_event
+from programstageinstance psi
+inner join programinstance pi on psi.programinstanceid = pi.programinstanceid 
+inner join program p on pi.programid = p.programid
+group by p.shortname
+order by latest_event asc;
 
 -- Approximate count of rows in tracker data tables
 
