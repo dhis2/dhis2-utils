@@ -682,7 +682,7 @@ def check_template_TEIs_in_cols(df, ws_dummy_data=None):
                             errors = errors + 1
                             worksheet.write(index + 1, df.columns.get_loc(tei_column), value, error_format)
                             if ws_dummy_data is not None:
-                                ws_col_row = chr(65 + df.columns.get_loc(tei_column) + 1) + str(index + 2)
+                                ws_col_row = chr(65 + df.columns.get_loc(tei_column)) + str(index + 2)
                                 try:
                                     batch.format_cell_range(ws_dummy_data, ws_col_row + ':' + ws_col_row,
                                                             error_cell_fmt)
