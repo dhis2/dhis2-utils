@@ -93,6 +93,7 @@ try:
     df = get_as_dataframe(sh.worksheet("DUMMY_DATA"), evaluate_formulas=True, dtype=str)
     df = df.dropna(how='all', axis=1)
     df['mandatory'] = df['mandatory'].map({'True': True, 'TRUE': True, 'False': False, 'FALSE': False})
+    df['random'] = df['random'].map({'True': True, 'TRUE': True, 'False': False, 'FALSE': False})
 
     df_params = get_as_dataframe(sh.worksheet("PARAMETERS"), evaluate_formulas=True, dtype=str)
     df_params = df_params.dropna(how='all', axis=1)
