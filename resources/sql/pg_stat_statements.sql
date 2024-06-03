@@ -19,7 +19,7 @@ create extension pg_stat_statements;
 
 -- Get queries ordered by mean time desc (times are in ms)
 
-select query, mean_time, calls, (total_time/calls) as avg_time, max_time, min_time, total_time, stddev_time, rows 
+select mean_exec_time, (total_exec_time/calls) as avg_time, max_exec_time, min_exec_time, total_exec_time, calls, rows, query 
 from pg_stat_statements 
 where query !~* '(copy|create index|create table|alter table).*'
-order by mean_time desc;
+order by mean_exec_time desc;
