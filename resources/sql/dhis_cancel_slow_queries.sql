@@ -11,9 +11,9 @@
 --
 -- Execute with psql with $ psql -d database -c "select dhis_cancel_slow_queries();"
 --
--- Create cron job to run every 2 minutes during day
+-- Create cron job to run every minute during day
 --
--- */2 9-23 * * *   /bin/bash -c 'psql -d database -c "select dhis_cancel_slow_queries();"'
+-- * 8-23 * * *   /bin/bash -c 'psql -d database -c "select dhis_cancel_slow_queries();"'
 --
 
 -- Create view
