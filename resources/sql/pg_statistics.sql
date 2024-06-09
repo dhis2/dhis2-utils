@@ -54,6 +54,14 @@ inner join period pe on dv.periodid = pe.periodid
 group by yr
 order by yr;
 
+-- Count of enrollments by program
+
+select p.shortname, count(pi.uid) as enrollment_count
+from programinstance pi
+inner join program p on pi.programid = p.programid
+group by p.shortname
+order by enrollment_count desc;
+
 -- Count of events by program
 
 select p.shortname, count(psi.uid) as event_count
