@@ -80,6 +80,12 @@ where (now() - pg_stat_activity.query_start) > interval '1 minutes'
 and state != 'idle' 
 and query not ilike '%pg_stat_activity%';
 
+-- Idle queries
+
+select pid, datname, usename, query_start, now() - pg_stat_activity.query_start as duration, state, query 
+from pg_catalog.pg_stat_activity 
+where state = 'idle';
+
 -- Count of queries by time interval
 
 with cte_activity as (
