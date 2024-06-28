@@ -1,22 +1,6 @@
 
 -- Contains various integrity checks as SQL statements for the category related tables, each should ideally return no rows
 
--- Get overview of category combo > category > category option structure
-
-select 
-  substring(cc.name,0,100) as category_combo, 
-  substring(c.name,0,60) as category, 
-  substring(string_agg(substring(co.name,0,40), ' | ' order by co.name),0,130) as category_option,
-  count(cocco.categoryoptioncomboid) as coc_count
-from categorycombo cc
-inner join categorycombos_categories ccc on cc.categorycomboid = ccc.categorycomboid 
-inner join dataelementcategory c on ccc.categoryid = c.categoryid 
-inner join categories_categoryoptions cco on c.categoryid = cco.categoryid 
-inner join dataelementcategoryoption co on cco.categoryoptionid = co.categoryoptionid
-inner join categoryoptioncombos_categoryoptions cocco on co.categoryoptionid = cocco.categoryoptionid
-group by category_combo, category
-order by category_combo, category;
-
 -- Get category option combos without category options
 
 select * from categoryoptioncombo where categoryoptioncomboid not in (select distinct categoryoptioncomboid from categoryoptioncombos_categoryoptions);
