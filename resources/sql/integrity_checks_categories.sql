@@ -5,51 +5,67 @@
 
 select * from categoryoptioncombo 
 where categoryoptioncomboid not in (
-  select distinct categoryoptioncomboid from categoryoptioncombos_categoryoptions);
+  select categoryoptioncomboid from categoryoptioncombos_categoryoptions);
 
 -- Get category option combos without category combo
 
 select * from categoryoptioncombo 
 where categoryoptioncomboid not in (
-  select distinct categoryoptioncomboid from categorycombos_optioncombos);
+  select categoryoptioncomboid from categorycombos_optioncombos);
 
 -- Get category option combos without category options or category combos
 
 select * from categoryoptioncombo
 where categoryoptioncomboid not in (
-  select distinct categoryoptioncomboid from categoryoptioncombos_categoryoptions)
+  select categoryoptioncomboid from categoryoptioncombos_categoryoptions)
 and categoryoptioncomboid not in (
-  select distinct categoryoptioncomboid from categorycombos_optioncombos);
+  select categoryoptioncomboid from categorycombos_optioncombos);
 
 -- Get category options without category option combos (be careful when deleting from categories_categoryoptions to avoid missing indexes)
 
 select * from dataelementcategoryoption 
 where categoryoptionid not in (
-  select distinct categoryoptionid from categoryoptioncombos_categoryoptions);
+  select categoryoptionid from categoryoptioncombos_categoryoptions);
 
--- Get catetegory options without categories
+-- Get category options without categories
 
 select * from dataelementcategoryoption 
 where categoryoptionid not in (
-  select distinct categoryoptionid from categories_categoryoptions);
+  select categoryoptionid from categories_categoryoptions);
+
+-- Get category options without categories and category option combos
+
+select * from dataelementcategoryoption 
+where categoryoptionid not in (
+  select categoryoptionid from categories_categoryoptions)
+and categoryoptionid not in (
+  select categoryoptionid from categoryoptioncombos_categoryoptions);
 
 -- Get categories without category options
 
 select * from dataelementcategory 
 where categoryid not in (
-  select distinct categoryid from categories_categoryoptions);
+  select categoryid from categories_categoryoptions);
 
 -- Get categories without category combos (not an error but could be removed)
 
 select * from dataelementcategory 
 where categoryid not in (
-  select distinct categoryid from categorycombos_categories);
+  select categoryid from categorycombos_categories);
+
+-- Get categories without category combos and category options
+
+select * from dataelementcategory 
+where categoryid not in (
+  select categoryid from categorycombos_categories)
+and categoryid not in (
+  select categoryid from categories_categoryoptions);
 
 -- Get category combos without categories
 
 select * from categorycombo 
 where categorycomboid not in (
-  select distinct categorycomboid from categorycombos_categories);
+  select categorycomboid from categorycombos_categories);
 
 -- Get category options with more than one membership for a category 
 
@@ -60,7 +76,7 @@ group by categoryid, categoryoptionid having count(*) > 1;
 
 select * from categorycombo 
 where categorycomboid not in (
-  select distinct categorycomboid from categorycombos_optioncombos);
+  select categorycomboid from categorycombos_optioncombos);
 
 -- Get category combos not used in data elements, data sets or programs
 
@@ -111,7 +127,8 @@ order by categorycount desc;
 -- Get category option combos without data values (not an error)
 
 select * from categoryoptioncombo 
-where categoryoptioncomboid not in (select distinct categoryoptioncomboid from datavalue);
+where categoryoptioncomboid not in (
+  select categoryoptioncomboid from datavalue);
 
 -- Get category option combos whose name is blank or null
 
@@ -128,7 +145,9 @@ group by cc_name, co_name having count(*) > 1;
 
 -- Get category combinations without data elements or data sets
 
-select * from categorycombo where categorycomboid not in (select distinct categorycomboid from dataelement);
+select * from categorycombo 
+where categorycomboid not in (
+  select categorycomboid from dataelement);
 
 -- Get data values where category option combo is not part of category combo of data element
 
@@ -182,9 +201,9 @@ where coc.categoryoptioncomboid not in (
 
 -- Get category combo with no data elements
 
-select cc.categorycomboid, cc.name from categorycombo cc where cc.categorycomboid not in (
-select distinct categorycomboid from dataelement);
-
+select cc.categorycomboid, cc.name from categorycombo cc 
+where cc.categorycomboid not in (
+  select categorycomboid from dataelement);
 
 -- WRITE BE CAREFUL
 
