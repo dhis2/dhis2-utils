@@ -1,6 +1,12 @@
 
 -- Contains various integrity checks as SQL statements for the category related tables, each should ideally return no rows
 
+-- Create support table for category option combos with data values
+
+create table _tmp_coc_with_dv (categoryoptioncomboid int8);
+insert into _tmp_coc_with_dv (categoryoptioncomboid) 
+select distinct dv.categoryoptioncomboid from datavalue dv;
+
 -- Get category option combos without category options
 
 select * from categoryoptioncombo 
@@ -47,7 +53,7 @@ select * from dataelementcategory
 where categoryid not in (
   select categoryid from categories_categoryoptions);
 
--- Get categories without category combos (not an error but could be removed)
+-- Get categories without category combos
 
 select * from dataelementcategory 
 where categoryid not in (
@@ -60,6 +66,20 @@ where categoryid not in (
   select categoryid from categorycombos_categories)
 and categoryid not in (
   select categoryid from categories_categoryoptions);
+
+-- Get categories without category combos and category option combos associated with data values
+
+select c.categoryid, c.uid, c.name
+from dataelementcategory c
+where c.categoryid not in (
+  select ccc.categoryid
+  from categorycombos_categories ccc
+  where ccc.categoryid = c.categoryid)
+and c.categoryid not in (
+  select cco.categoryid 
+  from categories_categoryoptions cco
+  inner join categoryoptioncombos_categoryoptions cocco on cco.categoryoptionid = cocco.categoryoptionid
+  inner join _tmp_coc_with_dv cocdv on cocco.categoryoptioncomboid = cocdv.categoryoptioncomboid);
 
 -- Get category combos without categories
 
