@@ -24,7 +24,7 @@ where categoryoptioncomboid not in (
 select * from categoryoptioncombo 
 where categoryoptioncomboid not in (
   select categoryoptioncomboid from categorycombos_optioncombos);
-
+x|
 -- Get category option combos without category options or category combos
 
 select * from categoryoptioncombo
@@ -131,6 +131,18 @@ and c.categoryid not in (
   from categories_categoryoptions cco
   inner join categoryoptioncombos_categoryoptions cocco on cco.categoryoptionid = cocco.categoryoptionid
   inner join _tmp_coc_with_dv cocdv on cocco.categoryoptioncomboid = cocdv.categoryoptioncomboid);
+
+-- Get categories with only one category option
+
+with category_cateory_option_count as (
+  select c.categoryid, c.uid, c.name, (
+    select count(*)
+    from categories_categoryoptions cco
+    where cco.categoryid = c.categoryid) as co_count
+    from dataelementcategory c)
+select c.uid, c.name
+from category_cateory_option_count c
+where c.co_count = 1;
 
 -- Get categories with more than one membership for a category combination
 
