@@ -1,5 +1,11 @@
 
+--
 -- Contains various integrity checks as SQL statements for the category related tables, each should ideally return no rows
+--
+
+--
+-- Category option combos
+--
 
 -- Create support table for category option combos with data values
 
@@ -27,6 +33,35 @@ where categoryoptioncomboid not in (
 and categoryoptioncomboid not in (
   select categoryoptioncomboid from categorycombos_optioncombos);
 
+-- Category option combos members of more than one category combo
+
+select categoryoptioncomboid, count(categoryoptioncomboid) as count from categorycombos_optioncombos 
+group by categoryoptioncomboid having count(categoryoptioncomboid) > 1;
+
+-- Get additional default option combos 1
+
+select * from categoryoptioncombo coc 
+inner join categorycombos_optioncombos ccoc on coc.categoryoptioncomboid=ccoc.categoryoptioncomboid 
+inner join categorycombo cc on ccoc.categorycomboid=cc.categorycomboid 
+where cc.name = 'default' offset 1;
+
+-- Get additional default option combos 2
+
+select * from categoryoptioncombo coc 
+inner join categoryoptioncombos_categoryoptions cocco on coc.categoryoptioncomboid=cocco.categoryoptioncomboid 
+inner join dataelementcategoryoption co on cocco.categoryoptionid=co.categoryoptionid 
+where co.name = 'default' offset 1;
+
+-- Get category option combos without data values (not an error)
+
+select * from categoryoptioncombo 
+where categoryoptioncomboid not in (
+  select categoryoptioncomboid from datavalue);
+
+--
+-- Category options
+--
+
 -- Get category options without category option combos (be careful when deleting from categories_categoryoptions to avoid missing indexes)
 
 select * from dataelementcategoryoption 
@@ -46,6 +81,22 @@ where categoryoptionid not in (
   select categoryoptionid from categories_categoryoptions)
 and categoryoptionid not in (
   select categoryoptionid from categoryoptioncombos_categoryoptions);
+
+-- Get category options with more than one membership for a category 
+
+select categoryid, categoryoptionid, count(*) from categories_categoryoptions 
+group by categoryid, categoryoptionid having count(*) > 1;
+
+-- Get category options with count of memberships in categories
+
+select co.categoryoptionid, co.name, (select count(categoryoptionid) 
+from categories_categoryoptions 
+where categoryoptionid=co.categoryoptionid ) as categorycount from dataelementcategoryoption co 
+order by categorycount desc;
+
+--
+-- Categories
+--
 
 -- Get categories without category options
 
@@ -81,16 +132,20 @@ and c.categoryid not in (
   inner join categoryoptioncombos_categoryoptions cocco on cco.categoryoptionid = cocco.categoryoptionid
   inner join _tmp_coc_with_dv cocdv on cocco.categoryoptioncomboid = cocdv.categoryoptioncomboid);
 
+-- Get categories with more than one membership for a category combination
+
+select categorycomboid, categoryid, count(*) from categorycombos_categories 
+group by categorycomboid, categoryid having count(*) > 1;
+
+--
+-- Category combos
+--
+
 -- Get category combos without categories
 
 select * from categorycombo 
 where categorycomboid not in (
   select categorycomboid from categorycombos_categories);
-
--- Get category options with more than one membership for a category 
-
-select categoryid, categoryoptionid, count(*) from categories_categoryoptions 
-group by categoryid, categoryoptionid having count(*) > 1;
 
 -- Get category combos without category option combos
 
@@ -115,45 +170,11 @@ and not exists (
   from program p
   where p.categorycomboid = cc.categorycomboid);
 
--- Get categories with more than one membership for a category combination
-
-select categorycomboid, categoryid, count(*) from categorycombos_categories 
-group by categorycomboid, categoryid having count(*) > 1;
-
--- Category option combos members of more than one category combo
-
-select categoryoptioncomboid, count(categoryoptioncomboid) as count from categorycombos_optioncombos 
-group by categoryoptioncomboid having count(categoryoptioncomboid) > 1;
-
--- Get additional default option combos 1
-
-select * from categoryoptioncombo coc 
-inner join categorycombos_optioncombos ccoc on coc.categoryoptioncomboid=ccoc.categoryoptioncomboid 
-inner join categorycombo cc on ccoc.categorycomboid=cc.categorycomboid 
-where cc.name = 'default' offset 1;
-
--- Get additional default option combos 2
-
-select * from categoryoptioncombo coc 
-inner join categoryoptioncombos_categoryoptions cocco on coc.categoryoptioncomboid=cocco.categoryoptioncomboid 
-inner join dataelementcategoryoption co on cocco.categoryoptionid=co.categoryoptionid 
-where co.name = 'default' offset 1;
-
--- Get category options with count of memberships in categories
-
-select co.categoryoptionid, co.name, (select count(categoryoptionid) from categories_categoryoptions where categoryoptionid=co.categoryoptionid ) as categorycount from dataelementcategoryoption co 
-order by categorycount desc;
-
 -- Get category option combos without data values (not an error)
 
 select * from categoryoptioncombo 
 where categoryoptioncomboid not in (
   select categoryoptioncomboid from datavalue);
-
--- Get category option combos whose name is blank or null
-
-select * from categoryoptioncombo 
-where name ='' or name is null;
 
 -- Get category combos with categories which share the same category options
 
@@ -163,7 +184,7 @@ inner join categories_categoryoptions cco on ccc.categoryid=cco.categoryid
 inner join dataelementcategoryoption co on cco.categoryoptionid=co.categoryoptionid
 group by cc_name, co_name having count(*) > 1;
 
--- Get category combinations without data elements or data sets
+-- Get category combos without data elements or data sets
 
 select * from categorycombo 
 where categorycomboid not in (
@@ -211,21 +232,10 @@ where not exists (
   select 1 from _dataelementcategoryoptioncombo dc
   where dc.dataelementid=dv.dataelementid
   and dc.categoryoptioncomboid=dv.categoryoptioncomboid);
-  
--- Get category option combos not part of _categoryoptioncomboname resource table
 
-select * from categoryoptioncombo coc
-where coc.categoryoptioncomboid not in (
-  select cocn.categoryoptioncomboid
-  from _categoryoptioncomboname cocn);
-
--- Get category combo with no data elements
-
-select cc.categorycomboid, cc.name from categorycombo cc 
-where cc.categorycomboid not in (
-  select categorycomboid from dataelement);
-
--- WRITE BE CAREFUL
+--
+-- WRITE STATEMENTS BE CAREFUL
+--
 
 -- Repair missing link row between default category and default category option
 
