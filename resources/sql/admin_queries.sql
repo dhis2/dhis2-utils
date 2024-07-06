@@ -1,5 +1,7 @@
 ﻿
+--
 -- DATA ELEMENTS
+--
 
 -- Data elements and frequency with average agg operator (higher than yearly negative for data mart performance)
 
@@ -53,8 +55,9 @@ where dataelementid not in (
   where s.datasetid=dsm.datasetid)
 and dsm.datasetid=1979200;
 
-
+--
 -- CATEGORIES
+--
 
 -- Exploded category option combo view
 
@@ -152,8 +155,9 @@ group by c.name
 having count(c.uid) > 1
 order by row_count desc;
 
-
+--
 -- DATA SETS
+--
 
 select ds.uid as ds_uid, ds.name as ds_name, (
   select count(*)
@@ -162,21 +166,22 @@ select ds.uid as ds_uid, ds.name as ds_name, (
 from dataset ds
 order by de_count desc;
 
+--
+-- PROGRAMS
+--
 
+-- Programs, stages and count of data elements
+
+select p.uid as p_uid, p.name as p_name, ps.uid as ps_uid, ps.name as ps_name, count(psde.uid) as psde_count
+from program p
+inner join programstage ps on p.programid = ps.programid 
+inner join programstagedataelement psde on ps.programstageid = psde.programstageid
+group by p_uid, p_name, ps_uid, ps_name
+order by p_name, ps_name
+
+--
 -- ORGANISATION UNITS
-
--- Facility overview
-
-select distinct ous.idlevel5 as internalid, ou.uid, ou.code, ou.name, ougs.type, ougs.ownership,
-ou2.name as province, ou3.name as county, ou4.name as district, ou.coordinates as longitide_latitude
-from _orgunitstructure ous
-left join organisationunit ou on ous.organisationunitid=ou.organisationunitid
-left join organisationunit ou2 on ous.idlevel2=ou2.organisationunitid
-left join organisationunit ou3 on ous.idlevel3=ou3.organisationunitid
-left join organisationunit ou4 on ous.idlevel4=ou4.organisationunitid
-left join _organisationunitgroupsetstructure ougs on ous.organisationunitid=ougs.organisationunitid
-where ous.level=5
-order by province, county, district, ou.name;
+--
 
 -- Turn longitude/latitude around for organisationunit coordinates (adjust the like clause)
 
@@ -222,8 +227,9 @@ and (
   or cast(substring(coordinates from '\[(.+?\..+?),.+?\..+?\]') as double precision) > 43
 );
 
-
+--
 -- USERS
+--
 
 -- Compare user roles (lists what is in the first role but not in the second)
 
@@ -296,8 +302,9 @@ from (
   where ura.authority = 'ALL'
   limit 1) as userroleid;
 
-
+--
 -- VALIDATION RULES
+--
 
 -- Display validation rules which includes the given data element uid
 
@@ -308,8 +315,9 @@ inner join expression re on vr.rightexpressionid=re.expressionid
 where le.expression ~ 'OuudMtJsh2z'
 or re.expression  ~ 'OuudMtJsh2z'
 
-
+--
 -- DASHBOARDS
+--
 
 -- Visualizations ordered by count of data items
 
@@ -363,8 +371,9 @@ with metadata as (
 select e as entity, c as object_count
 from metadata;
 
-  
+--
 -- DATA VALUES
+--
 
 -- Display data out of reasonable time range
 
@@ -501,8 +510,9 @@ alter table datavalue add constraint fk_datavalue_dataelementid foreign key (dat
 alter table datavalue add constraint fk_datavalue_organisationunitid foreign key (sourceid) references organisationunit(organisationunitid);
 alter table datavalue add constraint fk_datavalue_periodid foreign key (periodid) references period(periodid);
 
-
+--
 -- EVENTS
+--
 
 -- Display events out of reasonable time range
 
