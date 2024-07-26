@@ -181,3 +181,21 @@ from pg_constraint c
 where confrelid = 'organisationunit'::regclass
   and c.contype = 'f';
 
+-- PROGRESS
+
+-- Create index progress
+
+select * from pg_progress_create_index;
+
+-- Vacuum progress
+
+select * from pg_stat_progress_vacuum ;
+
+-- Analyze progress
+
+select * from pg_stat_progress_analyze;
+
+-- Copy progress
+
+select * from pg_stat_progress_copy;
+

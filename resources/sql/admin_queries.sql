@@ -177,7 +177,19 @@ from program p
 inner join programstage ps on p.programid = ps.programid 
 inner join programstagedataelement psde on ps.programstageid = psde.programstageid
 group by p_uid, p_name, ps_uid, ps_name
-order by p_name, ps_name
+order by p_name, ps_name;
+
+-- Programs, stages and data elements
+
+select p.uid as p_uid, substring(p.name, 0, 80) as p_name, 
+  substring(ps.name, 0, 80) as ps_name, 
+  de.uid as de_uid, substring(de.name, 0, 80) as de_name, de.aggregationtype as de_agg_type, 
+  de.valuetype as de_val_type, psde.skipanalytics as skip_analytics
+from program p
+inner join programstage ps on p.programid = ps.programid 
+inner join programstagedataelement psde on ps.programstageid = psde.programstageid
+inner join dataelement de on psde.dataelementid = de.dataelementid 
+order by p_name, ps_name, de_name;
 
 --
 -- ORGANISATION UNITS
