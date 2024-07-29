@@ -945,7 +945,7 @@ def import_metadata(metadata_type_selection: str):
                                 df_multilevel_dict[id][column] = new_column_list
 
                             # Check if the column name ends with 'Date]'
-                            elif column.endswith('Date]'):
+                            elif column.endswith('Date]') and df[column].dtype == 'object':
                                 # Process each item in the column_list for 'Date'
                                 new_column_list = [datetime.strptime(str(item), '%Y-%m-%d %H:%M:%S').isoformat() for
                                                    item in column_list]
@@ -984,6 +984,18 @@ def import_metadata(metadata_type_selection: str):
             for column in df.columns:
                 if any(identifier in column for identifier in multilevel_identifiers):
                     columns_to_drop.append(column)
+                elif column.endswith('Date') and df[column].dtype == 'object':
+                    # Convert to ISO format for all elements except the header (first row)
+                    # This is key to be able to update properties such as openingDate for OUs
+                    new_column_list = []
+                    for item in df[column].iloc[0:]:
+                        try:
+                            parsed_date = date_parser.parse(str(item))
+                            new_column_list.append(parsed_date.isoformat())
+                        except ValueError:
+                            # Date format is not recognized
+                            new_column_list.append(None)
+                    df[column] = new_column_list
             df = df.drop(columns_to_drop, axis=1)
 
             json_payload = df.to_dict(orient='records')
