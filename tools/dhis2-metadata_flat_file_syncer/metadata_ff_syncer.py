@@ -19,6 +19,7 @@ import validators
 import sys
 from argparse import ArgumentParser
 from datetime import datetime
+from dateutil import parser as date_parser
 
 
 def authorize_google_sheets(auth_file):
