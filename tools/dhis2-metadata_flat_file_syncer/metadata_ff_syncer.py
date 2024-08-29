@@ -443,9 +443,9 @@ def apply_formatting_to_worksheet(worksheet, metadata_types_supported, worksheet
                 col_letter = gspread.utils.rowcol_to_a1(1, col_index + 2).split('1')[0]
                 rows = list()
                 for row_index in range(2, worksheet.row_count + 1):
-                    formula = "=iferror(VLOOKUP(" + col_letter + str(
-                        row_index) + ",{'" + the_worksheet + "'!$B$2:$B, '" + the_worksheet + "'!$A$2:$A}, 2, FALSE), \"\")"
-
+                    formula = "=iferror(TEXTJOIN(\", \", TRUE, FILTER('" + the_worksheet + "'!$A$2:$A, '" + the_worksheet + "'!$B$2:$B = " + col_letter + str(
+                        row_index) + ")), \"\")"
+                    
                     rows.append({
                         "values": [
                             {
