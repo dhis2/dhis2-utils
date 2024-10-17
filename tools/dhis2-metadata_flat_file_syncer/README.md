@@ -88,4 +88,5 @@ On Windows systems, when executing
 ```
 pip install -r requirements.txt
 ```
-you could encounter an ERROR during the installation of the numpy==1.23.4 library. As a workaround, consider modifying the "requirements.txt" file. Locate the line with numpy==1.23.4 and replace it with simply numpy. This adjustment will prompt pip to install the most recent version of the library, addressing the encountered ERROR. It's important to note that the Flat File tool hasn't undergone comprehensive testing with the latest version, although no issues have been reported thus far.
+you could encounter an ERROR during the installation of the numpy==1.23.4 library. As a workaround, consider modifying the "requirements.txt" file. Locate the line with numpy==1.23.4 and replace it with simply numpy. This adjustment will prompt pip to install the most recent version of the library, addressing the encountered ERROR. You may also need to upgrade packages that with dependencies on numpy, such as pandas and gspread-dataframe.
+It's important to note that the Flat File tool hasn't undergone comprehensive testing with the latest version, although no issues have been reported thus far. 
