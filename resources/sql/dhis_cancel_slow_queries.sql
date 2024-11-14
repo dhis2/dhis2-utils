@@ -20,7 +20,7 @@
 
 create or replace view dhis_slow_queries as
 select * from pg_catalog.pg_stat_activity
-where (now() - pg_stat_activity.query_start) > interval '2 minutes'
+where (now() - pg_stat_activity.query_start) > interval '1 minutes'
 and usename = 'dhis'
 and application_name not in ('psql', 'pg_dump')
 and query ilike 'select%'
