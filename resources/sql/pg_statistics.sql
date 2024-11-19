@@ -14,7 +14,7 @@ select tb.table_schema as table_schema, tb.table_name, pg_size_pretty(pg_relatio
 from information_schema.tables tb
 where tb.table_schema = 'public'
 order by pg_relation_size(quote_ident(tb.table_name)) desc
-limit 500;
+limit 200;
 
 -- Size of temp files being created since database was created
 
@@ -22,7 +22,16 @@ select datname, temp_files, temp_bytes as temp_files_size_bytes, pg_size_pretty(
 from pg_stat_database db
 where datname = 'dhis2';
 
--- COUNT
+-- Tables with highest number of columns
+
+select c.table_schema, c.table_name, count(c.column_name) as column_count
+from information_schema.columns c
+where c.table_schema = 'public'
+group by c.table_schema, c.table_name
+order by column_count desc, c.table_schema, c.table_name
+limit 200;
+
+-- ROW COUNT
 
 -- Approximate count of largest tables
 
@@ -139,6 +148,8 @@ from pg_stat_user_indexes
 inner join pg_indexes on pg_stat_user_indexes.indexrelname = pg_indexes.indexname
 where relname = 'analytics_2024'
 order by idx_scan desc;
+
+-- VACUUM
 
 -- Time of last vacuum and analyze by table
 
