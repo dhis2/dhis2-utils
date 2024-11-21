@@ -1,10 +1,13 @@
 --
 -- Queries for the pg_stat_statements PostgreSQL extension
 --
+-- Configuration changes require a PostgreSQL server restart to take effect
+--
 -- Enable 'pg_stat_statements' extension
 --
 -- Create new config file 'pg_stat_statements.conf' and put in 'conf.d' directory
 --
+
 -- -- BEGIN --
 
 # Enable library
@@ -21,16 +24,55 @@ pg_stat_statements.max = 10000
 
 -- -- END --
 
---
--- Changes require a PostgreSQL server restart to take effect
---
 -- Create extension for the specific database from psql CLI
 
 create extension pg_stat_statements;
 
--- Queries ordered by mean time desc (times are in ms)
+--
+-- Use \x in psql for expanded display
+--
+-- Time unit is milliseconds
+--
 
-select mean_exec_time, (total_exec_time/calls) as avg_time, max_exec_time, min_exec_time, total_exec_time, calls, rows, query 
-from pg_stat_statements 
+-- Create base view for statistics
+
+drop view if exists x_min_pg_stat_statements;
+
+create view x_min_pg_stat_statements as
+select 
+  to_char(mean_exec_time, 'FM999G999G999G990') as mean_time_ms,
+  to_char((total_exec_time/calls), 'FM999G999G999G990') as avg_time_ms,
+  to_char(max_exec_time, 'FM999G999G999G990') as max_time_ms,
+  to_char(min_exec_time, 'FM999G999G999G990') as min_time_ms,
+  to_char(total_exec_time, 'FM999G999G999G990') as total_time_ms,
+  calls, 
+  rows,
+  mean_exec_time, 
+  total_exec_time,
+  length(query) as query_length,
+  substring(query, 0, 750) as query
+from pg_stat_statements;
+
+-- Time consuming queries ordered by total time desc (time in ms)
+
+select *
+from x_min_pg_stat_statements
 where query !~* '(copy|create index|create table|alter table).*'
-order by mean_exec_time desc;
+order by total_exec_time desc
+limit 200;
+
+-- Slow queries ordered by mean time desc (time in ms)
+
+select *
+from x_min_pg_stat_statements
+where query !~* '(copy|create index|create table|alter table).*'
+order by mean_exec_time desc
+limit 200;
+
+-- Frequent queries ordered by calls desc (time in ms)
+
+select * 
+from x_min_pg_stat_statements
+where query !~* '(copy|create index|create table|alter table).*'
+order by calls desc
+limit 200;
