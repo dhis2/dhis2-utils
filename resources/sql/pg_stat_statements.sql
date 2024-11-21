@@ -1,12 +1,9 @@
 --
 -- Queries for the pg_stat_statements PostgreSQL extension
 --
-
 -- Enable 'pg_stat_statements' extension
 --
 -- Create new config file 'pg_stat_statements.conf' and put in 'conf.d' directory
---
--- Changes require a PostgreSQL server restart to take effect
 --
 -- -- BEGIN --
 
@@ -24,6 +21,9 @@ pg_stat_statements.max = 10000
 
 -- -- END --
 
+--
+-- Changes require a PostgreSQL server restart to take effect
+--
 -- Create extension for the specific database from psql CLI
 
 create extension pg_stat_statements;
