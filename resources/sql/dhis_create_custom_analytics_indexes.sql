@@ -12,7 +12,7 @@
 
 -- Partition 2024
 
-create index if not exists "in_dx_uidlevel2_2024" on public.analytics_2024 using btree (dx, uidlevel1);
+create index if not exists "in_dx_uidlevel1_2024" on public.analytics_2024 using btree (dx, uidlevel1);
 create index if not exists "in_dx_uidlevel2_2024" on public.analytics_2024 using btree (dx, uidlevel2);
 create index if not exists "in_dx_uidlevel3_2024" on public.analytics_2024 using btree (dx, uidlevel3);
 create index if not exists "in_dx_uidlevel4_2024" on public.analytics_2024 using btree (dx, uidlevel4);
@@ -21,7 +21,7 @@ create index if not exists "in_dx_quarterly_2024" on public.analytics_2024 using
 
 -- Partition 2023
 
-create index if not exists "in_dx_uidlevel2_2024" on public.analytics_2023 using btree (dx, uidlevel1);
+create index if not exists "in_dx_uidlevel1_2023" on public.analytics_2023 using btree (dx, uidlevel1);
 create index if not exists "in_dx_uidlevel2_2023" on public.analytics_2023 using btree (dx, uidlevel2);
 create index if not exists "in_dx_uidlevel3_2023" on public.analytics_2023 using btree (dx, uidlevel3);
 create index if not exists "in_dx_uidlevel4_2023" on public.analytics_2023 using btree (dx, uidlevel4);
