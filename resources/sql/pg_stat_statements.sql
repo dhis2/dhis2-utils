@@ -45,34 +45,28 @@ select
   to_char(max_exec_time, 'FM999G999G999G990') as max_time_ms,
   to_char(min_exec_time, 'FM999G999G999G990') as min_time_ms,
   to_char(total_exec_time, 'FM999G999G999G990') as total_time_ms,
+  to_char(stddev_exec_time, 'FM999G999G990') as std_dev_time,
   calls, 
   rows,
   mean_exec_time, 
   total_exec_time,
   length(query) as query_length,
   substring(query, 0, 750) as query
-from pg_stat_statements;
+from pg_stat_statements
+limit 500;
 
 -- Time consuming queries ordered by total time desc (time in ms)
 
-select *
-from x_min_pg_stat_statements
-where query !~* '(copy|create index|create table|alter table).*'
-order by total_exec_time desc
-limit 200;
+select * from x_min_pg_stat_statements
+order by total_exec_time desc;
 
 -- Slow queries ordered by mean time desc (time in ms)
 
-select *
-from x_min_pg_stat_statements
-where query !~* '(copy|create index|create table|alter table).*'
-order by mean_exec_time desc
-limit 200;
+select * from x_min_pg_stat_statements
+order by mean_exec_time desc;
 
 -- Frequent queries ordered by calls desc (time in ms)
 
 select * 
 from x_min_pg_stat_statements
-where query !~* '(copy|create index|create table|alter table).*'
-order by calls desc
-limit 200;
+order by calls desc;
