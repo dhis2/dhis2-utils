@@ -57,16 +57,12 @@ limit 500;
 
 -- Time consuming queries ordered by total time desc (time in ms)
 
-select * from x_min_pg_stat_statements
-order by total_exec_time desc;
+select * from x_min_pg_stat_statements order by total_exec_time desc;
 
 -- Slow queries ordered by mean time desc (time in ms)
 
-select * from x_min_pg_stat_statements
-order by mean_exec_time desc;
+select * from x_min_pg_stat_statements order by mean_exec_time desc;
 
 -- Frequent queries ordered by calls desc (time in ms)
 
-select * 
-from x_min_pg_stat_statements
-order by calls desc;
+select * from x_min_pg_stat_statements order by calls desc;
