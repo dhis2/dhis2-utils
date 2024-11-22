@@ -50,9 +50,9 @@ select c.relname as table_name, to_char(c.reltuples::bigint, 'FM999G999G999G999'
 from pg_catalog.pg_class c
 where c.relname in (
   'completedatasetregistration', 'dataelement', 'dataelementcategory', 
-  'dataset', 'period', 'datavalue', 'datavalueaudit', 'program',
-  'programinstance', 'programstageinstance', 'trackedentityattributevalue', 
-  'trackedentitydatavalueaudit', 'trackedentityinstance')
+  'dataset', 'period', 'datavalue', 'datavalueaudit', 'program', 'organisationunit',
+  'programinstance', 'enrollment', 'programstageinstance', 'event',
+  'trackedentityattributevalue', 'trackedentitydatavalueaudit', 'trackedentityinstance')
 order by c.relname;
 
 -- Count of data values by year
