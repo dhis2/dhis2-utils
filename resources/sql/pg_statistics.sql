@@ -20,8 +20,8 @@ limit 200;
 
 -- Size of temp files being created since database was created
 
-select datname, 
-temp_files, 
+select datname as database_name, 
+  temp_files, 
   temp_bytes as temp_files_size_bytes, 
   pg_size_pretty(temp_bytes) as temp_files_size_pretty
 from pg_stat_database db
