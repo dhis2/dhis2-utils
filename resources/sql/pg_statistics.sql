@@ -180,17 +180,19 @@ limit 200;
 
 -- Foreign keys referring to a specific table
 
-select conrelid::regclass AS foreign_table,
-  conname AS constraint_name,
-  a.attname AS foreign_column,
-  confrelid::regclass AS referenced_table,
-  af.attname AS referenced_column,
-  pg_get_constraintdef(c.oid) AS constraint_definition
+select c.conrelid::regclass as foreign_table,
+  c.conname as constraint_name,
+  a.attname as foreign_column,
+  c.confrelid::regclass as referenced_table,
+  af.attname as referenced_column,
+  pg_get_constraintdef(c.oid) as constraint_definition
 from pg_constraint c
-  inner join pg_attribute a ON a.attnum = ANY(c.conkey) AND a.attrelid = c.conrelid
-  inner join pg_attribute af ON af.attnum = ANY(c.confkey) AND af.attrelid = c.confrelid
-where confrelid = 'organisationunit'::regclass
-  and c.contype = 'f';
+  inner join pg_attribute a on a.attnum = any(c.conkey) and a.attrelid = c.conrelid
+  inner join pg_attribute af on af.attnum = any(c.confkey) and af.attrelid = c.confrelid
+  -- Specify table below
+where c.confrelid = 'organisationunit'::regclass
+  and c.contype = 'f'
+order by foreign_table;
 
 -- PROGRESS
 
