@@ -10,7 +10,9 @@ select pg_size_pretty(pg_database_size('dhis2'));
 
 -- Size of largest tables
 
-select tb.table_schema as table_schema, tb.table_name, pg_size_pretty(pg_relation_size(quote_ident(tb.table_name))) as table_size
+select tb.table_schema as table_schema, 
+  tb.table_name as table_name, 
+  pg_size_pretty(pg_relation_size(quote_ident(tb.table_name))) as table_size
 from information_schema.tables tb
 where tb.table_schema = 'public'
 order by pg_relation_size(quote_ident(tb.table_name)) desc
@@ -18,7 +20,10 @@ limit 200;
 
 -- Size of temp files being created since database was created
 
-select datname, temp_files, temp_bytes as temp_files_size_bytes, pg_size_pretty(temp_bytes) as temp_files_size_pretty
+select datname, 
+temp_files, 
+  temp_bytes as temp_files_size_bytes, 
+  pg_size_pretty(temp_bytes) as temp_files_size_pretty
 from pg_stat_database db
 where datname = 'dhis2';
 
@@ -35,7 +40,9 @@ limit 200;
 
 -- Approximate count of largest tables
 
-select c.relname as table_name, s.nspname as table_schema, c.reltuples::bigint as approximate_row_count
+select c.relname as table_name, 
+  s.nspname as table_schema, 
+  c.reltuples::bigint as approximate_row_count
 from pg_catalog.pg_class c
 inner join pg_catalog.pg_namespace s on c.relnamespace = s.oid
 inner join information_schema.tables t on c.relname = t.table_name and s.nspname = t.table_schema 
@@ -46,7 +53,8 @@ limit 200;
 
 -- Approximate count of rows in key tables
 
-select c.relname as table_name, to_char(c.reltuples::bigint, 'FM999G999G999G999') as approximate_row_count
+select c.relname as table_name, 
+  to_char(c.reltuples::bigint, 'FM999G999G999G999') as approximate_row_count
 from pg_catalog.pg_class c
 where c.relname in (
   'completedatasetregistration', 'dataelement', 'dataelementcategory', 
@@ -104,7 +112,10 @@ where relname in ('completedatasetregistration', 'dataset', 'datavalue', 'datava
 
 -- Approximate count of rows for all relations by schema
 
-select ns.nspname as schema_name, rl.relname as table_name, rl.oid as object_id, rl.reltuples::bigint as approximate_row_count 
+select ns.nspname as schema_name, 
+  rl.relname as table_name, 
+  rl.oid as object_id, 
+  rl.reltuples::bigint as approximate_row_count 
 from pg_catalog.pg_class rl
 inner join pg_catalog.pg_namespace ns on rl.relnamespace = ns.oid
 where ns.nspname not in ('information_schema', 'pg_catalog', 'pg_toast')
@@ -112,7 +123,8 @@ order by schema_name, table_name;
 
 -- Approximate count of rows in analytics tables
 
-select relname as table_name, reltuples::bigint as approximate_row_count
+select relname as table_name, 
+  reltuples::bigint as approximate_row_count
 from pg_class
 where relname like 'analytics%'
 order by approximate_row_count desc;
@@ -160,8 +172,7 @@ where relname = 'datavalue';
 
 -- Time of last vacuum and analyze for largest tables
 
-select
-  s.nspname as table_schema,
+select s.nspname as table_schema,
   c.relname as table_name,
   c.reltuples::bigint as approximate_row_count,
   u.n_dead_tup as dead_tuples,
