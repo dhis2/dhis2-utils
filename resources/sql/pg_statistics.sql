@@ -192,8 +192,8 @@ limit 200;
 -- Foreign keys referring to a specific table
 
 select c.conrelid::regclass as foreign_table,
-  c.conname as constraint_name,
   a.attname as foreign_column,
+  c.conname as constraint_name,
   c.confrelid::regclass as referenced_table,
   af.attname as referenced_column,
   pg_get_constraintdef(c.oid) as constraint_definition
