@@ -18,6 +18,7 @@ import argparse
 import re
 import os
 
+
 keys_not_owned = {
     'categories': ['items', 'categoryCombos'],
     'categoryCombos': ['categoryOptionCombos', 'items'],
@@ -140,24 +141,25 @@ def json_extract_nested_ids(obj, key):
 
 # Function to insert row in the dataframe
 def insert_row(row_number, df, row_value):
+
     # Slice the upper half of the dataframe
-    df1 = df[0:row_number]
+    df1 = df.iloc[:row_number]
 
     # Store the result of lower half of the dataframe
-    df2 = df[row_number:]
+    df2 = df.iloc[row_number:]
 
-    # Insert the row in the upper half dataframe
-    # df1.loc[row_number] = row_value
-    df1 = df1.append(row_value, ignore_index=True)
+    # Convert row_value to a DataFrame if it's a dictionary
+    row_df = pd.DataFrame([row_value])
+
+    # Use pd.concat to append the row to the upper half dataframe
+    df1 = pd.concat([df1, row_df], ignore_index=True)
 
     # Concat the two dataframes
-    df_result = pd.concat([df1, df2])
-
-    # Reassign the index labels
-    df_result.index = [*range(df_result.shape[0])]
+    df_result = pd.concat([df1, df2], ignore_index=True)
 
     # Return the updated dataframe
     return df_result
+
 
 
 def append_row_element(metaobj, df, type, operation, update = []):
@@ -465,14 +467,18 @@ if __name__ == '__main__':
             file.write(json.dumps(delete_payload, indent=4, sort_keys=True, ensure_ascii=False))
         file.close()
 
-    writer = pd.ExcelWriter(sh_name + '.xlsx', engine='openpyxl')
+
+
+# Updated code to handle Excel writing with pd.ExcelWriter
+with pd.ExcelWriter(sh_name + '.xlsx', engine='openpyxl') as writer:
     for metadata_type in df:
         print('Processing ' + metadata_type)
 
         df[metadata_type].to_excel(writer, sheet_name=metadata_type, index=False, header=True)
 
-        # Get the worksheet
-        ws = writer.sheets[metadata_type]
+        # Get the workbook and worksheet
+        workbook = writer.book
+        ws = workbook[metadata_type]
 
         for cell in ws[1]:
             cell.font = Font(bold=True)
@@ -482,19 +488,19 @@ if __name__ == '__main__':
 
         index = 1
         for column in df[metadata_type].columns:
-            width = df[metadata_type][column].str.len().max()
+            width = df[metadata_type][column].astype(str).str.len().max()
             if width < 10:
                 width = 10
             ws.column_dimensions[get_column_letter(index)].width = width
             index += 1
 
-
         fill_red = openpyxl.styles.PatternFill(start_color='00FF0000', end_color='00FF0000',
-                                           fill_type='solid')
+                                               fill_type='solid')
         fill_blue = openpyxl.styles.PatternFill(start_color='001C8FFF', end_color='001C8FFF',
-                                           fill_type='solid')
+                                                fill_type='solid')
         fill_green = openpyxl.styles.PatternFill(start_color='0000FF00', end_color='0000FF00',
-                                           fill_type='solid')
+                                                 fill_type='solid')
+
         rule1 = FormulaRule(formula=['=$A2="CREATED"'], stopIfTrue=True, fill=fill_green)
         rule2 = FormulaRule(formula=['=$A2="UPDATED"'], stopIfTrue=True, fill=fill_blue)
         rule3 = FormulaRule(formula=['=$A2="DELETED"'], stopIfTrue=True, fill=fill_red)
@@ -503,15 +509,13 @@ if __name__ == '__main__':
         rule6 = FormulaRule(formula=['=$D2="DELETED"'], stopIfTrue=True, fill=fill_red)
 
         # Add the conditional formatting rules to the worksheet
-        ws.conditional_formatting.add(get_column_letter(1) + '2:' + get_column_letter(3) + str(ws.max_row), rule1)
-        ws.conditional_formatting.add(get_column_letter(1) + '2:' + get_column_letter(3) + str(ws.max_row), rule2)
-        ws.conditional_formatting.add(get_column_letter(1) + '2:' + get_column_letter(3) + str(ws.max_row), rule3)
-
-        ws.conditional_formatting.add(get_column_letter(4) + '2:' + get_column_letter(6) + str(ws.max_row), rule4)
-        ws.conditional_formatting.add(get_column_letter(4) + '2:' + get_column_letter(6) + str(ws.max_row), rule5)
-        ws.conditional_formatting.add(get_column_letter(4) + '2:' + get_column_letter(6) + str(ws.max_row), rule6)
-
-    writer.save()
+        max_row = ws.max_row
+        ws.conditional_formatting.add(f'A2:C{max_row}', rule1)
+        ws.conditional_formatting.add(f'A2:C{max_row}', rule2)
+        ws.conditional_formatting.add(f'A2:C{max_row}', rule3)
+        ws.conditional_formatting.add(f'D2:F{max_row}', rule4)
+        ws.conditional_formatting.add(f'D2:F{max_row}', rule5)
+        ws.conditional_formatting.add(f'D2:F{max_row}', rule6)
 
 
     if upload_to_gspread:
@@ -566,5 +570,3 @@ if __name__ == '__main__':
 
         google_spreadsheet_url = "https://docs.google.com/spreadsheets/d/%s" % gs.id
         print('Google spreadsheet created/updated here: ' + google_spreadsheet_url)
-
-
