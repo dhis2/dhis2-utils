@@ -2,6 +2,8 @@
 
 Resources, tools and utils for DHIS 2
 
+> ⚠️ These tools are mainly for the development team and most of them manipulate data in some way or another. They should not be applied to production instances of DHIS2 without full understanding of what they are doing.
+
 ## Tools for test data generation
 
 | Tool | Summary |
