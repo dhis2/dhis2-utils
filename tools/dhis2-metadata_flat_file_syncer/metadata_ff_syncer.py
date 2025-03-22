@@ -42,6 +42,7 @@ def authorize_google_sheets(auth_file):
 app = Flask(__name__)
 CORS(app)
 
+
 def create_app(config_file):
     # app = Flask(__name__)
     # CORS(app)
@@ -115,10 +116,10 @@ def post_to_server(api, jsonObject, apiObject='metadata', strategy='CREATE_AND_U
                             error_text += error_report["message"] + "<br>"
         return error_text
 
-    result = { 'type': 'info', 'msg': ""}
+    result = {'type': 'info', 'msg': ""}
     try:
         response = api.post(apiObject, params={'mergeMode': mergeMode, 'importStrategy': strategy},
-                                   json=jsonObject)
+                            json=jsonObject)
 
     except RequestException as e:
         error_message = str(e)
@@ -167,7 +168,7 @@ def post_to_server(api, jsonObject, apiObject='metadata', strategy='CREATE_AND_U
             return result
 
 
-def get_json_payload_to_instance(api, metadata_type, json_payload, index_elements_to_delete = []):
+def get_json_payload_to_instance(api, metadata_type, json_payload, index_elements_to_delete=[]):
     if len(index_elements_to_delete) > 0:
         tmp_payload = list()
         for i in range(0, len(json_payload)):
@@ -211,14 +212,13 @@ def extract_multi_level(df, keyword):
             else:
                 tmp = c.split('-')
                 if tmp[0] not in new_element:
-                    new_element[tmp[0]] = {tmp[1]:row[column]}
+                    new_element[tmp[0]] = {tmp[1]: row[column]}
         json_payload[keyword].append(new_element)
 
     return json_payload
 
 
 def add_owned_fields_to_json_payload(api, json_payload):
-
     # Get all metadata for that metadata_type
     metadata_types = json_payload.keys()
 
@@ -250,7 +250,9 @@ def add_constant_schemas_to_configuration(api_source, metadata_type, df, mandato
 
     # Still dont know how to get periodType from schemas
     hardcoded_constants = {
-        'periodType': ['Daily','Weekly','Monthly','Quarterly','Yearly','WeeklyWednesday','WeeklyThursday','WeeklySaturday','WeeklySunday','BiWeekly','BiMonthly','SixMonthly','SixMonthlyApril','SixMonthlyNov','FinancialApril','FinancialJuly','FinancialOct','FinancialNov'],
+        'periodType': ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Yearly', 'WeeklyWednesday', 'WeeklyThursday',
+                       'WeeklySaturday', 'WeeklySunday', 'BiWeekly', 'BiMonthly', 'SixMonthly', 'SixMonthlyApril',
+                       'SixMonthlyNov', 'FinancialApril', 'FinancialJuly', 'FinancialOct', 'FinancialNov'],
         'boundaryTarget': ['ENROLLMENT_DATE', 'EVENT_DATE']
     }
 
@@ -265,11 +267,11 @@ def add_constant_schemas_to_configuration(api_source, metadata_type, df, mandato
         "fields": "properties[name,required,constants]"
     }
     try:
-        metadata_properties = api_source.get('schemas/'+api_endpoint,
-                                  params=params).json()['properties']
+        metadata_properties = api_source.get('schemas/' + api_endpoint,
+                                             params=params).json()['properties']
         if api_endpoint == 'programIndicator':
             metadata_properties += api_source.get('schemas/analyticsPeriodBoundary',
-                                                 params=params).json()['properties']
+                                                  params=params).json()['properties']
     except RequestException as e:
         logger.error('Server return ' + str(e.code) + ' when getting schemas for ' + metadata_type)
         return df, mandatory_fields
@@ -284,14 +286,14 @@ def add_constant_schemas_to_configuration(api_source, metadata_type, df, mandato
             if 'constants' in _property:
                 if not already_added_constants:
                     # Add a row with the metadata_type
-                    new_row = ['']*len(_property['constants'])
+                    new_row = [''] * len(_property['constants'])
                     new_row[0] = metadata_type
                     try:
                         df.loc[len(df)] = new_row
                     except ValueError as e:
                         df = expand_df_columns_to_fit_new_row(df, new_row)
                         if len(new_row) < df.shape[1]:
-                            new_row += ['']*(df.shape[1]-len(new_row))
+                            new_row += [''] * (df.shape[1] - len(new_row))
                         df.loc[len(df)] = new_row
 
                     already_added_constants = True
@@ -318,7 +320,7 @@ def apply_formatting_to_worksheet(worksheet, metadata_types_supported, worksheet
     if df_conf.shape[0] == 0:
         config_values = list()
     else:
-        config_values = list(df_conf.iloc[:,0])
+        config_values = list(df_conf.iloc[:, 0])
     formatting_rules = {'id': ['=AND(*2 <> "", ARRAYFORMULA(SUM(N(*:* = *2))) > 1)'],
                         'name': ['=AND(*2 <> "", ARRAYFORMULA(SUM(N(*:* = *2))) > 1)'],
                         'shortName': ['=AND(*2 <> "", ARRAYFORMULA(SUM(N(*:* = *2))) > 1)', '=LEN(*2) > 50'],
@@ -342,31 +344,31 @@ def apply_formatting_to_worksheet(worksheet, metadata_types_supported, worksheet
         {
             "repeatCell": {
                 "range": {
-                  "sheetId": sheetId,
-                  "startRowIndex": 0,
-                  "endRowIndex": 1
+                    "sheetId": sheetId,
+                    "startRowIndex": 0,
+                    "endRowIndex": 1
                 },
                 "cell": {
-                      "userEnteredFormat": {
-                            # "backgroundColor": {
-                            #   "red": 0.0,
-                            #   "green": 0.0,
-                            #   "blue": 0.0
+                    "userEnteredFormat": {
+                        # "backgroundColor": {
+                        #   "red": 0.0,
+                        #   "green": 0.0,
+                        #   "blue": 0.0
+                        # },
+                        "horizontalAlignment": "CENTER",
+                        "textFormat": {
+                            # "foregroundColor": {
+                            #     "red": 1.0,
+                            #     "green": 1.0,
+                            #     "blue": 1.0
                             # },
-                            "horizontalAlignment": "CENTER",
-                            "textFormat": {
-                                # "foregroundColor": {
-                                #     "red": 1.0,
-                                #     "green": 1.0,
-                                #     "blue": 1.0
-                                # },
-                                # "fontSize": 12,
-                                "bold": True
-                            }
-                     }
+                            # "fontSize": 12,
+                            "bold": True
+                        }
+                    }
                 },
                 "fields": "userEnteredFormat(textFormat,horizontalAlignment)"
-                #"fields": "userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)"
+                # "fields": "userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)"
             }
         },
         # Replace APOSTROPHE with '. See comment on APOSTROPHE
@@ -376,19 +378,19 @@ def apply_formatting_to_worksheet(worksheet, metadata_types_supported, worksheet
                 "find": "APOSTROPHE",
                 "replacement": "'",
                 "matchEntireCell": False
-                #"allSheets": True
+                # "allSheets": True
             }
         },
         {
-              "updateSheetProperties": {
-                    "properties": {
-                      "sheetId": sheetId,
-                      "gridProperties": {
+            "updateSheetProperties": {
+                "properties": {
+                    "sheetId": sheetId,
+                    "gridProperties": {
                         "frozenRowCount": 1
-                      }
-                    },
-                    "fields": "gridProperties.frozenRowCount"
-              }
+                    }
+                },
+                "fields": "gridProperties.frozenRowCount"
+            }
         }
     ]
 
@@ -398,7 +400,7 @@ def apply_formatting_to_worksheet(worksheet, metadata_types_supported, worksheet
         # For those cases, we need to look for analyticsPeriodBoundaryType
         # So this variable will contain either just the normal name or the column OR
         # the result of removing [ ] and taking the second element after splitting by -
-        column_name_for_schema_constant_dropdown_menu = column_name.replace("[","").replace("]","").split('-')
+        column_name_for_schema_constant_dropdown_menu = column_name.replace("[", "").replace("]", "").split('-')
         if len(column_name_for_schema_constant_dropdown_menu) > 1:
             column_name_for_schema_constant_dropdown_menu = column_name_for_schema_constant_dropdown_menu[1]
         else:
@@ -463,7 +465,7 @@ def apply_formatting_to_worksheet(worksheet, metadata_types_supported, worksheet
                                 "startRowIndex": 1,
                                 "endRowIndex": worksheet.row_count,
                                 "startColumnIndex": col_index,
-                                "endColumnIndex": col_index+1
+                                "endColumnIndex": col_index + 1
                             },
                             "rows": rows,
                             "fields": "userEnteredValue"
@@ -491,13 +493,14 @@ def apply_formatting_to_worksheet(worksheet, metadata_types_supported, worksheet
                 # We specify column B because we assume that the name is there
                 # X_worksheet = sh.worksheet(the_worksheet)
                 # num_rows = X_worksheet.row_count
-                validation_range = "='" + the_worksheet + "'!$B$2:$B" # $" + str(num_rows)
+                validation_range = "='" + the_worksheet + "'!$B$2:$B"  # $" + str(num_rows)
 
                 requests.append({
                     "setDataValidation": {
                         "range": {
                             "sheetId": sheetId,
                             "startRowIndex": 1,
+                            "endRowIndex": worksheet.row_count,
                             "startColumnIndex": col_index,
                             "endColumnIndex": col_index + 1
                         },
@@ -540,14 +543,15 @@ def apply_formatting_to_worksheet(worksheet, metadata_types_supported, worksheet
             for validation_value in validation_values:
                 if validation_value != '':
                     values.append({
-                                        "userEnteredValue": validation_value
-                                    })
+                        "userEnteredValue": validation_value
+                    })
 
             requests.append({
                 "setDataValidation": {
                     "range": {
                         "sheetId": sheetId,
                         "startRowIndex": 1,
+                        "endRowIndex": worksheet.row_count,
                         "startColumnIndex": col_index,
                         "endColumnIndex": col_index + 1
                     },
@@ -577,31 +581,32 @@ def apply_formatting_to_worksheet(worksheet, metadata_types_supported, worksheet
                 #         }
                 # )
                 requests.append(
-                        {
-                            "addConditionalFormatRule": {
-                                "index": conditional_formatting_rule_index,
-                                "rule": {
-                                    "ranges": [
-                                        {
-                                            "sheetId": sheetId,
-                                            "startRowIndex": 1,
-                                            "startColumnIndex": col_index,
-                                            "endColumnIndex": col_index + 1
-                                        }],
-                                    "booleanRule": {
-                                        "condition": {
-                                            "type": "CUSTOM_FORMULA",
-                                            "values": [{"userEnteredValue": formula.replace('*', col_letter)}],
-                                        },
-                                        "format": {
-                                            "backgroundColorStyle": {
-                                                "rgbColor": {"red": 1, "green": 0, "blue": 0}
-                                            }
-                                        },
+                    {
+                        "addConditionalFormatRule": {
+                            "index": conditional_formatting_rule_index,
+                            "rule": {
+                                "ranges": [
+                                    {
+                                        "sheetId": sheetId,
+                                        "startRowIndex": 1,
+                                        "startColumnIndex": col_index,
+                                        "endRowIndex": worksheet.row_count,
+                                        "endColumnIndex": col_index + 1
+                                    }],
+                                "booleanRule": {
+                                    "condition": {
+                                        "type": "CUSTOM_FORMULA",
+                                        "values": [{"userEnteredValue": formula.replace('*', col_letter)}],
+                                    },
+                                    "format": {
+                                        "backgroundColorStyle": {
+                                            "rgbColor": {"red": 1, "green": 0, "blue": 0}
+                                        }
                                     },
                                 },
-                            }
+                            },
                         }
+                    }
                 )
                 conditional_formatting_rule_index += 1
 
@@ -648,6 +653,7 @@ def instances():
 def flat_files():
     return flask.jsonify(gc.list_spreadsheet_files())
 
+
 @app.route('/metadataTypes', methods=["GET"])
 def metadata_types():
     with open(app.config['CONFIG_FILE']) as file:
@@ -674,6 +680,8 @@ def metadata_types():
 @app.route('/login')
 def login():
     return render_template('login.html')
+
+
 # @app.route('/login', methods=['GET', 'POST'])
 # def login():
 #     error = None
@@ -697,10 +705,11 @@ def connect_to_api():
         print("Running DHIS2 version {} revision {}".format(api_source.version, api_source.revision))
         base_url = api_source.base_url
     except RequestException as e:
-        return flask.jsonify({'msg':'Could not connect to API ' + instance_url, 'type':'error'})
+        return flask.jsonify({'msg': 'Could not connect to API ' + instance_url, 'type': 'error'})
     else:
         print()
-        return flask.jsonify({'msg': 'Connected to API in ' + "{}".format(base_url) + ' as user: ' + username, 'type':'info'})
+        return flask.jsonify(
+            {'msg': 'Connected to API in ' + "{}".format(base_url) + ' as user: ' + username, 'type': 'info'})
 
 
 @app.route('/createSpreadsheet', methods=["POST"])
@@ -739,9 +748,11 @@ def open_spreadsheet():
     try:
         sh = gc.open(gs_file)
     except gspread.SpreadsheetNotFound as e:
-        return flask.jsonify({'msg':'Could not find the spreadsheet ' + gs_file, 'type':'error'})
+        return flask.jsonify({'msg': 'Could not find the spreadsheet ' + gs_file, 'type': 'error'})
     else:
-        return flask.jsonify({'msg': 'Google spreadsheet ' + "{}".format(gs_file) + ' opened successfully', 'type':'info'})
+        return flask.jsonify(
+            {'msg': 'Google spreadsheet ' + "{}".format(gs_file) + ' opened successfully', 'type': 'info'})
+
 
 @app.route('/getSpreadsheetID', methods=["GET"])
 def get_spreadsheet_id():
@@ -751,7 +762,8 @@ def get_spreadsheet_id():
     except Exception as e:
         return flask.jsonify({'msg': f"An error occurred: {e}", 'type': 'error'})
     else:
-        return flask.jsonify({'msg': 'Google spreadsheet created/updated here: ' + google_spreadsheet_url, 'type': 'info'})
+        return flask.jsonify(
+            {'msg': 'Google spreadsheet created/updated here: ' + google_spreadsheet_url, 'type': 'info'})
 
 
 @app.route('/delSpreadsheetByName', methods=["POST"])
@@ -763,14 +775,14 @@ def del_spreadsheet_by_name():
     try:
         sh = gc.open(gs_file)
     except gspread.SpreadsheetNotFound as e:
-        return flask.jsonify({'msg':'Could not find the spreadsheet ' + gs_file, 'type':'error'})
+        return flask.jsonify({'msg': 'Could not find the spreadsheet ' + gs_file, 'type': 'error'})
     else:
         try:
             gc.del_spreadsheet(sh.id)
         except Exception as e:
-            return flask.jsonify({'msg': f"An error occurred: {e}", 'type':'error'})
+            return flask.jsonify({'msg': f"An error occurred: {e}", 'type': 'error'})
         else:
-            return flask.jsonify({'msg': 'Google spreadsheet ' + "{}".format(gs_file) + ' deleted', 'type':'info'})
+            return flask.jsonify({'msg': 'Google spreadsheet ' + "{}".format(gs_file) + ' deleted', 'type': 'info'})
 
 
 @app.route('/shareSpreadsheet', methods=["GET"])
@@ -792,7 +804,9 @@ def share_spreadsheet():
                 {'msg': 'Google spreadsheet shared successfully with ' + user_info['email'], 'type': 'info'})
         else:
             return flask.jsonify(
-                {'msg': 'Sharing not possible: no email could be found for your user in the instance', 'type': 'warning'})
+                {'msg': 'Sharing not possible: no email could be found for your user in the instance',
+                 'type': 'warning'})
+
 
 @app.route('/shareSpreadsheetWithEmail', methods=["POST"])
 def share_spreadsheet_with_email():
@@ -802,7 +816,7 @@ def share_spreadsheet_with_email():
     try:
         sh = gc.open(gs_file)
     except gspread.SpreadsheetNotFound as e:
-        return flask.jsonify({'msg':'Could not find the spreadsheet ' + gs_file, 'type':'error'})
+        return flask.jsonify({'msg': 'Could not find the spreadsheet ' + gs_file, 'type': 'error'})
     else:
         try:
             sh.share(received_data['user_email'], perm_type='user', role='writer')
@@ -810,7 +824,7 @@ def share_spreadsheet_with_email():
             return flask.jsonify({'msg': f"An error occurred: {e}", 'type': 'error'})
         else:
             return flask.jsonify(
-                    {'msg': 'Google spreadsheet shared successfully with ' + received_data['user_email'], 'type': 'info'})
+                {'msg': 'Google spreadsheet shared successfully with ' + received_data['user_email'], 'type': 'info'})
 
 
 @app.route('/importMetadata/<string:metadata_type_selection>', methods=["GET"])
@@ -852,7 +866,7 @@ def import_metadata(metadata_type_selection: str):
     if metadata_type_selection != 'All':
         metadata_type_user_selection = [metadata_type_selection]
     else:
-        metadata_type_user_selection = metadata_types_supported # All metadata supported
+        metadata_type_user_selection = metadata_types_supported  # All metadata supported
     # Expand pairs with +
     new_metadata_type_user_selection = list()
     for metadata_type in metadata_type_user_selection:
@@ -864,7 +878,6 @@ def import_metadata(metadata_type_selection: str):
             new_metadata_type_user_selection.append(metadata_type)
     metadata_type_user_selection = new_metadata_type_user_selection
 
-
     # if args.user is not None and args.password is not None:
     #     api_source = Api(instance_url, args.user, args.password)
     # else:
@@ -873,10 +886,12 @@ def import_metadata(metadata_type_selection: str):
         if ws.title in metadata_type_user_selection:
             sheets_to_process.append(ws.title)
 
-        multilevel_identifiers = ['trackedEntityTypeAttributes', 'programStageDataElements', 'programTrackedEntityAttributes', 'dataSetElements', 'attributeValues', 'dataInputPeriods']
+        multilevel_identifiers = ['trackedEntityTypeAttributes', 'programStageDataElements',
+                                  'programTrackedEntityAttributes', 'dataSetElements', 'attributeValues',
+                                  'dataInputPeriods']
 
     if len(sheets_to_process) == 0:
-        return { 'msg': 'Metadata type not found in gspreadsheet, nothing to do', 'type':'warning'}
+        return {'msg': 'Metadata type not found in gspreadsheet, nothing to do', 'type': 'warning'}
 
     for metadata_type in metadata_type_user_selection:
 
@@ -894,16 +909,16 @@ def import_metadata(metadata_type_selection: str):
             except APIError as e:
                 return flask.jsonify(
                     {'msg': 'gspread.exceptions.APIError: ' + "{}".format(str(e)), 'type': 'error'})
-            #df = pd.read_excel(xls, sheet_name=metadata_type, na_filter=False)
+            # df = pd.read_excel(xls, sheet_name=metadata_type, na_filter=False)
             if df.shape[0] == 0 or (df['id'] == '').sum() == df.shape[0]:
-                return {'msg':'GSpreadsheet is empty, nothing to do', 'type':'warning'}
+                return {'msg': 'GSpreadsheet is empty, nothing to do', 'type': 'warning'}
             metadata_type = metadata_type.replace(' ', '')
             metadata_type = metadata_type[0].lower() + metadata_type[1:]
             if metadata_type.lower() == 'datasets':
                 metadata_type = 'dataSets'
 
             # ---------------------
-            #df = pd.read_csv(csv_file)
+            # df = pd.read_csv(csv_file)
             df.replace('', np.nan, inplace=True)
             df = df.dropna(how='all')
             df = df.dropna(how='all', axis=1)
@@ -924,12 +939,12 @@ def import_metadata(metadata_type_selection: str):
             for column in df.columns:
                 if '[' in column and ']' in column:
                     # Add a tmp column
-                    df.insert(column_index, 'tmp', ['']*df.shape[0])
+                    df.insert(column_index, 'tmp', [''] * df.shape[0])
                     indexes = df[df['id'] != ''].index.tolist()
                     # Append the last index
                     indexes.append(df.shape[0])
-                    #indexes.append(df[df[column] != ''].index.tolist()[-1:][0]+1)
-                    for i in range(0,len(indexes)-1):
+                    # indexes.append(df[df[column] != ''].index.tolist()[-1:][0]+1)
+                    for i in range(0, len(indexes) - 1):
                         # Slice column
                         column_list = df[column].loc[indexes[i]:indexes[i + 1] - 1].tolist()
                         if any(identifier in column for identifier in multilevel_identifiers):
@@ -971,13 +986,13 @@ def import_metadata(metadata_type_selection: str):
                     df.drop([column], axis=1, inplace=True)
                     df.rename(columns={"tmp": column}, inplace=True)
 
-                column_index +=1
+                column_index += 1
 
             # Rename column
             df.columns = df.columns.str.replace("[", "")
             df.columns = df.columns.str.replace("]", "")
             # Remove rows not given by index
-            #df = df.drop(df.index[df[df['id'] == ''].index.tolist()])
+            # df = df.drop(df.index[df[df['id'] == ''].index.tolist()])
             df['id'].replace('', np.nan, inplace=True)
             df.dropna(subset=['id'], inplace=True)
             # Remove multilevel columns, they will be processed later
@@ -1021,14 +1036,15 @@ def import_metadata(metadata_type_selection: str):
                                     # Store the lists which have been processed to make sure we don't overwrite
                                     element[key_pairs[0]] = list()
                                     for i in range(0, len(element[key])):
-                                        element[key_pairs[0]].append({ key_pairs[1]: element[key][i] })
+                                        element[key_pairs[0]].append({key_pairs[1]: element[key][i]})
                                 else:
                                     # We are relying on id column to come first and informative ones after
                                     element[key_pairs[0]] = dict()
                                     element[key_pairs[0]][key_pairs[1]] = element[key]
                             else:
                                 # For Option Sets and Legend Sets we allow name to be there next to the id on a nested structure
-                                if metadata_type not in ["optionSets", "legendSets"] and key_pairs[1] != 'name':  # name is informative
+                                if metadata_type not in ["optionSets", "legendSets"] and key_pairs[
+                                    1] != 'name':  # name is informative
                                     if isinstance(element[key_pairs[0]], list):
                                         if len(element[key]) == len(element[key_pairs[0]]):
                                             for index in range(0, len(element[key])):
@@ -1039,7 +1055,7 @@ def import_metadata(metadata_type_selection: str):
                                             element[key_pairs[0]][key_pairs[1]] = json.loads(element[key])
                                         else:
                                             element[key_pairs[0]][key_pairs[1]] = element[key]
-                                            
+
                         # Use case: when a json object is provided as free text a flat file cell, convert it to json
                         element[key] = convert_json_if_needed(element, key)
 
@@ -1080,13 +1096,16 @@ def import_metadata(metadata_type_selection: str):
                                 selected_columns = [col for col in df_multilevel_dict[id].columns if name in col]
                                 new_df = df_multilevel_dict[id][selected_columns]
                                 json_payload[i] = {**json_payload[i],
-                                                **extract_multi_level(new_df, name)}
+                                                   **extract_multi_level(new_df, name)}
 
             # We are going to consider that json export will only work with what exists on the file
             if not gen_json:
-                json_payload = get_json_payload_to_instance(api_source, metadata_type, json_payload, index_elements_to_delete)
+                json_payload = get_json_payload_to_instance(api_source, metadata_type, json_payload,
+                                                            index_elements_to_delete)
                 if metadata_type == "optionSets":
-                    json_payload = {**json_payload,  **get_json_payload_to_instance(api_source, 'options', json_options_payload, index_options_to_delete)}
+                    json_payload = {**json_payload,
+                                    **get_json_payload_to_instance(api_source, 'options', json_options_payload,
+                                                                   index_options_to_delete)}
             else:
                 # The function get_json_payload_to_instance creates the key - list pair
                 # Since we are skipping it in the previous step, we need to do it here
@@ -1115,14 +1134,14 @@ def import_metadata(metadata_type_selection: str):
                     elif element[field] == "{}":
                         element[field] = dict()
 
-            with open('metadata-'+metadata_type+'.json', 'w',
+            with open('metadata-' + metadata_type + '.json', 'w',
                       encoding='utf8') as file:
                 file.write(json.dumps(json_payload, indent=4, sort_keys=True, ensure_ascii=False))
             file.close()
 
             if gen_json:
                 try:
-                    with open(filename_for_json_export, "r",encoding='utf8') as file:
+                    with open(filename_for_json_export, "r", encoding='utf8') as file:
                         json_file_all = json.load(file)
                 except FileNotFoundError:
                     json_file_all = {}
@@ -1185,7 +1204,6 @@ def import_metadata(metadata_type_selection: str):
 
 @app.route('/exportMetadata/<string:metadata_type_selection>', methods=["GET"])
 def export_metadata(metadata_type_selection: str):
-
     generate_template = False
     result = dict()
     result['type'] = 'error'
@@ -1206,7 +1224,7 @@ def export_metadata(metadata_type_selection: str):
     if metadata_type_selection != 'All':
         metadata_type_user_selection = [metadata_type_selection]
     else:
-        metadata_type_user_selection = metadata_types_supported # All metadata supported
+        metadata_type_user_selection = metadata_types_supported  # All metadata supported
 
     current_worksheet_names = [worksheet.title for worksheet in sh.worksheets()]
 
@@ -1215,7 +1233,8 @@ def export_metadata(metadata_type_selection: str):
     df_conf = pd.DataFrame()
     for metadata_type in metadata_type_columns:
         if metadata_type in metadata_type_user_selection:
-            df_conf, mandatory_fields = add_constant_schemas_to_configuration(api_source, metadata_type, df_conf, mandatory_fields)
+            df_conf, mandatory_fields = add_constant_schemas_to_configuration(api_source, metadata_type, df_conf,
+                                                                              mandatory_fields)
 
     for metadata_type in metadata_type_user_selection:
         logger.info('Processing ' + metadata_type)
@@ -1242,14 +1261,14 @@ def export_metadata(metadata_type_selection: str):
                             subsubfields[s[1]] = list()
                         subsubfields[s[1]].append(s[2])
 
-                    if len(s) == 3 and (i == len(fields)-1 or '-' + s[1] + '-' not in fields[i+1]):
-                        subfields[s[0]].append(s[1]+'['+','.join(subsubfields[s[1]])+']')
+                    if len(s) == 3 and (i == len(fields) - 1 or '-' + s[1] + '-' not in fields[i + 1]):
+                        subfields[s[0]].append(s[1] + '[' + ','.join(subsubfields[s[1]]) + ']')
 
                 else:
                     api_fields.append(column)
             for key in subfields:
                 if isinstance(subfields[key], list):
-                    api_fields.append(key+'['+','.join(subfields[key])+']')
+                    api_fields.append(key + '[' + ','.join(subfields[key]) + ']')
 
             fields = ','.join(api_fields)
 
@@ -1260,15 +1279,15 @@ def export_metadata(metadata_type_selection: str):
 
             # We can add filters in the future, for example to get only GEN Library
             filter = ""
-            params = {  "paging": "false",
-                        "fields": fields
-                    }
+            params = {"paging": "false",
+                      "fields": fields
+                      }
 
             if filter != "":
                 params['filter'] = filter
 
             metadata = api_source.get(api_endpoint,
-                          params=params).json()[api_endpoint]
+                                      params=params).json()[api_endpoint]
 
             if len(metadata) == 0:
                 logger.info('   Nothing found')
@@ -1413,13 +1432,16 @@ def export_metadata(metadata_type_selection: str):
             current_number_rows = df.shape[0]
             columns = df.columns
             # Create a DataFrame containing some empty rows
-            empty_df = pd.DataFrame(index=range(int(current_number_rows/4)), columns=columns)
+            empty_df = pd.DataFrame(index=range(int(current_number_rows / 4)), columns=columns)
             df = pd.concat([df, empty_df], ignore_index=True)
 
             while True:
                 try:
+                    resize = True
+                    if len(df) + 1 <= ws.row_count:
+                        resize = False
                     set_with_dataframe(worksheet=ws, dataframe=df, include_index=False,
-                                       include_column_header=True, resize=True)
+                                       include_column_header=True, resize=resize)
                 except gspread.exceptions.APIError as e:
                     time.sleep(30)
                     pass
@@ -1454,7 +1476,8 @@ def export_metadata(metadata_type_selection: str):
                         break
 
         logger.info('Adding formatting')
-        requests = apply_formatting_to_worksheet(ws, metadata_types_supported, current_worksheet_names, df_conf, mandatory_fields[metadata_type])
+        requests = apply_formatting_to_worksheet(ws, metadata_types_supported, current_worksheet_names, df_conf,
+                                                 mandatory_fields[metadata_type])
         # Apply the requests using batch updates
         while True:
             try:
@@ -1470,7 +1493,8 @@ def export_metadata(metadata_type_selection: str):
 
                 # Ignore errors related to "beyond the last requested row"
                 elif "'code': 400" in error_message and "beyond the last requested row" in error_message:
-                    print('API is trying to access or modify a row that is outside the existing bounds of the sheet... Ignoring ')
+                    print(
+                        'API is trying to access or modify a row that is outside the existing bounds of the sheet... Ignoring ')
                     break
 
                 # Notify user of other errors
@@ -1484,7 +1508,6 @@ def export_metadata(metadata_type_selection: str):
 
 @app.route('/genMissingUIDs', methods=["GET"])
 def gen_missing_uids():
-    
     def has_data(row, col_index):
         # Check if there's data in the adjacent cell
         return col_index + 1 < len(row) and row[col_index + 1]
@@ -1558,7 +1581,8 @@ if __name__ == '__main__':
     from argparse import ArgumentParser
 
     parser = ArgumentParser()
-    parser.add_argument('-c', '-conf', help='Custom metadata conf file (optional), metadata_types.conf is used by default')
+    parser.add_argument('-c', '-conf',
+                        help='Custom metadata conf file (optional), metadata_types.conf is used by default')
     parser.add_argument('-a', '-auth', required=True, help='Google API Key (mandatory)')
     args = parser.parse_args()
 
@@ -1566,8 +1590,9 @@ if __name__ == '__main__':
     auth_file = args.a
 
     if not auth_file:
-        print('Warning: No Google API Key provided. Please generate one using this link: https://support.google.com/googleapi/answer/6158862?hl=en')
-    
+        print(
+            'Warning: No Google API Key provided. Please generate one using this link: https://support.google.com/googleapi/answer/6158862?hl=en')
+
     gc = authorize_google_sheets(auth_file)
 
     app = create_app(config_file)
