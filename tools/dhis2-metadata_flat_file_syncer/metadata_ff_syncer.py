@@ -313,7 +313,7 @@ def add_constant_schemas_to_configuration(api_source, metadata_type, df, mandato
         return df, mandatory_fields
 
 
-def apply_formatting_to_worksheet(worksheet, metadata_types_supported, worksheet_names, df_conf, mandatory_fields):
+def apply_formatting_to_worksheet(worksheet, metadata_types_supported, worksheet_names, df_conf, mandatory_fields, new_worksheet_row_max):
     # sheetId = worksheet._properties['sheetId']
     sheetId = worksheet.id
 
@@ -463,7 +463,7 @@ def apply_formatting_to_worksheet(worksheet, metadata_types_supported, worksheet
                             "range": {
                                 "sheetId": sheetId,
                                 "startRowIndex": 1,
-                                "endRowIndex": worksheet.row_count,
+                                "endRowIndex": new_worksheet_row_max,
                                 "startColumnIndex": col_index,
                                 "endColumnIndex": col_index + 1
                             },
@@ -500,7 +500,7 @@ def apply_formatting_to_worksheet(worksheet, metadata_types_supported, worksheet
                         "range": {
                             "sheetId": sheetId,
                             "startRowIndex": 1,
-                            "endRowIndex": worksheet.row_count,
+                            "endRowIndex": new_worksheet_row_max,
                             "startColumnIndex": col_index,
                             "endColumnIndex": col_index + 1
                         },
@@ -551,7 +551,7 @@ def apply_formatting_to_worksheet(worksheet, metadata_types_supported, worksheet
                     "range": {
                         "sheetId": sheetId,
                         "startRowIndex": 1,
-                        "endRowIndex": worksheet.row_count,
+                        "endRowIndex": new_worksheet_row_max,
                         "startColumnIndex": col_index,
                         "endColumnIndex": col_index + 1
                     },
@@ -590,7 +590,7 @@ def apply_formatting_to_worksheet(worksheet, metadata_types_supported, worksheet
                                         "sheetId": sheetId,
                                         "startRowIndex": 1,
                                         "startColumnIndex": col_index,
-                                        "endRowIndex": worksheet.row_count,
+                                        "endRowIndex": new_worksheet_row_max,
                                         "endColumnIndex": col_index + 1
                                     }],
                                 "booleanRule": {
@@ -1477,7 +1477,7 @@ def export_metadata(metadata_type_selection: str):
 
         logger.info('Adding formatting')
         requests = apply_formatting_to_worksheet(ws, metadata_types_supported, current_worksheet_names, df_conf,
-                                                 mandatory_fields[metadata_type])
+                                                 mandatory_fields[metadata_type], (df.shape[0]+1))
         # Apply the requests using batch updates
         while True:
             try:
