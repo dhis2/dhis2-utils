@@ -165,10 +165,14 @@ order by idx_scan desc;
 
 -- Time of last vacuum and analyze by table
 
-select relname as table_name, n_dead_tup as dead_tuples, 
-  last_vacuum, last_autovacuum, last_analyze, last_autoanalyze
+select schemaname as schema_name, 
+  relname as table_name, 
+  n_dead_tup as dead_tuples, 
+  last_vacuum, last_autovacuum, 
+  last_analyze, last_autoanalyze
 from pg_stat_user_tables
-where relname = 'datavalue';
+where schemaname = 'public'
+order by last_autoanalyze desc;
 
 -- Time of last vacuum and analyze for largest tables
 
