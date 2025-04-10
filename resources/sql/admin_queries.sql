@@ -159,12 +159,23 @@ order by row_count desc;
 -- DATA SETS
 --
 
+-- Data sets ordered by count of data elements
+
 select ds.uid as ds_uid, ds.name as ds_name, (
   select count(*)
   from datasetelement dse
   where ds.datasetid = dse.datasetid) as de_count
 from dataset ds
 order by de_count desc;
+
+-- Data elements and membership of data sets
+
+select de.name, string_agg(ds.name, ', ')
+from datasetelement dse
+inner join dataset ds on dse.datasetid = ds.datasetid
+inner join dataelement de on dse.dataelementid = de.dataelementid
+group by de.name
+order by de.name;
 
 --
 -- PROGRAMS
