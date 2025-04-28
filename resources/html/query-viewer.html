@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
 <head>
 <title>Query viewer</title>
@@ -94,7 +94,23 @@ app.urlDecodeQuery = function () {
 app.getQueryResponse = function() {
 	const query = document.getElementById('query').value;
 	const unFormattedQuery = app.getUnFormattedQuery(query);
+	
+	if (!unFormattedQuery) {
+		return;
+	}
+	
 	window.location.href = unFormattedQuery;
+};
+
+app.openQueryResponse = function() {
+	const query = document.getElementById('query').value;
+	const unFormattedQuery = app.getUnFormattedQuery(query);
+	
+	if (!unFormattedQuery) {
+		return;
+	}
+	
+	window.open(unFormattedQuery, '_blank');
 };
 
 app.copyToClipboard = function() {
@@ -118,6 +134,7 @@ app.clearQuery = function() {
 		<input type="button" class="main-btn" onclick="app.unFormatQuery()" value="Un-format">
 		<input type="button" class="main-btn" onclick="app.urlDecodeQuery()" value="URL decode">
 		<input type="button" class="main-btn" onclick="app.getQueryResponse()" value="Get response">
+		<input type="button" class="main-btn" onclick="app.openQueryResponse()" value="Get in new tab">
 		<input type="button" class="main-btn" onclick="app.copyToClipboard()" value="Copy">
 		<input type="button" class="main-btn" onclick="app.clearQuery()" value="Clear">
 	</div>
