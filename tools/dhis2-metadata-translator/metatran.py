@@ -35,7 +35,7 @@ mt_logger.addHandler(console)
 
 class d2t():
 
-    def __init__(self,server, user, password, project, resource, base, tx_org='', tx_token='', object_filter=''):
+    def __init__(self,server, user, password, project, resource, base, tx_org='', tx_token='', object_filter='', exclude_custom_forms=False):
 
         mt_logger.setLevel(20)
         # DHIS2 connection details
@@ -51,6 +51,7 @@ class d2t():
         # package details
         self.package_filter = None
         self.object_filter  = object_filter.split(',')
+        self.exclude_custom_forms = exclude_custom_forms
 
         # set the default format to STRUCTURED_JSON
         self.tx_i18n_type = "STRUCTURED_JSON"
@@ -198,18 +199,13 @@ class d2t():
             for element in collection:
 
                 # if we want to translate custom forms
-                self.get_custom_form_translations(resource, element)
-                try:
-                    # form_dict = self.customForms[resource][element['id']]['form_dict']
-                    form_trans = self.customForms[resource][element['id']]['translations']
-                    # if self.base_lang in form_dict:
-                    #     print(json.dumps(form_dict[self.base_lang], sort_keys=True, indent=2, ensure_ascii=False))
-
-                    # if there was a custom form with translations, add the translations to the current element
-                    element['translations'] += form_trans
-
-                except KeyError:
-                    pass
+                if not self.exclude_custom_forms:
+                    self.get_custom_form_translations(resource, element)
+                    try:
+                        form_trans = self.customForms[resource][element['id']]['translations']
+                        element['translations'] += form_trans
+                    except KeyError:
+                        pass
 
 
                 translations= element["translations"]
@@ -406,26 +402,26 @@ class d2t():
             for id in toDHIS2[resource]:
                 payload = json.dumps(toDHIS2[resource][id], sort_keys=True, indent=2, ensure_ascii=True, separators=(',', ': '))
                 url = self.dhis2_server+"/api/"+resource+"/"+id+"/translations"
-                # print("PUT ",url)
                 r = requests.put(url, data=payload,auth=self.dhis2_AUTH)
                 print(r.status_code,": PUT ",url)
                 print("payload:",payload)
                 if r.status_code > 204:
                     print(payload)
                     print(r.headers)
-        
-        for resource in self.customForms:
-            for element in self.customForms[resource]:
-                print("want to update html:",element)
-                newForm = {}
-                el = { 'id': element, 'htmlCode': ''}
-                newForm['htmlCode'] = self.set_custom_form_translations(resource, el)                
-                url = self.dhis2_server+"/api/"+resource+"/"+element
-                r = requests.patch(url, json=newForm,auth=self.dhis2_AUTH,params={'mergeMode': 'REPLACE'})
-                print(r.status_code,": PUT ",url)
-                if r.status_code > 204:
-                    print(payload)
-                    print(r.headers)
+        # Only update custom forms if not excluded
+        if not self.exclude_custom_forms:
+            for resource in self.customForms:
+                for element in self.customForms[resource]:
+                    print("want to update html:",element)
+                    newForm = {}
+                    el = { 'id': element, 'htmlCode': ''}
+                    newForm['htmlCode'] = self.set_custom_form_translations(resource, el)                
+                    url = self.dhis2_server+"/api/"+resource+"/"+element
+                    r = requests.patch(url, json=newForm,auth=self.dhis2_AUTH,params={'mergeMode': 'REPLACE'})
+                    print(r.status_code,": PUT ",url)
+                    if r.status_code > 204:
+                        print(payload)
+                        print(r.headers)
 
     def merge_translations(self, dict1, dict2):
         """ Recursively merges dict2 into dict1 """
@@ -1256,6 +1252,8 @@ if __name__ == "__main__":
     p.add('-t', '--token', required='--push' in sys.argv or '--pull' in sys.argv, help='Transifex token', env_var='TX_TOKEN')
     # list of object types to exclude
     p.add('-e', '--exclude-objects', required=False, help='Comma-separated list of object types to exclude')
+    # new option to exclude custom form translations
+    p.add('--exclude-custom-forms', required=False, action='store_true', help='Exclude custom form translations when pulling/pushing from DHIS2 instance')
 
 
     options = p.parse_args()
@@ -1327,7 +1325,9 @@ if __name__ == "__main__":
                         resource=options.resource,
                         base=options.basex,
                         tx_org=options.org,
-                        tx_token=options.token
+                        tx_token=options.token,
+                        object_filter=options.exclude_objects,
+                        exclude_custom_forms=getattr(options, 'exclude_custom_forms', False)
                     )
             
             if options.exclude_objects:
