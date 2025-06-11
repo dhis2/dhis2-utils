@@ -41,6 +41,7 @@ instance options:
  -p password        [DHIS2_PASSWORD] DHIS2 user password
  --push             push source strings to Transifex
  --pull             pull localised strings from Transifex
+ --exclude-custom-forms  Exclude custom form translations when pulling/pushing from DHIS2 instance
 
 package options:
  -f package-url     [PACKAGE_FILE] full url (or local path) to the initial package file
