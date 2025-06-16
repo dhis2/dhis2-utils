@@ -25,9 +25,12 @@ DHIS2_USERS_FILENAME=test_users.csv
 ```
 
 NB: CSV header row must contain the following elements:
-***firstName, surname, username, password, userRoles, userGroups, organisationUnits, dataViewOrganisationUnits, locale***
-| firstName | surname | username | password | userRoles | organisationUnits | dataViewOrganisationUnits | locale |
-| :-------- | :------ | :------: | :------: | :-------: | :---------------- | :------------------------ | :----- |
+***firstName, surname, username, password, userRoles, userGroups, organisationUnits, dataViewOrganisationUnits, locale, userGroups***
+| firstName | surname | username | password | userRoles | organisationUnits | dataViewOrganisationUnits | locale | userGroups |
+| :-------- | :------ | :------: | :------: | :-------: | :---------------- | :------------------------ | :----- | :----------: |
+
+Note that the CSV fields must be delimted by semicolon `;`. For the userRoles, userGroups, organisationUnits and dataViewOrganisationUnits fields, 
+you can separate multiple entries with a comma `,`.
 
 ## Run
 
