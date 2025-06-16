@@ -59,7 +59,7 @@ class d2t():
         # We need to map language codes that DHIS2 doesn't support natively
         # uz@Cyrl --> uz
         # uz@Latn --> uz_UZ
-        self.langmap={'uz@Cyrl':'uz','uz@Latn':'uz_UZ'}
+        self.langmap={'uz@Cyrl':'uz_UZ_Cyrl','uz@Latn':'uz_UZ_Latn'}
 
         if project:
             # transifex details (if a transifex project is defined)
