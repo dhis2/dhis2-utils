@@ -2,7 +2,7 @@ certifi==2023.7.22
 charset-normalizer==2.0.6
 colorama==0.4.4
 dhis2.py==2.3.0
-idna==3.2
+idna==3.7
 logzero==1.7.0
 numpy==1.22.0
 pandas==1.3.3
