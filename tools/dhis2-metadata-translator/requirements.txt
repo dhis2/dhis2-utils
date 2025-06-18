@@ -10,4 +10,4 @@ requests==2.31.0
 python-slugify==7.0.0
 soupsieve==2.3.2.post1
 translayer @ https://github.com/Philip-Larsen-Donnelly/translayer/archive/refs/heads/main.zip
-urllib3==1.26.12
+urllib3==2.5.0
