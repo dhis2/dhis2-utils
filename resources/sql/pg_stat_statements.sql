@@ -59,16 +59,41 @@ select
   length(query) as query_length,
   substring(query, 0, 750) as query
 from stat.pg_stat_statements
-limit 500;
+limit 200;
 
--- Time consuming queries ordered by total time desc (time in ms)
+-- Create slow queries view
 
-select * from stat.view_pg_stat_statements order by total_exec_time desc;
+drop view if exists stat.view_slow_queries;
+
+create view stat.view_slow_queries as
+select 
+  to_char(mean_exec_time, 'FM999G999G999G990') as mean_time_ms,
+  to_char(max_exec_time, 'FM999G999G999G990') as max_time_ms,
+  to_char(min_exec_time, 'FM999G999G999G990') as min_time_ms,
+  query
+from stat.pg_stat_statements
+order by mean_exec_time desc
+limit 200;
+
+-- Create frequent queries view
+
+drop view if exists stat.view_frequent_queries;
+
+create view stat.view_frequent_queries as
+select 
+  to_char(mean_exec_time, 'FM999G999G999G990') as mean_time_ms,
+  to_char(total_exec_time, 'FM999G999G999G990') as total_time_ms,
+  calls, 
+  rows,
+  query
+from stat.pg_stat_statements
+order by total_exec_time desc
+limit 200;
 
 -- Slow queries ordered by mean time desc (time in ms)
 
-select * from stat.view_pg_stat_statements order by mean_exec_time desc;
+select * from stat.view_slow_queries;
 
--- Frequent queries ordered by calls desc (time in ms)
+-- Frequent and time consuming queries ordered by total time desc (time in ms)
 
-select * from stat.view_pg_stat_statements order by calls desc;
+select * from stat.view_frequent_queries;
