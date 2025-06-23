@@ -1,19 +1,25 @@
 --
 -- Queries for monitoring performance, slow queries and locks for PostgreSQL
 --
--- Enable slow query logging in postgresql.conf:
+-- Enable slow query logging, e.g. in a file `logging.conf`.
+
+-- -- BEGIN --
+
+# Log
+
+# Enable log for long-running queries
+log_min_duration_statement = 200
+log_statement = none
+
+# Increase memory for recorded queries
+track_activity_query_size = 8192
+
+-- -- END --
+
 --
--- # Enable log for long-running queries
--- log_min_duration_statement = 200
--- log_statement = none
+-- The log settings can be enabled with $ select pg_reload_conf();
 --
--- These log settings can be enabled with $ select pg_reload_conf();
---
--- Increase size of captured query:
---
--- track_activity_query_size = 8192
---
--- This log setting requires a server restart.
+-- This activity settings require a server restart.
 --
 
 -- Current queries
