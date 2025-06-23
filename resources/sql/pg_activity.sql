@@ -3,8 +3,9 @@
 --
 -- Enable slow query logging in postgresql.conf:
 --
--- log_statement = none
+-- # Enable log for long-running queries
 -- log_min_duration_statement = 200
+-- log_statement = none
 --
 -- These log settings can be enabled with $ select pg_reload_conf();
 --
