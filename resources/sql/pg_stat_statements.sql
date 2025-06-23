@@ -26,9 +26,13 @@ pg_stat_statements.max = 10000
 
 -- -- END --
 
+-- Create schema for extension
+
+create schema if not exists stat;
+
 -- Create extension for the specific database from psql CLI
 
-create extension pg_stat_statements;
+create extension pg_stat_statements schema stat;
 
 --
 -- Use \x in psql for expanded display
@@ -38,9 +42,9 @@ create extension pg_stat_statements;
 
 -- Create base view for statistics
 
-drop view if exists x_min_pg_stat_statements;
+drop view if exists stat.view_pg_stat_statements;
 
-create view x_min_pg_stat_statements as
+create view stat.view_pg_stat_statements as
 select 
   to_char(mean_exec_time, 'FM999G999G999G990') as mean_time_ms,
   to_char((total_exec_time/calls), 'FM999G999G999G990') as avg_time_ms,
@@ -54,17 +58,17 @@ select
   total_exec_time,
   length(query) as query_length,
   substring(query, 0, 750) as query
-from pg_stat_statements
+from stat.pg_stat_statements
 limit 500;
 
 -- Time consuming queries ordered by total time desc (time in ms)
 
-select * from x_min_pg_stat_statements order by total_exec_time desc;
+select * from stat.view_pg_stat_statements order by total_exec_time desc;
 
 -- Slow queries ordered by mean time desc (time in ms)
 
-select * from x_min_pg_stat_statements order by mean_exec_time desc;
+select * from stat.view_pg_stat_statements order by mean_exec_time desc;
 
 -- Frequent queries ordered by calls desc (time in ms)
 
-select * from x_min_pg_stat_statements order by calls desc;
+select * from stat.view_pg_stat_statements order by calls desc;
