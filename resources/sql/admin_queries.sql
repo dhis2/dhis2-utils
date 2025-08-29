@@ -297,7 +297,7 @@ insert into userrolemembers (userid, userroleid)
 select userid, userroleid 
 from (
   select u.userid 
-  from users u 
+  from userinfo u 
   where u.username = 'admin'
   limit 1) as userid, (
 
