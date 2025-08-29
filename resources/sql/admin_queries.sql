@@ -258,43 +258,25 @@ and (
 
 select authority from userroleauthorities where userroleid=33706 and authority not in (select authority from userroleauthorities where userroleid=21504);
 
--- User overview (Postgres only)
-
-select u.username, u.lastlogin, u.selfregistered, ui.surname, ui.firstname, ui.email, ui.phonenumber, ui.jobtitle, (
-  select array_to_string( array(
-    select name from userrole ur
-    join userrolemembers urm using(userroleid)
-    where urm.userid=u.userid), ', ' )
-  )  as userroles, (
-  select array_to_string( array(
-    select name from organisationunit ou
-    join usermembership um using(ofrganisationunitid)
-    where um.userinfoid=ui.userinfoid), ', ' )
-  ) as orgunits
-from users u 
-join userinfo ui on u.userid=ui.userinfoid
-order by u.username;
-
 -- Users in user role
 
-select u.userid, u.username, ui.firstname, ui.surname from users u 
-inner join userinfo ui on u.userid=ui.userinfoid 
+select u.userid, u.username, ui.firstname, ui.surname userinfo users u 
 inner join userrolemembers urm on u.userid=urm.userid 
 inner join userrole ur on urm.userroleid=ur.userroleid 
 where ur.name='UserRoleName';
 
 -- Users with ALL authority
 
-select u.userid, u.username, ui.firstname, ui.surname from users u 
-inner join userinfo ui on u.userid=ui.userinfoid
-where u.userid in (
+select u.userinfoid, u.username, u.firstname, u.surname 
+from userinfo u
+where u.userinfoid in (
   select urm.userid from userrolemembers urm 
   inner join userrole ur on urm.userroleid=ur.userroleid
   inner join userroleauthorities ura on ur.userroleid=ura.userroleid 
   where ura.authority = 'ALL'
 );
 
--- User roles with authority
+-- User roles with ALL authority
 
 select ur.userroleid, ur.name
 from userrole ur
