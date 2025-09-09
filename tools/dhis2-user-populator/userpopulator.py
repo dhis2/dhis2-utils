@@ -1,4 +1,6 @@
 import csv
+from pprint import pprint
+
 import requests
 import json
 from requests.auth import HTTPBasicAuth
@@ -14,7 +16,8 @@ filename = config['DHIS2_USERS_FILENAME']
 
 auth = HTTPBasicAuth(username, password)
 
-reader = tuple(csv.DictReader(open(filename)))
+with open(filename, newline='', encoding='utf-8') as csvfile:
+    reader = list(csv.DictReader(csvfile, delimiter=';'))
 
 # generate unique IDs for users
 def generate_ids(count):
@@ -81,10 +84,16 @@ def get_user_groups():
     return get_resource('userGroups', 'userGroups')
 
 
-def get_resource_id(name, resources):
+def get_resource_id(value, resources):
+    # First check for exact ID match
     for resource in resources:
-        if resource['displayName'] == name:
+        if resource['id'] == value:
+            return value
+    for resource in resources:
+        if resource['displayName'] == value:
             return resource['id']
+    print(f"⚠️ Could not find resource match for '{value}'")
+    return None
 
 
 def get_locales_with_usernames(entries):
@@ -95,7 +104,7 @@ def get_locales_with_usernames(entries):
         if row['locale'] != '':
             locales_and_username.append({
                 "username": row['username'],
-                "locale": list(filter(lambda x: x['name'] == row['locale'], system_locales))[0]['locale']
+                "locale": list(filter(lambda x: x['locale'] == row['locale'], system_locales))[0]['locale']
             })
     return locales_and_username
 
@@ -171,7 +180,7 @@ def create_user_list(entries):
         user_id = user_ids[index]
         user_roles_split = row['userRoles'].split(", ")
         oucapture_split = row['organisationUnits'].split(", ")
-        ououtput_split = row['organisationUnits'].split(", ")
+        ououtput_split = row['dataViewOrganisationUnits'].split(", ")
         user_groups_split = row['userGroups'].split(", ")
         user = {
             "id": user_id,
@@ -211,7 +220,7 @@ if __name__ == '__main__':
         "users": users,
         "userGroups": user_groups
     }
-    print(payload)
+    pprint(payload)
     # print(user_locales)
     print('Importing users and updating usergroups...')
     create_users(payload)
