@@ -18,7 +18,9 @@
 
 -- Create view
 
-create or replace view dhis_slow_queries as
+drop view if exists dhis_slow_queries;
+
+create view dhis_slow_queries as
 select * from pg_catalog.pg_stat_activity
 where (now() - pg_stat_activity.query_start) > interval '1 minutes'
 and usename = 'dhis'
@@ -28,7 +30,9 @@ and query !~* ('pg_catalog|information_schema|pg_temp|pg_toast');
 
 -- Create function
 
-create or replace function dhis_cancel_slow_queries()
+drop function if exists dhis_cancel_slow_queries;
+
+create function dhis_cancel_slow_queries()
 returns integer as $$
 declare
     q record;
