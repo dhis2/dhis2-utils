@@ -32,5 +32,8 @@ begin
     create index if not exists "in_dx_monthly_2024" on public.analytics_2024 using btree (dx, monthly);
     create index if not exists "in_dx_quarterly_2024" on public.analytics_2024 using btree (dx, quarterly);
     create index if not exists "in_dx_yearly_2024" on public.analytics_2024 using btree (dx, yearly);
+    
+    -- Analyze tables
+    analyze;
 end;
 $$ language plpgsql;
