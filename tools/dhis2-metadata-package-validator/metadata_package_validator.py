@@ -54,18 +54,20 @@ def main():
             o_mq_2[optionSet] = list()
             o_mq_2[optionSet].append(option["sortOrder"])
 
-    # O-MQ-2: Expected sortOrder for options of an optionSet (starts at 1 and ends at the size of the list of options)
-    for optionSet_uid, sortOrders in o_mq_2.items():
-        sortOrders.sort()  # Order array of sortOrders
+ ## Sort order starts at 0 in v2.42. O-MQ-2 causes errors in pipeline.
 
-        optionSet_size = len(sortOrders)
-        if (sortOrders[0] == 1) and (sortOrders[optionSet_size - 1] == optionSet_size):
-            pass  # Everything is OK
-        else:
-            optionSet_name = myutils.get_name_by_type_and_uid(package=package, resource_type="optionSets", uid=optionSet_uid)
-            message = "O-MQ-2 - The optionSet '" + optionSet_name + "' (" + optionSet_uid + ") has errors in the sortOrder. Current sortOrder: "+", ".join([str(i) for i in sortOrders])
-            logging.error(message)
-            num_error += 1
+ #    # O-MQ-2: Expected sortOrder for options of an optionSet (starts at 1 and ends at the size of the list of options)
+ #    for optionSet_uid, sortOrders in o_mq_2.items():
+ #        sortOrders.sort()  # Order array of sortOrders
+ #
+ #       optionSet_size = len(sortOrders)
+ #       if (sortOrders[0] == 1) and (sortOrders[optionSet_size - 1] == optionSet_size):
+ #           pass  # Everything is OK
+ #       else:
+ #           optionSet_name = myutils.get_name_by_type_and_uid(package=package, resource_type="optionSets", uid=optionSet_uid)
+ #           message = "O-MQ-2 - The optionSet '" + optionSet_name + "' (" + optionSet_uid + ") has errors in the sortOrder. Current sortOrder: "+", ".join([str(i) for i in sortOrders])
+ #           logging.error(message)
+ #           num_error += 1
 
     # -------------------------------------
 
