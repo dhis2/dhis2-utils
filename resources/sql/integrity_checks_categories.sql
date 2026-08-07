@@ -49,7 +49,7 @@ where cc.name = 'default' offset 1;
 
 select * from categoryoptioncombo coc 
 inner join categoryoptioncombos_categoryoptions cocco on coc.categoryoptioncomboid=cocco.categoryoptioncomboid 
-inner join dataelementcategoryoption co on cocco.categoryoptionid=co.categoryoptionid 
+inner join categoryoption co on cocco.categoryoptionid=co.categoryoptionid 
 where co.name = 'default' offset 1;
 
 -- Get category option combos without data values (not an error)
@@ -64,19 +64,19 @@ where categoryoptioncomboid not in (
 
 -- Get category options without category option combos (be careful when deleting from categories_categoryoptions to avoid missing indexes)
 
-select * from dataelementcategoryoption 
+select * from categoryoption 
 where categoryoptionid not in (
   select categoryoptionid from categoryoptioncombos_categoryoptions);
 
 -- Get category options without categories
 
-select * from dataelementcategoryoption 
+select * from categoryoption 
 where categoryoptionid not in (
   select categoryoptionid from categories_categoryoptions);
 
 -- Get category options without categories and category option combos
 
-select * from dataelementcategoryoption 
+select * from categoryoption 
 where categoryoptionid not in (
   select categoryoptionid from categories_categoryoptions)
 and categoryoptionid not in (
@@ -90,8 +90,9 @@ group by categoryid, categoryoptionid having count(*) > 1;
 -- Get category options with count of memberships in categories
 
 select co.categoryoptionid, co.name, (select count(categoryoptionid) 
-from categories_categoryoptions 
-where categoryoptionid=co.categoryoptionid ) as categorycount from dataelementcategoryoption co 
+  from categories_categoryoptions 
+  where categoryoptionid=co.categoryoptionid) as categorycount 
+from categoryoption co 
 order by categorycount desc;
 
 --
@@ -100,19 +101,19 @@ order by categorycount desc;
 
 -- Get categories without category options
 
-select * from dataelementcategory 
+select * from category 
 where categoryid not in (
   select categoryid from categories_categoryoptions);
 
 -- Get categories without category combos
 
-select * from dataelementcategory 
+select * from category 
 where categoryid not in (
   select categoryid from categorycombos_categories);
 
 -- Get categories without category combos and category options
 
-select * from dataelementcategory 
+select * from category 
 where categoryid not in (
   select categoryid from categorycombos_categories)
 and categoryid not in (
@@ -121,7 +122,7 @@ and categoryid not in (
 -- Get categories without category combos and category option combos associated with data values
 
 select c.categoryid, c.uid, c.name
-from dataelementcategory c
+from category c
 where c.categoryid not in (
   select ccc.categoryid
   from categorycombos_categories ccc
@@ -139,7 +140,7 @@ with category_cateory_option_count as (
     select count(*)
     from categories_categoryoptions cco
     where cco.categoryid = c.categoryid) as co_count
-    from dataelementcategory c)
+    from category c)
 select c.uid, c.name
 from category_cateory_option_count c
 where c.co_count = 1;
@@ -193,7 +194,7 @@ where categoryoptioncomboid not in (
 select cc.name as cc_name, co.name as co_name from categorycombo cc 
 inner join categorycombos_categories ccc on cc.categorycomboid=ccc.categorycomboid
 inner join categories_categoryoptions cco on ccc.categoryid=cco.categoryid
-inner join dataelementcategoryoption co on cco.categoryoptionid=co.categoryoptionid
+inner join categoryoption co on cco.categoryoptionid=co.categoryoptionid
 group by cc_name, co_name having count(*) > 1;
 
 -- Get category combos without data elements or data sets
@@ -241,9 +242,42 @@ inner join categorycombos_optioncombos cc_oc on dv.categoryoptioncomboid=cc_oc.c
 left join categorycombo oc_cc on cc_oc.categorycomboid=oc_cc.categorycomboid
 left join _categoryoptioncomboname con on dv.categoryoptioncomboid=con.categoryoptioncomboid
 where not exists (
-  select 1 from _dataelementcategoryoptioncombo dc
+  select 1 from categoryoptioncombo dc
   where dc.dataelementid=dv.dataelementid
   and dc.categoryoptioncomboid=dv.categoryoptioncomboid);
+
+--
+-- Default category objects
+--
+
+-- Check if link between default category combo and default category exists
+
+select cc.categorycomboid, cc.categoryid, cc.sort_order
+from categorycombos_categories cc
+where cc.categorycomboid = (select categorycomboid from categorycombo where name = 'default')
+and cc.categoryid = (select categoryid from category where name = 'default');
+
+-- Check if link between default category combo and default category option combo exists
+
+select cc.categorycomboid, cc.categoryoptioncomboid
+from categorycombos_optioncombos cc
+where cc.categorycomboid = (select categorycomboid from categorycombo where name = 'default')
+and cc.categoryoptioncomboid = (select categoryoptioncomboid from categoryoptioncombo where name = 'default');
+
+-- Check if link between default category and default category option existgs
+
+select categoryid, categoryoptionid, sort_order
+from categories_categoryoptions cc
+where cc.categoryid = (select categoryid from category where name = 'default')
+and cc.categoryoptionid = (select categoryoptionid from categoryoption where name = 'default');
+
+-- Check if link between default category option and default category option combo exists
+
+select categoryoptioncomboid, categoryoptionid
+from categoryoptioncombos_categoryoptions cc
+where cc.categoryoptioncomboid = (select categoryoptioncomboid from categoryoptioncombo where name = 'default')
+and cc.categoryoptionid = (select categoryoptionid from categoryoption where name = 'default');
+
 
 --
 -- WRITE STATEMENTS BE CAREFUL
@@ -253,19 +287,19 @@ where not exists (
 
 insert into categories_categoryoptions(categoryid, categoryoptionid, sort_order)
 select categoryid, categoryoptionid, 1 from
-(select categoryid from dataelementcategory where name = 'default') as categoryid,
-(select categoryoptionid from dataelementcategoryoption where name = 'default') as categoryoptionid;
+(select categoryid from category where name = 'default') as categoryid,
+(select categoryoptionid from categoryoption where name = 'default') as categoryoptionid;
 
 -- Repair missing link row between default category combo and default category
 
 insert into categorycombos_categories(categorycomboid, categoryid, sort_order)
 select categorycomboid, categoryid, 1 from
 (select categorycomboid from categorycombo where name = 'default') as categorycomboid,
-(select categoryid from dataelementcategory where name = 'default') as categoryid;
+(select categoryid from category where name = 'default') as categoryid;
 
 -- Repair missing link row between default category option and default category option combo
 
 insert into categoryoptioncombos_categoryoptions(categoryoptionid, categoryoptioncomboid)
 select categoryoptionid, categoryoptioncomboid from
-(select categoryoptionid from dataelementcategoryoption where name = 'default') as categoryoptionid,
+(select categoryoptionid from categoryoption where name = 'default') as categoryoptionid,
 (select categoryoptioncomboid from categoryoptioncombo where name = 'default') as categoryoptioncomboid;
