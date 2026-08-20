@@ -43,7 +43,7 @@ select
    ev.created + interval '1 day' as created,
    ev.lastupdated + interval '1 day' as lastupdated,
    ev.attributeoptioncomboid,
-   ev.storedby,
+   'script-run-01' as storedby,
    ev.completedby,
    ev.deleted,
    ev.code,
