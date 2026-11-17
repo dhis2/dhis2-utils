@@ -1,2 +1,4 @@
-pandas==1.5.3
+pandas==1.5.3; python_version < "3.9"
+pandas==2.3.3; python_version >= "3.9"
 dhis2.py==2.3.0
+chardet==5.2.0
